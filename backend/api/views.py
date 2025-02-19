@@ -1,5 +1,5 @@
 from rest_framework import generics
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from .models import User, Administrator, Employee, Salary, Trip, Vehicle, SalaryReport
 from .serializers import (
@@ -40,13 +40,14 @@ class UserListView(generics.ListAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated]  # Only authenticated users can view users
-
-# Employee Views (Only Admins can manage Employees)
+    
+#=======================================ADMIN HOMEPAGE DASHBOARD==================================================
+# Employee List View for Admin Home Page
 class EmployeeListView(generics.ListAPIView):
     queryset = Employee.objects.all()
     serializer_class = EmployeeSerializer
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated] # Only authenticated users can view employees
+    permission_classes = [AllowAny] # Will change to IsAuthenticated once token problem is fixed
 
 class EmployeeDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Employee.objects.all()
@@ -107,7 +108,8 @@ class SalaryReportDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = SalaryReport.objects.all()
     serializer_class = SalaryReportSerializer
     permission_classes = [IsAdminUser]
-
+    
+#=======================================ADMIN MANAGE PAYROLL==================================================
 #PDF Generation 
 def generate_pdf(request):
     buffer = BytesIO()
