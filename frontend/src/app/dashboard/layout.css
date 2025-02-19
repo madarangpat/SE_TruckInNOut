@@ -1,0 +1,52 @@
+.wrapper{
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.25));
+    border: 2px solid rgba(255, 255, 255, .2);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    box-shadow: 0 0 10px rgba(0, 0, 0, .50);
+    color: #ffff;
+}
+
+.wrapperdb{
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.25));
+    border: 2px solid rgba(255, 255, 255, .2);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    box-shadow: 0 0 10px rgba(0, 0, 0, .50);
+    color: #000;
+}
+
+.innerwrapper {
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)); 
+    border: 2px solid rgba(255, 255, 255, 0.064);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    color: #fff;
+    border-radius: 12px; 
+}
+
+.wrappersmall {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.5)); 
+    border: 2px solid rgba(255, 255, 255, 0.208);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    color: #fff;
+    transition: background 0.3s ease-in-out;
+}
+
+/* Hover effect: turns background to black */
+.wrappersmall:hover {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.25));
+}
+
+.wrappersmall2 {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.5)); 
+    border: 2px solid rgba(255, 255, 255, 0.208);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    color: #fff;
+    transition: background 0.3s ease-in-out;
+}
