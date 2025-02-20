@@ -27,20 +27,16 @@ class User(AbstractUser):
     )
 
     def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)  # Save the User first
+        super().save(*args, **kwargs)
 
-        # Import models inside save() to avoid circular import issues
         from api.models import Employee, Administrator
 
-        # Automatically create an Employee record if role is "Employee"
         if self.role == self.EMPLOYEE:
             Employee.objects.get_or_create(user=self)
 
-        # Automatically create an Administrator record if role is "Admin"
         if self.role == self.ADMIN:
             Administrator.objects.get_or_create(user=self)
 
-        # Ensure superusers are always "Super Admin"
         if self.is_superuser and self.role != self.SUPER_ADMIN:
             self.role = self.SUPER_ADMIN
             super().save(*args, **kwargs)
@@ -50,29 +46,26 @@ class User(AbstractUser):
     
     get_role.short_description = 'Role'
 
-# ✅ Administrator Model (Automatically created when a user with role "Admin" is added)
 class Administrator(models.Model):
     admin_id = models.AutoField(primary_key=True)
     user = models.OneToOneField(
         User, 
-        on_delete=models.CASCADE,  # Automatically delete Administrator when User is deleted
+        on_delete=models.CASCADE,
         related_name="administrator_profile"
     )
     salary_report = models.ForeignKey('SalaryReport', on_delete=models.CASCADE, null=True, blank=True)
 
-# ✅ Employee Model (Automatically created when a user with role "Employee" is added)
 class Employee(models.Model):
     employee_id = models.AutoField(primary_key=True)
     user = models.OneToOneField(
         User, 
-        on_delete=models.CASCADE,  # Automatically delete Employee when User is deleted
+        on_delete=models.CASCADE,
         related_name="employee_profile"
     )
     trip = models.ForeignKey('Trip', on_delete=models.CASCADE, null=True, blank=True)
     salary = models.ForeignKey('Salary', on_delete=models.CASCADE, null=True, blank=True)
     employee_type = models.CharField(max_length=50, null=True, blank=True)
 
-# ✅ Salary Model
 class Salary(models.Model):
     salary_id = models.AutoField(primary_key=True)
     trip = models.ForeignKey('Trip', on_delete=models.CASCADE)
@@ -83,7 +76,6 @@ class Salary(models.Model):
     overtime = models.DecimalField(max_digits=10, decimal_places=2)
     additionals = models.DecimalField(max_digits=10, decimal_places=2)
 
-# ✅ Trip Model
 class Trip(models.Model):
     trip_id = models.AutoField(primary_key=True)
     vehicle = models.ForeignKey('Vehicle', on_delete=models.CASCADE)
@@ -95,12 +87,20 @@ class Trip(models.Model):
     start_date = models.DateTimeField()
     end_date = models.DateTimeField()
 
-# ✅ Vehicle Model
 class Vehicle(models.Model):
     vehicle_id = models.AutoField(primary_key=True)
+    plate_number = models.CharField(
+        max_length=10,
+        unique=True,
+        null=True,  # ✅ Temporarily allow null values
+        blank=True  # ✅ Allow empty values in forms
+    )
     vehicle_type = models.CharField(max_length=50)
 
-# ✅ Salary Report Model
+
+    def __str__(self):
+        return f"{self.vehicle_id} - {self.plate_number} - {self.vehicle_type}"
+
 class SalaryReport(models.Model):
     salary_report_id = models.AutoField(primary_key=True)
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, null=True, blank=True)
