@@ -1,78 +1,85 @@
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { getSessionRefresh, logout } from "@/lib/auth";
+import SettingsOverlay from "@/components/SettingsOverlay"; // Import the new settings overlay
 
 const menuItems = [
   {
     items: [
-      {
-        icon: "/homee.png",
-        label: "Dashboard",
-        href: "/dashboard/admin/home",
-        visible: ["admin", "teacher", "student", "parent"],
-      },
-      {
-        icon: "/deliveries.png",
-        label: "View Deliveries",
-        href: "/dashboard/admin/viewdeliveries",
-        visible: ["admin", "teacher", "student", "parent"],
-      },
-      {
-        icon: "/payroll.png",
-        label: "Manage Payroll",
-        href: "/dashboard/admin/managepayroll",
-        visible: ["admin", "teacher", "student", "parent"],
+      { icon: "/homee.png", label: "Dashboard", href: "/dashboard/admin/home" },
+      { icon: "/deliveries.png", label: "View Deliveries", href: "/dashboard/admin/viewdeliveries",},
+      { icon: "/payroll.png", label: "Manage Payroll", href: "/dashboard/admin/managepayroll",
       },
     ],
   },
   {
     items: [
-      {
-        icon: "/accounts.png",
-        label: "Accounts",
-        href: "/dashboard/admin/accounts",
-        visible: ["admin", "teacher", "student", "parent"],
-      },
-      {
-        icon: "/settings.png",
-        label: "Settings",
-        href: "/dashboard/admin/settings",
-        visible: ["admin", "teacher", "student", "parent"],
-      },
-      {
-        icon: "/logoutt.png",
-        label: "Logout",
-        href: "/login",
-        visible: ["admin", "teacher", "student", "parent"],
-        onClick: () => {},
-      },
+      { icon: "/accounts.png", label: "Accounts", href: "/dashboard/admin/accounts",},
+      { icon: "/settings.png", label: "Settings" }, // Prevent navigation on click
+      { icon: "/logoutt.png", label: "Logout", href: "/login" },
     ],
   },
 ];
 
 const Menu = () => {
+  const router = useRouter();
   const pathname = usePathname();
+  const [showSettings, setShowSettings] = useState(false);
+
   return (
-    <div className="mt-4 text-sm">
-      {menuItems.map((i, index) => (
-        <div className="flex flex-col gap-3" key={index}>
-          {i.items.map((item) => (
-            <Link
-              href={item.href}
-              key={item.label}
-              className={`flex items-center justify-center lg:justify-start gap-5 text-white py-2 rounded-lg transition duration-200 hover:bg-black/25 ${
-                pathname === item.href ? "bg-black/25" : ""
-              }`}
-              onClick={item.label === "Logout" ? () => logout(getSessionRefresh()) : () => {}}
-            >
-              <Image src={item.icon} alt="" width={30} height={30} />
-              <span className="hidden lg:block">{item.label}</span>
-            </Link>
+    <>
+      {/* Sidebar Navigation */}
+        <div className="mt-4 text-sm relative">
+          {menuItems.map((group, index) => (
+            <div className="flex flex-col gap-3" key={index}>
+              {group.items.map((item) =>
+                item.label === "Settings" ? (
+                  // Settings - Open Overlay
+                  <button
+                    key={item.label}
+                    onClick={() => setShowSettings(true)}
+                    // href="/dashboard/admin/settings?openSettings=true"
+                    className="flex items-center justify-center lg:justify-start gap-5 text-white py-2 rounded-lg transition duration-200 hover:bg-black/25"
+                  >
+                    <Image src={item.icon} alt="menu-icon" width={30} height={30} />
+                    <span className="hidden lg:block">{item.label}</span>
+                  </button>) : 
+                  item.label === "Logout" ? (
+                  // Logout - Redirect after logout
+                  <button
+                    key={item.label}
+                    onClick={async () => {
+                      await logout();
+                      router.push("/login");
+                    }}
+                    className="flex items-center justify-center lg:justify-start gap-5 text-white py-2 rounded-lg transition duration-200 hover:bg-black/25"
+                  >
+                    <Image src={item.icon} alt="menu-icon" width={30} height={30} />
+                    <span className="hidden lg:block">{item.label}</span>
+                  </button>
+                ) : (
+                  // Regular Navigation - Uses <Link>
+                  <Link
+                    href={item.href}
+                    key={item.label}
+                    className={`flex items-center justify-center lg:justify-start gap-5 text-white py-2 rounded-lg transition duration-200 hover:bg-black/25 ${
+                      pathname === item.href ? "bg-black/25" : ""
+                    }`}
+                  >
+                    <Image src={item.icon} alt="menu-icon" width={30} height={30} />
+                    <span className="hidden lg:block">{item.label}</span>
+                  </Link>
+                )
+              )}
+            </div>
           ))}
         </div>
-      ))}
-    </div>
+
+      {/* Settings Overlay */}
+      {showSettings && <SettingsOverlay onClose={() => setShowSettings(false)} />}
+    </>
   );
 };
 

@@ -9,3 +9,7 @@ sqlparse
 psycopg2-binary
 python-dotenv
 reportlab
+django-storages
+boto3
+python-decouple
+pillow

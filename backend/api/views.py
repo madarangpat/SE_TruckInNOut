@@ -15,7 +15,7 @@ from reportlab.pdfgen import canvas
 from io import BytesIO
 
 # Custom Login View (Uses JWT Authentication)
-class CustomLoginView(TokenObtainPairView):
+class ustomLoginView(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
         username = request.data.get("username")
         password = request.data.get("password")

@@ -16,10 +16,14 @@ const LoginClient = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault(); // Prevent form from refreshing the page
-    console.log("client side");
     setError(null);
-    await login(username, password);
-    router.push("/dashboard/admin/home");
+    try {
+      await login(username, password);
+      router.push("/dashboard/admin/home");
+
+    } catch (error) {
+      setError((error as Error).message);
+    }
   };
 
   return (
@@ -63,6 +67,7 @@ const LoginClient = () => {
           <FaLock className="icon" />
         </div>
 
+        {error && <span className="text-red-500">{error}</span>}
         {/* This button will trigger handleSubmit when clicked */}
         <button type="submit">Login</button>
 
