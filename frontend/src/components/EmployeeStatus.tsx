@@ -5,11 +5,13 @@ const employeeStatus = [
   { id: 1, name: "Employee #1", salary: "P -------", payment: "PAID" },
   { id: 2, name: "Employee #2", salary: "P -------", payment: "PAID" },
   { id: 3, name: "Employee #3", salary: "P -------", payment: "PAID" },
+  { id: 4, name: "Employee #4", salary: "P -------", payment: "PAID" },
+  { id: 5, name: "Employee #5", salary: "P -------", payment: "PAID" },
 ];
 
 const EmployeeStatus = () => {
   return (
-    <div className="wrapperdb rounded-2xl p-4 flex-1 shadow-md h-full w-full flex flex-col">
+    <div className="wrapper rounded-2xl p-4 flex-1 shadow-md h-full w-full flex flex-col">
       <div className="flex justify-center items-center mx-3 gap-2">
         <h1 className="capitalize text-2xl font-medium text-black/40">
           Employee Status

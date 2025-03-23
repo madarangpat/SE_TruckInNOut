@@ -1,36 +1,46 @@
 "use client";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import axios from "axios";
 
-const employeesInTransit = [
-  { id: 1, name: "Employee #1", status: "ONGOING" },
-  { id: 2, name: "Employee #2", status: "ONGOING" },
-  { id: 3, name: "Employee #3", status: "ONGOING" },
-  { id: 4, name: "Employee #4", status: "ONGOING" },
-  { id: 5, name: "Employee #5", status: "ONGOING" },
-  { id: 6, name: "Employee #6", status: "ONGOING" },
-  { id: 7, name: "Employee #7", status: "ONGOING" },
-  { id: 8, name: "Employee #8", status: "ONGOING" },
-  { id: 9, name: "Employee #9", status: "ONGOING" },
-  { id: 10, name: "Employee #10", status: "ONGOING" },
-  { id: 11, name: "Employee #11", status: "ONGOING" },
-  { id: 12, name: "Employee #12", status: "ONGOING" },
-  { id: 13, name: "Employee #13", status: "ONGOING" },
-  { id: 14, name: "Employee #14", status: "ONGOING" },
-  { id: 15, name: "Employee #15", status: "ONGOING" },
-  { id: 16, name: "Employee #16", status: "ONGOING" },
-  { id: 17, name: "Employee #17", status: "ONGOING" },
-  { id: 18, name: "Employee #18", status: "ONGOING" },
-  { id: 19, name: "Employee #19", status: "ONGOING" },
-  { id: 20, name: "Employee #20", status: "ONGOING" },
-];
+interface Trip {
+  trip_id: number;
+  is_completed: boolean;
+  employee: {
+    employee_id: number;
+    user: {
+      username: string;
+      profile_image: string | null;
+    };
+  } | null;
+  start_date: string;
+  end_date: string;
+}
 
 const TripsInProgress = () => {
   const router = useRouter();
+  const [trips, setTrips] = useState<Trip[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleEmployeeClick = (id: number) => {
-    router.push(`/dashboard/admin/viewdeliveries/maps?employee=${id}`);
+  useEffect(() => {
+    const fetchTrips = async () => {
+      try {
+        const res = await axios.get("http://localhost:8000/api/trips/");
+        const activeTrips = res.data.filter((trip: Trip) => trip.is_completed === false);
+        setTrips(activeTrips);
+      } catch (err) {
+        console.error("Failed to fetch trips:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTrips();
+  }, []);
+
+  const handleEmployeeClick = (employeeId: number) => {
+    router.push(`/dashboard/admin/viewdeliveries/maps?employee=${employeeId}`);
   };
 
   return (
@@ -49,31 +59,34 @@ const TripsInProgress = () => {
       </div>
 
       <div className="innerwrapper max-h-[300px] min-h-[150px] p-5 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 flex items-center justify-center">
-        {employeesInTransit.length > 0 ? (
-          employeesInTransit.map((employee) => (
+        {loading ? (
+          <p className="text-white text-center text-lg">Loading trips...</p>
+        ) : trips.length > 0 ? (
+          trips.map((trip) => (
             <div
-              key={employee.id}
-              className="wrappersmall flex flex-col items-center justify-center bg-gray-900 rounded-lg p-4 border-2 border-white cursor-pointer hover:bg-gray-800"
-              onClick={() => handleEmployeeClick(employee.id)}
+              key={trip.trip_id}
+              className="wrappersmall flex flex-col items-center justify-center bg-[#668743] hover:bg-[#345216] transition rounded-lg p-4 cursor-pointer"
+              onClick={() => trip.employee && handleEmployeeClick(trip.employee.employee_id)}
             >
               <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center border-2 border-white">
                 <Image
-                  src="/accounts.png"
-                  alt="Status"
+                  src={
+                    trip.employee?.user.profile_image ||
+                    "/accounts.png"
+                  }
+                  alt="Profile"
                   width={70}
                   height={70}
-                  className="opacity-70"
+                  className="rounded-full object-cover opacity-90"
                 />
               </div>
               <span className="mt-2 text-sm text-white/90">
-                {employee.name}
+                {trip.employee?.user.username || "No Employee"}
               </span>
             </div>
           ))
         ) : (
-          <div className="flex items-center justify-center w-full h-full">
-            <p className="text-white text-center text-lg">No Current Trip/s.</p>
-          </div>
+          <p className="text-white text-center text-lg">No Current Trip/s.</p>
         )}
       </div>
     </div>

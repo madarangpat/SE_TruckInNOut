@@ -7,10 +7,12 @@ import "./layout.css";
 import { FaUser } from "react-icons/fa";
 import { FaLock } from "react-icons/fa";
 import Image from "next/image";
+import Link from "next/link";
 
 const LoginClient = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
@@ -18,9 +20,13 @@ const LoginClient = () => {
     e.preventDefault(); // Prevent form from refreshing the page
     setError(null);
     try {
-      await login(username, password);
-      router.push("/dashboard/admin/home");
+      const user = await login(username, password);
+      console.log(user)
 
+      user.role === "admin" || "super_admin"
+        ? router.push("/dashboard/admin/home")
+        : router.push("/dashboard/employee/home");
+        router.refresh()
     } catch (error) {
       setError((error as Error).message);
     }
@@ -45,7 +51,7 @@ const LoginClient = () => {
         <h1>Welcome Back!</h1>
         <p>Welcome back to TruckIn-N-Out, Happy Trucking!</p>
 
-        <div className="input-box">
+        <div className="input-box items-center">
           <input
             type="text"
             placeholder="Username"
@@ -58,7 +64,7 @@ const LoginClient = () => {
 
         <div className="input-box">
           <input
-            type="password"
+            type={showPassword ? "text" : "password"}
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -67,12 +73,20 @@ const LoginClient = () => {
           <FaLock className="icon" />
         </div>
 
+        <div
+          className="text-sm text-gray-600 mt-1 cursor-pointer"
+          onClick={() => setShowPassword(!showPassword)}
+        >
+          {showPassword ? "Hide Password" : "Show Password"}
+        </div>
+
         {error && <span className="text-red-500">{error}</span>}
-        {/* This button will trigger handleSubmit when clicked */}
+
+        {/* Login Button */}
         <button type="submit">Login</button>
 
         <div className="forgot-password">
-          <a href="#">Forgot Password?</a>
+          <Link href="/forgot-password">Forgot Password?</Link>
         </div>
       </form>
     </div>

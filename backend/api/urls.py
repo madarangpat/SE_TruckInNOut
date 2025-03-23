@@ -1,19 +1,33 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView, TokenBlacklistView
 from .views import (
-    UserListView, EmployeeListView, EmployeeDetailView,
+    LoginView, UserListView, EmployeeListView, EmployeeDetailView,
     AdministratorListView, AdministratorDetailView,
     SalaryListView, SalaryDetailView,
     TripListView, TripDetailView,
     VehicleListView, VehicleDetailView,
-    SalaryReportListView, SalaryReportDetailView, generate_pdf
+    SalaryReportListView, SalaryReportDetailView, generate_pdf, RegisterUserView, RegisterVehicleView, RegisterTripView,
+    SendPasswordLinkView, ResetPasswordView, get_vehicles, get_employees, get_users, SalaryConfigurationListCreateView, SalaryConfigurationRetrieveUpdateDestroyView,
+    EmployeeCreateView, delete_user, get_employee_profile, UserProfileView, update_employee_profile, UserUpdateView,
+    ValidateResetPasswordTokenView
 )
+from django.contrib.auth.views import (
+    PasswordResetView,
+    PasswordResetConfirmView,
+    PasswordResetCompleteView,
+    PasswordResetDoneView,
+)
+
 
 urlpatterns = [
     path('users/', UserListView.as_view(), name='user-list'),
+    path('users/profile/', UserProfileView.as_view(), name='user-profile-view'),
+    path('users/profile/update/', UserUpdateView.as_view(), name='user-profile-update-view'),
 
+    path('employees/create/', EmployeeCreateView.as_view(), name='employee-create'),
     path('employees/', EmployeeListView.as_view(), name='employee-list'),
     path('employees/<int:pk>/', EmployeeDetailView.as_view(), name='employee-detail'),
+    path("employee/update-profile/", update_employee_profile, name="update-profile"),
 
     path('admins/', AdministratorListView.as_view(), name='admin-list'),
     path('admins/<int:pk>/', AdministratorDetailView.as_view(), name='admin-detail'),
@@ -24,17 +38,45 @@ urlpatterns = [
     path('trips/', TripListView.as_view(), name='trip-list'),
     path('trips/<int:pk>/', TripDetailView.as_view(), name='trip-detail'),
 
-    path('vehicles/', VehicleListView.as_view(), name='vehicle-list'),
-    path('vehicles/<int:pk>/', VehicleDetailView.as_view(), name='vehicle-detail'),
-
     path('salary-reports/', SalaryReportListView.as_view(), name='salary-report-list'),
     path('salary-reports/<int:pk>/', SalaryReportDetailView.as_view(), name='salary-report-detail'),
 
     # JWT Authentication Routes
-    path('token/', TokenObtainPairView.as_view(), name='get_token'),
+    path('login/', LoginView.as_view(), name='get_token'),
     path('token/refresh/', TokenRefreshView.as_view(), name='refresh'),
     path("logout/", TokenBlacklistView.as_view(), name="logout"),
     
     #Generate PDF
     path("generate-pdf/", generate_pdf, name="generate_pdf"),
+    
+    #Add Account
+    path('register/', RegisterUserView.as_view(), name='register'),
+    
+    #Add Vehicle
+    path('register-vehicle/', RegisterVehicleView.as_view(), name='create_vehicle'),
+    
+    #Add Trip
+    path('register-trip/', RegisterTripView.as_view(), name='create_trip'),
+    
+    #Password Reset
+    path("password-reset/", SendPasswordLinkView.as_view(), name="password_reset"),
+    path("password-reset-confirm/<str:token>/", ResetPasswordView.as_view(), name="password_reset_confirm"),
+    path(
+        "password-reset/validate/",
+        ValidateResetPasswordTokenView.as_view(),
+        name="password-reset-validate/",
+    ),
+
+    #CREATE NEW TRIP GET VEHICLES
+    path('vehicles/', VehicleListView.as_view(), name='vehicle_list'),
+    
+    #CREATE NEW TRIP GET EMPLOYEES
+    path('employees/', get_employees, name='get_employees'),
+    
+    # Generic SalaryConfiguration Views
+    path('salary-configurations/', SalaryConfigurationListCreateView.as_view(), name='salary-configuration-list'),
+    path('salary-configurations/<int:pk>/', SalaryConfigurationRetrieveUpdateDestroyView.as_view(), name='salary-configuration-retrieve-update-destroy'),
+    
+    #Delete User
+    path('delete-user/<int:user_id>/', delete_user, name='delete-user'),
 ]

@@ -1,38 +1,25 @@
-"use client"; // This makes the component run on the client side
-
 import React from "react";
+import Image from "next/image";
 
 const PDFButton: React.FC = () => {
-  const handleDownload = async () => {
-    try {
-      const response = await fetch("http://127.0.0.1:8000/api/generate-pdf/", {
-        method: "GET",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch PDF");
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "generated.pdf";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    } catch (error) {
-      console.error("Error downloading PDF:", error);
-    }
+  const handleDownload = () => {
+    const pdfUrl = "http://localhost:8000/api/generate-pdf/";
+    window.open(pdfUrl, "_blank");
   };
 
   return (
     <button
       onClick={handleDownload}
-      className="px-4 py-2 bg-blue-600 text-white rounded"
+      className="px-6 py-2 bg-[#668743] text-white text-sm rounded-lg hover:bg-[#345216] tracking-wide flex justify-center items-center gap-2"
     >
-      Download Payroll PDF
+      <Image
+        src="/print.png"
+        alt="Print Icon"
+        width={18}
+        height={18}
+        className="opacity-80"
+      />
+      Generate Report
     </button>
   );
 };

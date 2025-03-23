@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import SettingsOverlay from "@/components/SettingsOverlay";
+import SettingsOverlayTwo from "@/components/SettingsOverlayTwo";
 
 export default function SettingsPage() {
   const searchParams = useSearchParams();
@@ -20,7 +20,7 @@ export default function SettingsPage() {
     <div className="relative">
       {/* ✅ Only Show the Settings Overlay */}
       {showSettings && (
-        <SettingsOverlay
+        <SettingsOverlayTwo
           onClose={() => {
             setShowSettings(false);
             router.push("/dashboard/admin/settings", { scroll: false }); // Remove query parameter after closing
@@ -30,3 +30,5 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+

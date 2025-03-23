@@ -1,71 +1,70 @@
 "use client";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Image from "next/image";
+import axios from "axios";
 
-const recentTrips = [
-  {
-    id: 1,
-    name: "Employee #1",
-    client: "__________",
-    destination: "__________ (___ km)",
-  },
-  {
-    id: 2,
-    name: "Employee #2",
-    client: "__________",
-    destination: "__________ (___ km)",
-  },
-  {
-    id: 3,
-    name: "Employee #3",
-    client: "__________",
-    destination: "__________ (___ km)",
-  },
-  {
-    id: 4,
-    name: "Employee #4",
-    client: "__________",
-    destination: "__________ (___ km)",
-  },
-  {
-    id: 5,
-    name: "Employee #5",
-    client: "__________",
-    destination: "__________ (___ km)",
-  },
-  {
-    id: 6,
-    name: "Employee #6",
-    client: "__________",
-    destination: "__________ (___ km)",
-  },
-  {
-    id: 7,
-    name: "Employee #7",
-    client: "__________",
-    destination: "__________ (___ km)",
-  },
-  {
-    id: 8,
-    name: "Employee #8",
-    client: "__________",
-    destination: "__________ (___ km)",
-  },
-  {
-    id: 9,
-    name: "Employee #9",
-    client: "__________",
-    destination: "__________ (___ km)",
-  },
-  {
-    id: 10,
-    name: "Employee #10",
-    client: "__________",
-    destination: "__________ (___ km)",
-  },
-];
+interface Trip {
+  trip_id: number;
+  is_completed: boolean;
+  start_date: string;
+  end_date: string;
+  client_info: string;
+  distance_traveled: string;
+  user_latitude: string;
+  user_longitude: string;
+  street_number: string;
+  street_name: string;
+  barangay: string;
+  city: string;
+  province: string;
+  region: string;
+  country: string;
+  vehicle: {
+    plate_number: string;
+  };
+  employee: {
+    employee_id: number;
+    user: {
+      username: string;
+      profile_image: string | null;
+    };
+  };
+}
 
 const RecentTrips = () => {
+  const [trips, setTrips] = useState<Trip[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchTrips = async () => {
+      try {
+        const res = await axios.get("http://localhost:8000/api/trips/");
+        const now = new Date();
+        const completedTrips = res.data.filter((trip: Trip) => trip.is_completed === true);
+        setTrips(completedTrips);
+      } catch (err) {
+        console.error("Failed to fetch recent trips:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTrips();
+  }, []);
+
+  const getDestination = (trip: Trip) => {
+    const parts = [
+      trip.street_number,
+      trip.street_name,
+      trip.barangay,
+      trip.city,
+      trip.province,
+      trip.region,
+      trip.country,
+    ];
+    return parts.filter(Boolean).join(", ");
+  };
+
   return (
     <div className="wrapper w-full max-w-5xl rounded-2xl shadow-lg p-6 bg-black/40">
       <div className="flex justify-center items-center mx-3 gap-2">
@@ -82,33 +81,39 @@ const RecentTrips = () => {
       </div>
 
       {/* Scrollable list of trips */}
-      <div className="innerwrapper max-h-[250px] overflow-y-auto bg-gray-900 rounded-lg p-3 border-2 border-white flex flex-col">
-        {recentTrips.length > 0 ? (
-          recentTrips.map((trip) => (
+      <div className="innerwrapper max-h-[250px] overflow-y-auto rounded-lg p-3 flex flex-col">
+        {loading ? (
+          <p className="text-white text-center text-lg">Loading trips...</p>
+        ) : trips.length > 0 ? (
+          trips.map((trip) => (
             <div
-              key={trip.id}
-              className="wrappersmall2 flex flex-col sm:flex-row items-center justify-between p-4 border-b border-gray-600 text-white w-full"
+              key={trip.trip_id}
+              className="wrappersmall2 flex flex-col sm:flex-row items-center justify-between p-4 bg-[#d9e0cc] text-black/80 rounded-lg mb-3 shadow-sm"
             >
               <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left w-full">
                 {/* Profile image */}
-                <div className="wrappersmall2 w-12 h-12 bg-gray-800 rounded-full flex items-center justify-center border-2 border-white">
+                <div className="wrappersmall2 w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center border border-gray-500 overflow-hidden">
                   <Image
-                    src="/accountsblk.png"
-                    alt="Status"
+                    src={trip.employee?.user.profile_image || "/accountsblk.png"}
+                    alt="Profile"
                     width={70}
                     height={70}
-                    className="opacity-70"
+                    className="rounded-full object-cover opacity-90"
                   />
                 </div>
 
                 {/* Trip details */}
                 <div className="w-full">
-                  <p className="font-medium">{trip.name} (Vehicle Used)</p>
-                  <p className="text-sm bg-black/45 text-white px-2 py-1 rounded-md mt-1 w-full">
-                    <strong>CLIENT:</strong> {trip.client}
+                  <p className="font-medium">
+                    {trip.employee?.user.username} (
+                    {trip.vehicle?.plate_number || "No Plate"})
                   </p>
-                  <p className="text-sm bg-black/45 text-white px-2 py-1 rounded-md mt-1 w-full">
-                    <strong>DESTINATION:</strong> {trip.destination}
+                  <p className="text-sm bg-white/50 text-black px-3 py-1 rounded-md mt-1 w-full">
+                    <strong>CLIENT:</strong> {trip.client_info || "__________"}
+                  </p>
+                  <p className="text-sm bg-white/50 text-black px-3 py-1 rounded-md mt-1 w-full">
+                    <strong>DESTINATION:</strong> {getDestination(trip)} (
+                    {trip.distance_traveled || "___"} km)
                   </p>
                 </div>
               </div>
@@ -121,10 +126,15 @@ const RecentTrips = () => {
 
       {/* Create New Trip Button */}
       <div className="mt-4 flex justify-center">
-        <button className="px-6 py-3 bg-green-700 text-white text-sm rounded-lg hover:bg-green-800 flex items-center gap-2">
+        <button
+          onClick={() =>
+            window.location.assign("/dashboard/admin/viewdeliveries/newtrip")
+          }
+          className="px-6 py-3 bg-[#668743] text-white text-sm rounded-lg hover:bg-[#345216] flex items-center gap-2"
+        >
           <Image
             src="/plustrip2.png"
-            alt="Recent Trips"
+            alt="Create New Trip"
             width={20}
             height={20}
             className="opacity-90"

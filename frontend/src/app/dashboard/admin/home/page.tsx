@@ -2,6 +2,7 @@ import EmployeeList from "@/components/EmployeeList";
 import EmployeeStatus from "@/components/EmployeeStatus";
 import PriorityQueue from "@/components/PriorityQueue";
 import TripsInTransit from "@/components/TripsInTransit";
+import { getSession } from "@/lib/auth";
 
 const AdminPage = () => {
   return (

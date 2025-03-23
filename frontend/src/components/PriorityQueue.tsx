@@ -11,7 +11,7 @@ const priorityQueue = [
 
 const PriorityQueue = () => {
   return (
-    <div className="wrapperdb rounded-2xl p-4 flex-1 shadow-md h-full w-full flex flex-col">
+    <div className="wrapper rounded-2xl p-4 flex-1 shadow-md h-full w-full flex flex-col">
       <div className="flex justify-center items-center mx-3 gap-2">
         <h1 className="capitalize text-2xl font-medium text-black/40">
           Priority Queue

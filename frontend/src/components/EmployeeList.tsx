@@ -11,13 +11,6 @@ const EmployeeList = () => {
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
-        // const token = localStorage.getItem("access_token"); // ❌ Commented out token retrieval
-        // if (!token) {
-        //   setError("No authentication token found.");
-        //   setLoading(false);
-        //   return;
-        // }
-
         const response = await axios.get("http://127.0.0.1:8000/api/employees/" /* , {
           headers: { Authorization: `Bearer ${token}` }, // ❌ Commented out token in headers
         } */);
@@ -40,7 +33,7 @@ const EmployeeList = () => {
   }, []);
 
   return (
-    <div className="wrapperdb rounded-2xl p-4 flex-1 shadow-md h-full w-full max-w-full md:max-w-lg lg:max-w-full flex flex-col">
+    <div className="wrapper rounded-2xl p-4 flex-1 shadow-md h-full w-full max-w-full md:max-w-lg lg:max-w-full flex flex-col">
       <div className="flex justify-center items-center mx-3 gap-2 mb-4">
         <h1 className="capitalize text-xl md:text-2xl font-medium text-black/40">
           Employee List
