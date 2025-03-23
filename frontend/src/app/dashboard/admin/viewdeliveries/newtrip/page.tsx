@@ -175,6 +175,69 @@ const CreateNewTripPage = () => {
       .catch((error) => console.error("Error fetching employees:", error));
   }, []);
 
+  useEffect(() => {
+    const {
+      street_number,
+      street_name,
+      barangay,
+      city,
+      province,
+      region,
+      country,
+    } = tripFormData;
+  
+    const fullDestination = [
+      street_number,
+      street_name,
+      barangay,
+      city,
+      province,
+      region,
+      country,
+    ]
+      .filter(Boolean)
+      .join(", ");
+  
+    if ([street_name, city, province].some((v) => v.trim() === "")) return;
+  
+    const delay = setTimeout(async () => {
+      try {
+        const apiKey = process.env.NEXT_PUBLIC_OPENCAGE_API_KEY;
+        const response = await fetch(
+          `https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(fullDestination)}&key=${apiKey}`
+        );
+  
+        const data = await response.json();
+        console.log("Auto-geocode OpenCage response:", data);
+  
+        if (!data.results || data.results.length === 0) return;
+  
+        const { lat, lng } = data.results[0].geometry;
+  
+        setTripFormData((prev) => ({
+          ...prev,
+          destination: fullDestination,
+          destination_latitude: lat,
+          destination_longitude: lng,
+        }));
+      } catch (err) {
+        console.error("Auto-geocoding failed:", err);
+      }
+    }, 1500); // wait for 1.5s after typing stops
+  
+    return () => clearTimeout(delay);
+  }, [
+    tripFormData.street_number,
+    tripFormData.street_name,
+    tripFormData.barangay,
+    tripFormData.city,
+    tripFormData.province,
+    tripFormData.region,
+    tripFormData.country,
+  ]);
+  
+  
+
   return (
     <div className="min-h-screen flex flex-col items-center py-8 px-4 md:px-8">      
       <form onSubmit={handleSubmit} className="wrapper w-full max-w-4xl mx-auto p-6 rounded-2xl bg-black/20 shadow-lg space-y-6">
@@ -284,7 +347,7 @@ const CreateNewTripPage = () => {
           <button
             type="button"
             className="bg-[#668743] text-white px-6 py-2 rounded-lg hover:bg-[#345216] transition-all min-w-[160px] text-center"
-            onClick={() => {
+            onClick={async () => {
               const fullDestination = [
                 tripFormData.street_number,
                 tripFormData.street_name,
@@ -296,9 +359,38 @@ const CreateNewTripPage = () => {
               ]
                 .filter(Boolean)
                 .join(", ");
-
-              setTripFormData((prev) => ({ ...prev, destination: fullDestination }));
-            }}
+            
+              console.log("Confirm Address clicked. Destination:", fullDestination);
+            
+              try {
+                const apiKey = process.env.NEXT_PUBLIC_OPENCAGE_API_KEY;
+                const response = await fetch(
+                  `https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(fullDestination)}&key=${apiKey}`
+                );
+            
+                const data = await response.json();
+                console.log("OpenCage response:", data);
+            
+                if (!data.results || data.results.length === 0) {
+                  setError("Location not found.");
+                  return;
+                }
+            
+                const { lat, lng } = data.results[0].geometry;
+            
+                setTripFormData((prev) => ({
+                  ...prev,
+                  destination: fullDestination,
+                  destination_latitude: lat,
+                  destination_longitude: lng,
+                }));
+            
+                setError(null);
+              } catch (err) {
+                console.error("Geocoding error:", err);
+                setError("Failed to get coordinates from OpenCage.");
+              }
+            }}            
           >
             Confirm Address
           </button>

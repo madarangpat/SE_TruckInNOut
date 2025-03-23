@@ -3,6 +3,10 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import axios from "axios";
+import dynamic from "next/dynamic";
+const LeafletMap = dynamic(() => import("@/components/LeafletMap"), {
+  ssr: false, // 👈 disables server-side rendering
+});
 
 interface Trip {
   trip_id: number;
@@ -70,7 +74,14 @@ const MapsPage = () => {
     return parts.filter(Boolean).join(", ");
   };
 
-  return (
+const lat = parseFloat(trip?.destination_latitude || "");
+const lng = parseFloat(trip?.destination_longitude || "");
+console.log(lat+" "+lng)
+console.log("Raw lat/lng from trip:", trip?.destination_latitude, trip?.destination_longitude);
+
+const hasValidCoords = !isNaN(lat) && !isNaN(lng);
+
+    return (
     <div className="min-h-screen flex flex-col items-center py-8 px-4 md:px-8">
       <div className="wrapper w-full max-w-5xl mx-auto p-6 rounded-2xl bg-black/40 shadow-lg">
         {/* ✅ Back Button */}
@@ -128,16 +139,15 @@ const MapsPage = () => {
               </div>
             </div>
 
-            {/* Map Placeholder */}
-            <div className="innerwrapper mt-7 w-full h-72 md:h-96 bg-gray-700 rounded-lg flex justify-center items-center">
-              <Image
-                src="/map-placeholder.png"
-                alt="No Map Found."
-                width={690}
-                height={350}
-                className="rounded-lg object-contain"
+            {/* Live Map*/}
+            <div className="w-full h-96 bg-gray-700 rounded-lg mt-7">
+              <LeafletMap
+                lat={14.5995}
+                lng={120.9842}
+                destination="Manila, Philippines"
               />
             </div>
+
           </div>
         ) : (
           <p className="text-white text-center">Trip not found for this employee.</p>
