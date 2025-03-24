@@ -145,9 +145,10 @@ const hasValidCoords = !isNaN(lat) && !isNaN(lng);
                 lat={14.5995}
                 lng={120.9842}
                 destination="Manila, Philippines"
+                userLat={14.65903}
+                userLng={121.10420}
               />
             </div>
-
           </div>
         ) : (
           <p className="text-white text-center">Trip not found for this employee.</p>
