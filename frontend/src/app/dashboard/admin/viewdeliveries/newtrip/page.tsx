@@ -53,11 +53,29 @@ const CreateNewTripPage = () => {
     client_information: "",
     start_date: new Date().toISOString().split("T")[0],
     end_date: "", 
-    user_latitude: "",
-    user_longitude: "",
+    user_latitude: "14.65903",
+    user_longitude: "121.101415",
     destination_latitude: "",
     destination_longitude: "",
   });
+
+  function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371; // Radius of Earth in kilometers
+    const toRad = (deg: number) => deg * (Math.PI / 180);
+  
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+  
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) ** 2;
+  
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  
+    return R * c; // returns distance in km
+  }
+  
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -378,12 +396,22 @@ const CreateNewTripPage = () => {
             
                 const { lat, lng } = data.results[0].geometry;
             
+                const distanceKm = haversineDistance(
+                  parseFloat(tripFormData.user_latitude||"0"),
+                  parseFloat(tripFormData.user_longitude || "0"),
+                  lat,
+                  lng
+                );
+
                 setTripFormData((prev) => ({
                   ...prev,
                   destination: fullDestination,
                   destination_latitude: lat,
                   destination_longitude: lng,
+                  distance: distanceKm.toFixed(2)
                 }));
+
+                console.log("Distance set in form:", distanceKm.toFixed(2));
             
                 setError(null);
               } catch (err) {
