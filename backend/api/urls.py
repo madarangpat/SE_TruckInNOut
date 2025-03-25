@@ -9,7 +9,7 @@ from .views import (
     SalaryReportListView, SalaryReportDetailView, generate_pdf, RegisterUserView, RegisterVehicleView, RegisterTripView, decline_trip, get_assigned_trip, get_recent_trips,
     SendPasswordLinkView, ResetPasswordView, get_vehicles, get_employees, get_users, SalaryConfigurationListCreateView, SalaryConfigurationRetrieveUpdateDestroyView,
     EmployeeCreateView, delete_user, get_employee_profile, UserProfileView, update_employee_profile, UserUpdateView,
-    ValidateResetPasswordTokenView, accept_trip
+    ValidateResetPasswordTokenView, accept_trip, get_ongoing_trips
 )
 from django.contrib.auth.views import (
     PasswordResetView,
@@ -80,11 +80,13 @@ urlpatterns = [
     #Delete User
     path('delete-user/<int:user_id>/', delete_user, name='delete-user'),
     
-    #Decline Trip
-    path('api/trips/<int:trip_id>/decline/', decline_trip, name='decline-trip'),
+    #Trip Assignment
+    path('trips/<int:trip_id>/decline/', decline_trip, name='decline-trip'),
     
-    path("api/trips/assigned/", get_assigned_trip, name="get-assigned-trip"),
-    path("api/trips/recent/", get_recent_trips, name="get-recent-trips"),
-    path('api/trips/<int:trip_id>/accept/', accept_trip, name='accept-trip'),
+    path("trips/assigned/", get_assigned_trip, name="get-assigned-trip"),
+    path("trips/recent/", get_recent_trips, name="get-recent-trips"),
+    path('trips/<int:trip_id>/accept/', accept_trip, name='accept-trip'),
+    path("trips/ongoing/", get_ongoing_trips, name="get-ongoing-trips"),
+
 
 ]

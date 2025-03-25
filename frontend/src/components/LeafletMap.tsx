@@ -38,11 +38,13 @@ interface Props {
   destination: string;
   userLat: number;
   userLng: number;
+  isAdmin: boolean;
 }
 
-export default function LeafletMap({ lat, lng, destination, userLat, userLng }: Props) {
+export default function LeafletMap({ lat, lng, destination, userLat, userLng, isAdmin }: Props) {
+  const [userCoords, setUserCoords] = useState({lat:userLat,lng:userLng});
   const destinationPos: [number, number] = [lat, lng];
-  const currentPos: [number, number] = [userLat, userLng];
+  const currentPos: [number, number] = [userCoords.lat, userCoords.lng];
   const bounds: L.LatLngBoundsExpression = [destinationPos, currentPos];
 
   const [landmark, setLandmark] = useState<string>("");
@@ -60,7 +62,7 @@ export default function LeafletMap({ lat, lng, destination, userLat, userLng }: 
     return R * c;
   }
 
-  const distanceKm = haversineDistance(userLat, userLng, lat, lng);
+  const distanceKm = haversineDistance(userCoords.lat, userCoords.lng, lat, lng);
 
   // 🔍 Reverse geocode for current position
   useEffect(() => {
@@ -68,7 +70,7 @@ export default function LeafletMap({ lat, lng, destination, userLat, userLng }: 
       try {
         const apiKey = process.env.NEXT_PUBLIC_OPENCAGE_API_KEY;
         const res = await fetch(
-          `https://api.opencagedata.com/geocode/v1/json?q=${userLat}+${userLng}&key=${apiKey}`
+          `https://api.opencagedata.com/geocode/v1/json?q=${userCoords.lat}+${userCoords.lng}&key=${apiKey}`
         );
         const data = await res.json();
         const result = data.results?.[0];
@@ -88,8 +90,43 @@ export default function LeafletMap({ lat, lng, destination, userLat, userLng }: 
     };
 
     fetchLandmark();
-  }, [userLat, userLng]);
+  }, [userCoords.lat, userCoords.lng]);
 
+  useEffect(() => {
+    // if (isAdmin) return; // 🔒 Don't track location for admins
+  
+    if (!navigator.geolocation) {
+      console.warn("Geolocation not supported by this browser.");
+      return;
+    }
+  
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        setUserCoords({ lat: latitude, lng: longitude });
+  
+        // 🔁 Update backend
+        try {
+          await fetch("/api/update-location", {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              user_latitude: latitude,
+              user_longitude: longitude,
+            }),
+          });
+        } catch (err) {
+          console.error("Failed to update location in backend:", err);
+        }
+      },
+      (err) => {
+        console.error("Failed to get user location:", err);
+      }
+    );
+  }, [isAdmin]); // 👈 re-run if isAdmin changes
+  
   return (
     <MapContainer
       center={destinationPos}

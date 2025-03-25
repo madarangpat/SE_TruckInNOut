@@ -1,4 +1,3 @@
-"use client";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Image from "next/image";
@@ -41,15 +40,40 @@ const MapsPage = () => {
   const router = useRouter();
 
   const [trip, setTrip] = useState<Trip | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false); // State for checking if user is admin
 
   useEffect(() => {
+    // Assume a function `checkIfAdmin` that checks if the logged-in user is an admin
+    const checkIfAdmin = async () => {
+      try {
+        const res = await axios.get("/api/auth/check_role"); // Replace with actual API call to check the user's role
+        if (res.data.role === "admin") {
+          setIsAdmin(true);
+        }
+      } catch (err) {
+        console.error("Error checking user role:", err);
+      }
+    };
+
+    checkIfAdmin();
+
     const fetchTrip = async () => {
       try {
         const res = await axios.get("http://localhost:8000/api/trips/");
-        const filtered = res.data.find(
-          (t: Trip) => t.employee?.employee_id === Number(employeeId)
-        );
-        setTrip(filtered || null);
+        let filteredTrips;
+        if (isAdmin) {
+          filteredTrips = res.data; // Admin can see all trips
+        } else {
+          filteredTrips = res.data.filter(
+            (t: Trip) => t.employee?.employee_id === Number(employeeId)
+          ); // Employee sees only their own trips
+        }
+
+        if (filteredTrips.length > 0) {
+          setTrip(filteredTrips[0]); // Assuming an employee only has one active trip at a time
+        } else {
+          setTrip(null);
+        }
       } catch (err) {
         console.error("Error fetching trip data:", err);
       }
@@ -58,7 +82,7 @@ const MapsPage = () => {
     if (employeeId) {
       fetchTrip();
     }
-  }, [employeeId]);
+  }, [employeeId, isAdmin]);
 
   const getDestination = () => {
     if (!trip) return "";
@@ -78,12 +102,6 @@ const MapsPage = () => {
   const dest_lng = parseFloat(trip?.destination_longitude || "");
   const user_lat = parseFloat(trip?.user_latitude || "");
   const user_lng = parseFloat(trip?.user_longitude || "");
-  console.log(dest_lat + " " + dest_lng);
-  console.log(
-    "Raw lat/lng from trip:",
-    trip?.destination_latitude,
-    trip?.destination_longitude
-  );
 
   return (
     <div className="min-h-screen flex flex-col items-center py-8 px-4 md:px-8">
@@ -91,7 +109,7 @@ const MapsPage = () => {
         {/* ✅ Back Button */}
         <div className="flex justify-start mb-4">
           <button
-            onClick={() => router.push("/dashboard/admin/viewdeliveries")}
+            onClick={() => router.push(isAdmin ? "/dashboard/admin/viewdeliveries" : "/dashboard/employee/viewdeliveries")}
             className="bg-[#668743] text-white px-4 py-2 rounded-lg hover:bg-[#345216] transition-all shadow-md"
           >
             ← Back to View Deliveries
@@ -107,7 +125,7 @@ const MapsPage = () => {
               height={40}
               className="opacity-40"
             />
-            Trips in Progress
+            {isAdmin ? "All Trips" : "Your Trip"} {/* Dynamic text for admin vs employee */}
           </h2>
         </div>
 
@@ -151,13 +169,13 @@ const MapsPage = () => {
                 destination={getDestination()}
                 userLat={user_lat}
                 userLng={user_lng}
-                isAdmin={true}
+                isAdmin={isAdmin} // Pass the admin flag to LeafletMap component
               />
             </div>
           </div>
         ) : (
           <p className="text-white text-center">
-            Trip not found for this employee.
+            {isAdmin ? "No trips found." : "Trip not found for this employee."}
           </p>
         )}
       </div>

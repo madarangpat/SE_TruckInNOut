@@ -582,24 +582,6 @@ class ValidateResetPasswordTokenView(APIView):
             )
         return Response({"message": "Token is valid."}, status=status.HTTP_200_OK)
 # =====================================================================================================
-# DECLINE TRIP
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def decline_trip(request, trip_id):
-    try:
-        trip = Trip.objects.get(pk=trip_id)
-
-        if trip.employee and trip.employee.user == request.user:
-            trip.assignment_status = "declined"
-            trip.employee = None
-            trip.save()
-            return Response({"message": "Trip declined successfully."})
-        else:
-            return Response({"error": "Unauthorized or already unassigned."}, status=403)
-
-    except Trip.DoesNotExist:
-        return Response({"error": "Trip not found."}, status=404)
-# =====================================================================================================
 # GET the currently assigned trip (status = pending)
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -613,23 +595,8 @@ def get_assigned_trip(request):
         return Response(serializer.data)
     except Employee.DoesNotExist:
         return Response({"error": "No employee profile found."}, status=400)
-# =====================================================================================================
-# GET trips that are accepted or completed
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])
-def get_recent_trips(request):
-    try:
-        employee = request.user.employee_profile
-        trips = Trip.objects.filter(
-            employee=employee
-        ).filter(
-            Q(assignment_status="accepted") | Q(is_completed=True)
-        ).order_by("-start_date")
+    
 
-        serializer = TripSerializer(trips, many=True)
-        return Response(serializer.data)
-    except Employee.DoesNotExist:
-        return Response({"error": "No employee profile found."}, status=400)
 # =====================================================================================================
 #Accept trips
 @api_view(['POST'])
@@ -649,6 +616,60 @@ def accept_trip(request, trip_id):
     except Trip.DoesNotExist:
         return Response({"error": "Trip not found."}, status=404)
 # =====================================================================================================
+# DECLINE TRIP
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def decline_trip(request, trip_id):
+    try:
+        trip = Trip.objects.get(pk=trip_id)
+
+        if trip.employee and trip.employee.user == request.user:
+            trip.assignment_status = "declined"
+            trip.employee = None
+            trip.save()
+            return Response({"message": "Trip declined successfully."})
+        else:
+            return Response({"error": "Unauthorized or already unassigned."}, status=403)
+
+    except Trip.DoesNotExist:
+        return Response({"error": "Trip not found."}, status=404)
+# =====================================================================================================
+# GET trips that are accepted but not yet completed (Ongoing Trips)
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_ongoing_trips(request):
+    try:
+        employee = request.user.employee_profile
+        
+        # Using Q for filtering
+        trips = Trip.objects.filter(
+            employee=employee
+        ).filter(
+            Q(assignment_status="accepted") & Q(is_completed=False)
+        ).order_by("-start_date")
+
+        serializer = TripSerializer(trips, many=True)
+        return Response(serializer.data)
+
+    except Employee.DoesNotExist:
+        return Response({"error": "No employee profile found."}, status=400)
+# =====================================================================================================
+# GET trips that are accepted or completed
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_recent_trips(request):
+    try:
+        employee = request.user.employee_profile
+        trips = Trip.objects.filter(
+            employee=employee,
+            is_completed=True
+        ).order_by("-start_date")
+
+        serializer = TripSerializer(trips, many=True)
+        return Response(serializer.data)
+    except Employee.DoesNotExist:
+        return Response({"error": "No employee profile found."}, status=400)
+# =====================================================================================================
 #Get Unassigned Trips
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -659,7 +680,6 @@ def get_unassigned_trips(request):
     trips = Trip.objects.filter(employee__isnull=True).order_by("-start_date")
     serializer = TripSerializer(trips, many=True)
     return Response(serializer.data)
-# =====================================================================================================
 # =====================================================================================================
 # =====================================================================================================
 # =====================================================================================================

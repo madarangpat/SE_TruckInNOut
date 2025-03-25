@@ -4,8 +4,11 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { logout } from "@/lib/auth";
-import { updateUserData, uploadProfilePicture } from "@/lib/actions";
 import { PencilIcon } from "lucide-react";
+import {
+  updateUserData,
+  uploadProfilePicture,
+} from "@/lib/actions/user.actions";
 
 const MyProfileClient = ({ user }: { user: User }) => {
   const router = useRouter();
@@ -117,7 +120,9 @@ const MyProfileClient = ({ user }: { user: User }) => {
               <div className="flex items-center space-x-2">
                 {/* Make 'role' read-only */}
                 {field === "role" ? (
-                  <span className="text-sm text-stone-950">{employeeData[field]}</span>
+                  <span className="text-sm text-stone-950">
+                    {employeeData[field]}
+                  </span>
                 ) : editableField === field ? (
                   <input
                     type="text"
@@ -127,7 +132,9 @@ const MyProfileClient = ({ user }: { user: User }) => {
                     autoFocus
                   />
                 ) : (
-                  <span className="text-sm text-stone-950">{employeeData[field]}</span>
+                  <span className="text-sm text-stone-950">
+                    {employeeData[field]}
+                  </span>
                 )}
 
                 {editableField !== field && field !== "role" && (
@@ -146,7 +153,10 @@ const MyProfileClient = ({ user }: { user: User }) => {
                     >
                       ✓
                     </button>
-                    <button className="text-red-500 text-xs" onClick={handleCancelEdit}>
+                    <button
+                      className="text-red-500 text-xs"
+                      onClick={handleCancelEdit}
+                    >
                       ✗
                     </button>
                   </>
@@ -164,7 +174,6 @@ const MyProfileClient = ({ user }: { user: User }) => {
             </button>
           </div>
         </form>
-
 
         <div className="flex flex-col items-center space-y-2 mt-2">
           <button

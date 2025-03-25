@@ -85,6 +85,17 @@ class TripSerializer(serializers.ModelSerializer):
             'assignment_status',
         ]
 
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        full_destination_parts = [
+            instance.street_number, instance.street_name,
+            instance.barangay, instance.city,
+            instance.province, instance.region, instance.country
+        ]
+        full_destination = ', '.join([part for part in full_destination_parts if part])
+        representation['full_destination'] = full_destination
+        return representation
+
 # ✅ Salary Report Serializer
 class SalaryReportSerializer(serializers.ModelSerializer):
     class Meta:

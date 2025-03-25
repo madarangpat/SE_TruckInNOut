@@ -36,3 +36,24 @@ type Vehicle = {
   vehicle_type?: string;
   is_company_owned?: boolean;
 };
+
+type Trip = {
+  trip_id: number;
+  full_destination?: string;
+  client_info: string;
+  num_of_drops: number;
+  start_date: string;
+  end_date?: string;
+  assignment_status: string;
+  is_completed: boolean;
+  vehicle: {
+    plate_number: string;
+  };
+  employee?: {
+    employee_id: number;
+    user: {
+      username: string;
+      profile_image: string | null;
+    };
+  } | null;
+};
