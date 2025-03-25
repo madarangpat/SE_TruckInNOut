@@ -18,3 +18,4 @@ media
 _pycache_
 /venv
 *.iml
+backend/db.sqlite3

@@ -43,18 +43,19 @@ const CreateNewTripPage = () => {
     street_name: "",
     barangay: "",
     city: "",
+    postal_code: "",
     province: "",
     region: "",
     country: "Philippines",
     destination: "",
     distance: "",
-    numdrops: "",
+    num_of_drops: "",
     curr_drops: "0",
-    client_information: "",
+    client_info: "",
     start_date: new Date().toISOString().split("T")[0],
     end_date: "", 
-    user_latitude: "14.65903",
-    user_longitude: "121.101415",
+    user_latitude: "14.65889",
+    user_longitude: "121.10419",
     destination_latitude: "",
     destination_longitude: "",
   });
@@ -92,6 +93,7 @@ const CreateNewTripPage = () => {
       tripFormData.street_name,
       tripFormData.barangay,
       tripFormData.city,
+      tripFormData.postal_code,
       tripFormData.province,
       tripFormData.region,
       tripFormData.country,
@@ -105,36 +107,44 @@ const CreateNewTripPage = () => {
       vehicle_id: selectedVehicle.vehicle_id,
       employee_id: selectedEmployee.employee_id,
       helper_id: selectedHelper?.employee_id || null,
-  
+    
       street_number: toNullable(tripFormData.street_number),
       street_name: toNullable(tripFormData.street_name),
       barangay: toNullable(tripFormData.barangay),
       city: toNullable(tripFormData.city),
+      postal_code: toNullable(tripFormData.postal_code),
+    
       province: toNullable(tripFormData.province),
       region: toNullable(tripFormData.region),
-      country: tripFormData.country, // ✅ predefined
-  
+      country: tripFormData.country,
+    
       destination: fullDestination,
-      distance_traveled: toNullable(tripFormData.distance),
-      num_of_drops: toNullable(tripFormData.numdrops),
-      curr_drops: tripFormData.curr_drops, // ✅ predefined
-  
-      client_info: toNullable(tripFormData.client_information),
-      start_date: new Date(tripFormData.start_date).toISOString(), // ✅ predefined
+      distance_traveled: tripFormData.distance ? parseFloat(tripFormData.distance) : null,
+      num_of_drops: tripFormData.num_of_drops ? parseInt(tripFormData.num_of_drops) : null,  // ✅ fixed key
+      curr_drops: tripFormData.curr_drops,
+    
+      client_info: toNullable(tripFormData.client_info), // ✅ fixed key
+      start_date: new Date(tripFormData.start_date).toISOString(),
       end_date: toNullable(tripFormData.end_date)
         ? new Date(tripFormData.end_date).toISOString()
         : null,
-  
+    
       user_latitude: toNullable(tripFormData.user_latitude),
       user_longitude: toNullable(tripFormData.user_longitude),
       destination_latitude: toNullable(tripFormData.destination_latitude),
       destination_longitude: toNullable(tripFormData.destination_longitude),
     };
+    
   
     try {
+      console.log("payload before POST:", payload);
       const response = await axios.post("http://127.0.0.1:8000/api/register-trip/", payload);
       console.log("API Response:", response);
       setSuccess("Trip successfully created!");
+
+      setTimeout(() => {
+        setSuccess(null);
+      }, 4000);
   
       setSelectedVehicle(null);
       setSelectedEmployee(null);
@@ -144,17 +154,18 @@ const CreateNewTripPage = () => {
         barangay: "",
         city: "",
         province: "",
+        postal_code:"",
         region: "",
         country: "Philippines",
         destination: "",
         distance: "",
-        numdrops: "",
+        num_of_drops: "",
         curr_drops: "0",
-        client_information: "",
+        client_info: "",
         start_date: new Date().toISOString().split("T")[0],
         end_date: "",
-        user_latitude: "",
-        user_longitude: "",
+        user_latitude: "14.65889",
+        user_longitude: "121.10419",
         destination_latitude: "",
         destination_longitude: "",
       });
@@ -199,6 +210,7 @@ const CreateNewTripPage = () => {
       street_name,
       barangay,
       city,
+      postal_code,
       province,
       region,
       country,
@@ -209,6 +221,7 @@ const CreateNewTripPage = () => {
       street_name,
       barangay,
       city,
+      postal_code,
       province,
       region,
       country,
@@ -244,18 +257,8 @@ const CreateNewTripPage = () => {
     }, 1500); // wait for 1.5s after typing stops
   
     return () => clearTimeout(delay);
-  }, [
-    tripFormData.street_number,
-    tripFormData.street_name,
-    tripFormData.barangay,
-    tripFormData.city,
-    tripFormData.province,
-    tripFormData.region,
-    tripFormData.country,
-  ]);
+  }, [tripFormData]);
   
-  
-
   return (
     <div className="min-h-screen flex flex-col items-center py-8 px-4 md:px-8">      
       <form onSubmit={handleSubmit} className="wrapper w-full max-w-4xl mx-auto p-6 rounded-2xl bg-black/20 shadow-lg space-y-6">
@@ -275,59 +278,91 @@ const CreateNewTripPage = () => {
         {/* Selection */}
         <div>
           <h3 className="text-lg font-bold mb-2 text-black/70">Selection</h3>
-          <div className="space-y-3">
-            {[{
-              label: "Select Vehicle",
-              list: vehicles,
-              selected: selectedVehicle,
-              setSelected: setSelectedVehicle,
-              open: vehicleDropdownOpen,
-              setOpen: setVehicleDropdownOpen,
-              labelFn: (v: Vehicle) => `${v.plate_number} (${v.vehicle_type})`,
-            }, {
-              label: "Select Employee",
-              list: employees,
-              selected: selectedEmployee,
-              setSelected: setSelectedEmployee,
-              open: employeeDropdownOpen,
-              setOpen: setEmployeeDropdownOpen,
-              labelFn: (e: Employee) => e.user.username,
-            }, {
-              label: "Select Helper (Optional)",
-              list: employees,
-              selected: selectedHelper,
-              setSelected: setSelectedHelper,
-              open: helperDropdownOpen,
-              setOpen: setHelperDropdownOpen,
-              labelFn: (e: Employee) => e.user.username,
-            }].map(({ label, list, selected, setSelected, open, setOpen, labelFn }, idx) => (
-              <div key={idx} className="relative">
-                <button
-                  type="button"
-                  onClick={() => setOpen(!open)}
-                  className="w-full px-4 py-3 bg-zinc-700/40 text-white rounded-lg flex justify-between items-center hover:bg-black/40 shadow-md uppercase tracking-widest text-sm"
-                >
-                  {selected ? labelFn(selected) : label}
-                  <span>▼</span>
-                </button>
-                {open && (
-                  <div className="absolute w-full bg-zinc-600 text-white mt-1 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
-                    {list.map((item: any) => (
-                      <button
-                        key={item.employee_id || item.vehicle_id}
-                        onClick={() => {
-                          setSelected(item);
-                          setOpen(false);
-                        }}
-                        className="w-full text-left px-4 py-2 hover:bg-black/40 uppercase tracking-widest text-sm"
-                      >
-                        {labelFn(item)}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
+          <div className="space-y-3">           
+            {/* Vehicle Dropdown */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setVehicleDropdownOpen(!vehicleDropdownOpen)}
+                className="w-full px-4 py-3 bg-zinc-700/40 text-white rounded-lg flex justify-between items-center hover:bg-black/40 shadow-md uppercase tracking-widest text-sm"
+              >
+                {selectedVehicle ? `${selectedVehicle.plate_number} (${selectedVehicle.vehicle_type})` : "Select Vehicle"}
+                <span>▼</span>
+              </button>
+              {vehicleDropdownOpen && (
+                <div className="absolute w-full bg-zinc-600 text-white mt-1 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
+                  {vehicles.map((vehicle) => (
+                    <button
+                      key={vehicle.vehicle_id}
+                      onClick={() => {
+                        setSelectedVehicle(vehicle);
+                        setVehicleDropdownOpen(false);
+                      }}
+                      className="w-full text-left px-4 py-2 hover:bg-black/40 uppercase tracking-widest text-sm"
+                    >
+                      {vehicle.plate_number} ({vehicle.vehicle_type})
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Employee Dropdown */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setEmployeeDropdownOpen(!employeeDropdownOpen)}
+                className="w-full px-4 py-3 bg-zinc-700/40 text-white rounded-lg flex justify-between items-center hover:bg-black/40 shadow-md uppercase tracking-widest text-sm"
+              >
+                {selectedEmployee ? selectedEmployee.user.username : "Select Employee"}
+                <span>▼</span>
+              </button>
+              {employeeDropdownOpen && (
+                <div className="absolute w-full bg-zinc-600 text-white mt-1 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
+                  {employees.map((emp) => (
+                    <button
+                      key={emp.employee_id}
+                      onClick={() => {
+                        setSelectedEmployee(emp);
+                        setEmployeeDropdownOpen(false);
+                      }}
+                      className="w-full text-left px-4 py-2 hover:bg-black/40 uppercase tracking-widest text-sm"
+                    >
+                      {emp.user.username}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Helper Dropdown */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setHelperDropdownOpen(!helperDropdownOpen)}
+                className="w-full px-4 py-3 bg-zinc-700/40 text-white rounded-lg flex justify-between items-center hover:bg-black/40 shadow-md uppercase tracking-widest text-sm"
+              >
+                {selectedHelper ? selectedHelper.user.username : "Select Helper (Optional)"}
+                <span>▼</span>
+              </button>
+              {helperDropdownOpen && (
+                <div className="absolute w-full bg-zinc-600 text-white mt-1 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
+                  {employees.map((emp) => (
+                    <button
+                      key={emp.employee_id}
+                      onClick={() => {
+                        setSelectedHelper(emp);
+                        setHelperDropdownOpen(false);
+                      }}
+                      className="w-full text-left px-4 py-2 hover:bg-black/40 uppercase tracking-widest text-sm"
+                    >
+                      {emp.user.username}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
           </div>
         </div>
 
@@ -335,7 +370,7 @@ const CreateNewTripPage = () => {
         <div>
           <h3 className="text-lg font-bold mb-2 text-black/70">Address Destination</h3>
           <div className="grid grid-cols-2 gap-3">            
-            {["street_number", "street_name", "barangay", "city", "province", "region", "country", "destination"].map((field) => {
+            {["street_number", "street_name", "barangay", "city", "postal_code", "province", "region", "country", "destination"].map((field) => {
               const isDestination = field === "destination";
               return isDestination ? (
                 <div
@@ -346,15 +381,44 @@ const CreateNewTripPage = () => {
                   {tripFormData.destination}
                 </div>
               ) : (
-                <input
-                  key={field}
-                  type="text"
-                  placeholder={field.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
-                  className="input-field text-black rounded"
-                  value={(tripFormData as any)[field]}
-                  onChange={(e) => setTripFormData({ ...tripFormData, [field]: e.target.value })}
-                  readOnly={field === "country"}
-                />
+                field === "region" ? (
+                  <select
+                    key="region"
+                    value={tripFormData.region}
+                    onChange={(e) => setTripFormData({ ...tripFormData, region: e.target.value })}
+                    className="input-field text-black rounded"
+                  >
+                    <option value="">Select Region</option>
+                    <option value="Region I">Region I – Ilocos Region</option>
+                    <option value="Region II">Region II – Cagayan Valley</option>
+                    <option value="Region III">Region III – Central Luzon</option>
+                    <option value="Region IV‑A">Region IV‑A – CALABARZON</option>
+                    <option value="MIMAROPA">MIMAROPA Region</option>
+                    <option value="Region V">Region V – Bicol Region</option>
+                    <option value="Region VI">Region VI – Western Visayas</option>
+                    <option value="Region VII">Region VII – Central Visayas</option>
+                    <option value="Region VIII">Region VIII – Eastern Visayas</option>
+                    <option value="Region IX">Region IX – Zamboanga Peninsula</option>
+                    <option value="Region X">Region X – Northern Mindanao</option>
+                    <option value="Region XI">Region XI – Davao Region</option>
+                    <option value="Region XII">Region XII – SOCCSKSARGEN</option>
+                    <option value="Region XIII">Region XIII – Caraga</option>
+                    <option value="NCR">NCR – National Capital Region</option>
+                    <option value="CAR">CAR – Cordillera Administrative Region</option>
+                    <option value="BARMM">BARMM – Bangsamoro Autonomous Region in Muslim Mindanao</option>
+                    <option value="NIR">NIR – Negros Island Region</option>
+                  </select>
+                ) : (
+                  <input
+                    key={field}
+                    type="text"
+                    placeholder={field.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                    className="input-field text-black rounded"
+                    value={(tripFormData as any)[field]}
+                    onChange={(e) => setTripFormData({ ...tripFormData, [field]: e.target.value })}
+                    readOnly={field === "country"}
+                  />
+                )
               );
             })}
           </div>
@@ -371,6 +435,7 @@ const CreateNewTripPage = () => {
                 tripFormData.street_name,
                 tripFormData.barangay,
                 tripFormData.city,
+                tripFormData.postal_code,
                 tripFormData.province,
                 tripFormData.region,
                 tripFormData.country,
@@ -420,7 +485,7 @@ const CreateNewTripPage = () => {
               }
             }}            
           >
-            Confirm Address
+            Calculate Distance
           </button>
 
           <button
@@ -433,6 +498,7 @@ const CreateNewTripPage = () => {
                 street_name: "",
                 barangay: "",
                 city: "",
+                postal_code: "",
                 province: "",
                 region: "",
                 country: "Philippines",
@@ -448,43 +514,111 @@ const CreateNewTripPage = () => {
         <div>
           <h3 className="text-lg font-bold mb-2 text-black/70">Trip Details</h3>
           <div className="grid grid-cols-2 gap-3">
-            {["distance", "numdrops", "curr_drops", "client_information", "start_date", "end_date", "user_latitude", "user_longitude", "destination_latitude", "destination_longitude"].map((field) => (
-              <input
-                key={field}
-                type={field.includes("date") ? "date" : field.includes("latitude") || field.includes("longitude") || field.includes("distance") ? "number" : "text"}
-                placeholder={field.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
-                className="input-field text-black rounded placeholder:text-sm"
-                value={(tripFormData as any)[field]}
-                onChange={(e) => setTripFormData({ ...tripFormData, [field]: e.target.value })}
-                readOnly={field === "start_date" || field === "curr_drops"}
-              />
-            ))}
+          <input
+            type="number"
+            placeholder="Distance Traveled"
+            className="input-field text-black rounded placeholder:text-sm"
+            value={tripFormData.distance}
+            onChange={(e) => setTripFormData({ ...tripFormData, distance: e.target.value })}
+          />
+
+          <input
+            type="number"
+            placeholder="Num of Drops"
+            className="input-field text-black rounded placeholder:text-sm"
+            value={tripFormData.num_of_drops}
+            onChange={(e) => setTripFormData({ ...tripFormData, num_of_drops: e.target.value })}
+          />
+
+          <input
+            type="number"
+            placeholder="Curr Drops"
+            className="input-field text-black rounded placeholder:text-sm"
+            value={tripFormData.curr_drops}
+            readOnly
+          />
+
+          <input
+            type="text"
+            placeholder="Client Info"
+            className="input-field text-black rounded placeholder:text-sm"
+            value={tripFormData.client_info}
+            onChange={(e) => setTripFormData({ ...tripFormData, client_info: e.target.value })}
+          />
+
+          <input
+            type="date"
+            placeholder="Start Date"
+            className="input-field text-black rounded placeholder:text-sm"
+            value={tripFormData.start_date}
+            readOnly
+          />
+
+          <input
+            type="date"
+            placeholder="End Date"
+            className="input-field text-black rounded placeholder:text-sm"
+            value={tripFormData.end_date}
+            onChange={(e) => setTripFormData({ ...tripFormData, end_date: e.target.value })}
+          />
+
+          <input
+            type="number"
+            placeholder="User Latitude"
+            className="input-field text-black rounded placeholder:text-sm"
+            value={tripFormData.user_latitude}
+            onChange={(e) => setTripFormData({ ...tripFormData, user_latitude: e.target.value })}
+          />
+
+          <input
+            type="number"
+            placeholder="User Longitude"
+            className="input-field text-black rounded placeholder:text-sm"
+            value={tripFormData.user_longitude}
+            onChange={(e) => setTripFormData({ ...tripFormData, user_longitude: e.target.value })}
+          />
+
+          <input
+            type="number"
+            placeholder="Destination Latitude"
+            className="input-field text-black rounded placeholder:text-sm"
+            value={tripFormData.destination_latitude}
+            onChange={(e) => setTripFormData({ ...tripFormData, destination_latitude: e.target.value })}
+          />
+
+          <input
+            type="number"
+            placeholder="Destination Longitude"
+            className="input-field text-black rounded placeholder:text-sm"
+            value={tripFormData.destination_longitude}
+            onChange={(e) => setTripFormData({ ...tripFormData, destination_longitude: e.target.value })}
+          />
           </div>
         </div>
 
         <div className="flex justify-start">
-        <button
-          type="button"
-          className="bg-[#668743] text-white px-6 py-2 rounded-lg hover:bg-[#345216] transition-all min-w-[160px] text-center mt-2"
-          onClick={() => {
-            setTripFormData((prev) => ({
-              ...prev,
-              distance: "",
-              numdrops: "",
-              curr_drops: "0",
-              client_information: "",
-              start_date: new Date().toISOString().split("T")[0],
-              end_date: "",
-              user_latitude: "",
-              user_longitude: "",
-              destination_latitude: "",
-              destination_longitude: ""
-            }));
-          }}
-        >
-          Clear Details
-        </button>
-      </div>
+          <button
+            type="button"
+            className="bg-[#668743] text-white px-6 py-2 rounded-lg hover:bg-[#345216] transition-all min-w-[160px] text-center mt-2"
+            onClick={() => {
+              setTripFormData((prev) => ({
+                ...prev,
+                distance: "",
+                numdrops: "",
+                curr_drops: "0",
+                client_information: "",
+                start_date: new Date().toISOString().split("T")[0],
+                end_date: "",
+                // user_latitude: "",
+                // user_longitude: "",
+                destination_latitude: "",
+                destination_longitude: ""
+              }));
+            }}
+          >
+            Clear Details
+          </button>
+        </div>
 
         <button
           type="submit"
@@ -498,7 +632,7 @@ const CreateNewTripPage = () => {
             className="mb-4 self-start bg-[#668743] hover:bg-[#345216] text-white px-4 py-2 rounded-lg transition"
           >
             ← Back to Deliveries
-          </button>
+        </button>
 
         {error && <p className="text-red-500 mt-4">{error}</p>}
         {success && <p className="text-green-600 mt-4">{success}</p>}

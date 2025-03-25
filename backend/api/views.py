@@ -36,6 +36,7 @@ from reportlab.lib.pagesizes import letter, landscape
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
 from reportlab.platypus import Table, TableStyle
+from django.db.models import Q
 
 User = get_user_model()
 
@@ -131,18 +132,25 @@ class RegisterTripView(APIView):
                 vehicle=vehicle,
                 employee=employee,
                 helper=helper,
+                
                 street_number=request.data.get("street_number"),
                 street_name=request.data.get("street_name"),
                 barangay=request.data.get("barangay"),
                 city=request.data.get("city"),
+                postal_code=request.data.get("postal_code"),
+                
                 province=request.data.get("province"),
                 region=request.data.get("region"),
-                distance_traveled=request.data.get("distance"),
-                num_of_drops=request.data.get("numdrops"),
+                country=request.data.get("country"),
+                
+                distance_traveled=request.data.get("distance_traveled"),
+                num_of_drops=request.data.get("num_of_drops"),
                 curr_drops=request.data.get("curr_drops", 0),
-                client_info=request.data.get("client_information"),
+                client_info=request.data.get("client_info"),
+                
                 start_date=request.data.get("start_date"),
                 end_date=request.data.get("end_date"),
+                
                 user_latitude=request.data.get("user_latitude"),
                 user_longitude=request.data.get("user_longitude"),
                 destination_latitude=request.data.get("destination_latitude"),
@@ -573,3 +581,85 @@ class ValidateResetPasswordTokenView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         return Response({"message": "Token is valid."}, status=status.HTTP_200_OK)
+# =====================================================================================================
+# DECLINE TRIP
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def decline_trip(request, trip_id):
+    try:
+        trip = Trip.objects.get(pk=trip_id)
+
+        if trip.employee and trip.employee.user == request.user:
+            trip.assignment_status = "declined"
+            trip.employee = None
+            trip.save()
+            return Response({"message": "Trip declined successfully."})
+        else:
+            return Response({"error": "Unauthorized or already unassigned."}, status=403)
+
+    except Trip.DoesNotExist:
+        return Response({"error": "Trip not found."}, status=404)
+# =====================================================================================================
+# GET the currently assigned trip (status = pending)
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_assigned_trip(request):
+    try:
+        employee = request.user.employee_profile
+        trip = Trip.objects.filter(employee=employee, assignment_status="pending").first()
+        if not trip:
+            return Response({}, status=204)
+        serializer = TripSerializer(trip)
+        return Response(serializer.data)
+    except Employee.DoesNotExist:
+        return Response({"error": "No employee profile found."}, status=400)
+# =====================================================================================================
+# GET trips that are accepted or completed
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_recent_trips(request):
+    try:
+        employee = request.user.employee_profile
+        trips = Trip.objects.filter(
+            employee=employee
+        ).filter(
+            Q(assignment_status="accepted") | Q(is_completed=True)
+        ).order_by("-start_date")
+
+        serializer = TripSerializer(trips, many=True)
+        return Response(serializer.data)
+    except Employee.DoesNotExist:
+        return Response({"error": "No employee profile found."}, status=400)
+# =====================================================================================================
+#Accept trips
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def accept_trip(request, trip_id):
+    try:
+        trip = Trip.objects.get(pk=trip_id)
+
+        # Only allow the assigned employee to accept it
+        if trip.employee and trip.employee.user == request.user:
+            trip.assignment_status = "accepted"
+            trip.save()
+            return Response({"message": "Trip accepted successfully."})
+        else:
+            return Response({"error": "Unauthorized or already accepted."}, status=403)
+
+    except Trip.DoesNotExist:
+        return Response({"error": "Trip not found."}, status=404)
+# =====================================================================================================
+#Get Unassigned Trips
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_unassigned_trips(request):
+    if request.user.role != "admin":
+        return Response({"error": "Only admins can view this."}, status=403)
+
+    trips = Trip.objects.filter(employee__isnull=True).order_by("-start_date")
+    serializer = TripSerializer(trips, many=True)
+    return Response(serializer.data)
+# =====================================================================================================
+# =====================================================================================================
+# =====================================================================================================
+# =====================================================================================================

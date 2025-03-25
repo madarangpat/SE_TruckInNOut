@@ -5,6 +5,7 @@ from .validators import validate_image
 from .utils import remove_file_from_s3
 from storages.backends.s3boto3 import S3Boto3Storage
 from django.contrib.auth import get_user_model
+from django.core.validators import RegexValidator
 
 class SalaryConfiguration(models.Model):
     sss = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
@@ -148,30 +149,69 @@ class Salary(models.Model):
         return f"Salary {self.salary_id}"
 
 class Trip(models.Model):
+    REGION_CHOICES = [
+        ("Region I", "Region I – Ilocos Region"),
+        ("Region II", "Region II – Cagayan Valley"),
+        ("Region III", "Region III – Central Luzon"),
+        ("Region IV‑A", "Region IV‑A – CALABARZON"),
+        ("MIMAROPA", "MIMAROPA Region"),
+        ("Region V", "Region V – Bicol Region"),
+        ("Region VI", "Region VI – Western Visayas"),
+        ("Region VII", "Region VII – Central Visayas"),
+        ("Region VIII", "Region VIII – Eastern Visayas"),
+        ("Region IX", "Region IX – Zamboanga Peninsula"),
+        ("Region X", "Region X – Northern Mindanao"),
+        ("Region XI", "Region XI – Davao Region"),
+        ("Region XII", "Region XII – SOCCSKSARGEN"),
+        ("Region XIII", "Region XIII – Caraga"),
+        ("NCR", "NCR – National Capital Region"),
+        ("CAR", "CAR – Cordillera Administrative Region"),
+        ("BARMM", "BARMM – Bangsamoro Autonomous Region in Muslim Mindanao"),
+        ("NIR", "NIR – Negros Island Region"),
+    ]
+    
+    ASSIGNMENT_STATUS_CHOICES = [
+        ("pending", "Pending"),
+        ("accepted", "Accepted"),
+        ("declined", "Declined"),
+        ("reassigned", "Reassigned"),
+    ]
+    
     trip_id = models.AutoField(primary_key=True)
     vehicle = models.ForeignKey('Vehicle', on_delete=models.CASCADE)
     employee = models.ForeignKey('Employee', on_delete=models.SET_NULL, null=True, blank=True, related_name='trips')
     helper = models.ForeignKey('Employee', on_delete=models.SET_NULL, null=True, blank=True, related_name='helper_trips')
+    
+    assignment_status = models.CharField(
+        max_length=20,
+        choices=ASSIGNMENT_STATUS_CHOICES,
+        default="pending"
+    )
     
     # Structureed Destination Fields
     street_number = models.CharField(max_length=50, null=True, blank=True)
     street_name = models.CharField(max_length=255, null=True, blank=True)
     barangay = models.CharField(max_length=255, null=True, blank=True)
     city = models.CharField(max_length=255, null=True, blank=True)
+    postal_code = models.CharField(max_length=10, null=True, blank=True)
     province = models.CharField(max_length=255, null=True, blank=True)
-    region = models.CharField(max_length=255, null=True)
+    region = models.CharField(
+        max_length=50,
+        choices=REGION_CHOICES,
+        blank=True,
+        null=True
+    )
     country = models.CharField(max_length=255, default="Philippines", editable=False)
-    
-    distance_traveled = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    distance_traveled = models.DecimalField(max_digits=10, decimal_places=5, null=True, blank=True)
     num_of_drops = models.IntegerField(null=True, blank=True)
     curr_drops = models.IntegerField(null=True, blank=True)
     client_info = models.CharField(max_length=255, null=True, blank=True)
     start_date = models.DateTimeField(null=True, blank=True)
     end_date = models.DateTimeField(null=True, blank=True)
-    user_latitude = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    user_longitude = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    destination_latitude = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    destination_longitude = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    user_latitude = models.DecimalField(max_digits=10, decimal_places=5, null=True, blank=True)
+    user_longitude = models.DecimalField(max_digits=10, decimal_places=5, null=True, blank=True)
+    destination_latitude = models.DecimalField(max_digits=10, decimal_places=5, null=True, blank=True)
+    destination_longitude = models.DecimalField(max_digits=10, decimal_places=5, null=True, blank=True)
     is_completed = models.BooleanField(default=False)
     
     def __str__(self):

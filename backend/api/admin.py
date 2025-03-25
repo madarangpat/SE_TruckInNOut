@@ -52,9 +52,10 @@ class SalaryReportAdmin(admin.ModelAdmin):
 
 # ✅ Trip Admin - Shows Important Trip Info
 class TripAdmin(admin.ModelAdmin):
-    list_display = ('trip_id', 'vehicle', 'get_full_destination', 'start_date', 'end_date')
+    list_display = ('trip_id', 'vehicle', 'get_full_destination', 'assignment_status', 'start_date', 'end_date')
     search_fields = ('vehicle__plate_number', 'street_name', 'barangay', 'city', 'province')   
-
+    list_filter = ('assignment_status',)
+    
 # ✅ Register Models in Admin
 admin.site.register(User, CustomUserAdmin)
 admin.site.register(Administrator, AdministratorAdmin)  # ✅ Added custom admin

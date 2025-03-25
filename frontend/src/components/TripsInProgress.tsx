@@ -26,7 +26,7 @@ const TripsInProgress = () => {
   useEffect(() => {
     const fetchTrips = async () => {
       try {
-        const res = await axios.get("http://localhost:8000/api/trips/");
+        const res = await axios.get("http://localhost:8000/api/trips/");       
         const activeTrips = res.data.filter((trip: Trip) => trip.is_completed === false);
         setTrips(activeTrips);
       } catch (err) {
@@ -71,8 +71,9 @@ const TripsInProgress = () => {
               <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center border-2 border-white">
                 <Image
                   src={
-                    trip.employee?.user.profile_image ||
-                    "/accounts.png"
+                    trip.employee?.user?.profile_image
+                      ? trip.employee.user.profile_image
+                    : "/accounts.png"
                   }
                   alt="Profile"
                   width={70}
@@ -81,7 +82,7 @@ const TripsInProgress = () => {
                 />
               </div>
               <span className="mt-2 text-sm text-white/90">
-                {trip.employee?.user.username || "No Employee"}
+                {trip.employee?.user?.username || "No Employee"}
               </span>
             </div>
           ))

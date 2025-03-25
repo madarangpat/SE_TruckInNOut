@@ -5,12 +5,12 @@ import Menu from "@/components/Menu";
 import "leaflet/dist/leaflet.css";
 import "./layout.css";
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = getSession();
+  const session = await getSession();
   const user = session?.user;
 
   return (

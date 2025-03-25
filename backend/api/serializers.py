@@ -50,12 +50,6 @@ class NestedEmployeeSerializer(serializers.ModelSerializer):
         fields = ['employee_id', 'user']
 # ================================
 
-# # ✅ Trip Serializer
-# class TripSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = Trip
-#         fields = '__all__'
-
 # ✅ Vehicle Serializer (Updated)
 class VehicleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -75,20 +69,21 @@ class VehicleSerializer(serializers.ModelSerializer):
 class TripSerializer(serializers.ModelSerializer):
     employee = NestedEmployeeSerializer()
     vehicle = VehicleSerializer()
-
+    
     class Meta:
         model = Trip
         fields = [
-            'trip_id', 'employee', 'vehicle',
+            'trip_id', 'employee', 'vehicle', 'helper',
             'client_info', 'distance_traveled',
             'user_latitude', 'user_longitude',
+            'destination_latitude', 'destination_longitude',
             'street_number', 'street_name', 'barangay',
-            'city', 'province', 'region', 'country',
+            'city', 'postal_code', 'province', 'region', 'country',
             'start_date', 'end_date',
-            'is_completed'
+            'num_of_drops', 'curr_drops',
+            'is_completed',
+            'assignment_status',
         ]
-
-
 
 # ✅ Salary Report Serializer
 class SalaryReportSerializer(serializers.ModelSerializer):
