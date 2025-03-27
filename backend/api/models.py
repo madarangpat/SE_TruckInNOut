@@ -13,7 +13,7 @@ class SalaryConfiguration(models.Model):
     pag_ibig = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
 
     def __str__(self):
-        return f"Salary Configuration for {self.employee.user.username}"
+        return "Global Salary Configuration"
 
 class User(AbstractUser):
     SUPER_ADMIN = 'super_admin'
@@ -114,7 +114,6 @@ class Employee(models.Model):
     )
     salary = models.ForeignKey('Salary', on_delete=models.CASCADE, null=True, blank=True)
     employee_type = models.CharField(max_length=50, null=True, blank=True)
-    salary_configuration = models.OneToOneField(SalaryConfiguration, on_delete=models.CASCADE, null=True, blank=True)
 
     def save(self, *args, **kwargs):
         # Only create a default salary configuration when this is a new instance
@@ -203,6 +202,7 @@ class Trip(models.Model):
     )
     country = models.CharField(max_length=255, default="Philippines", editable=False)
     distance_traveled = models.DecimalField(max_digits=10, decimal_places=5, null=True, blank=True)
+    multiplier = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     num_of_drops = models.IntegerField(null=True, blank=True)
     curr_drops = models.IntegerField(null=True, blank=True)
     client_info = models.CharField(max_length=255, null=True, blank=True)

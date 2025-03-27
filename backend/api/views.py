@@ -2,6 +2,7 @@ from datetime import datetime
 
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
+from django.forms import ValidationError
 from rest_framework import generics
 from django.conf import settings
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -40,6 +41,8 @@ from django.db.models import Q
 
 User = get_user_model()
 
+#==================================================================================================================================================================================
+# [Function]
 @api_view(["PUT"])
 @permission_classes([IsAuthenticated])
 def update_employee_profile(request):
@@ -52,7 +55,6 @@ def update_employee_profile(request):
         return Response({"message": "Profile updated successfully!", "user": serializer.data})
 
     return Response(serializer.errors, status=400)
-
 
 #==================================================================================================================================================================================
 # ADD ACCOUNT FOR USER
@@ -170,6 +172,7 @@ class RegisterTripView(APIView):
 class LoginView(TokenObtainPairView):
     serializer_class = LoginSerializer
 
+#==================================================================================================================================================================================
 class SendPasswordLinkView(generics.GenericAPIView):
     permission_classes = [AllowAny]
     serializer_class = ResetPasswordRequestSerializer
@@ -239,22 +242,26 @@ class ResetPasswordView(generics.GenericAPIView):
             return Response({'success':'Password updated'})
         else: 
             return Response({'error':'No user found'}, status=404)
-
+        
+#==================================================================================================================================================================================
 # Custom Permissions
 class IsAdminUser(IsAuthenticated):
     def has_permission(self, request, view):
         return super().has_permission(request, view) and request.user.role == 'admin'
 
+#==================================================================================================================================================================================
 class IsEmployeeUser(IsAuthenticated):
     def has_permission(self, request, view):
         return super().has_permission(request, view) and request.user.role == 'employee'
-   
+
+#==================================================================================================================================================================================   
 class UserListView(generics.ListAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
+#==================================================================================================================================================================================
 class EmployeeCreateView(generics.CreateAPIView):
     queryset = Employee.objects.all()
     serializer_class = EmployeeSerializer
@@ -268,39 +275,39 @@ class EmployeeListView(generics.ListAPIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [AllowAny] # Will change to IsAuthenticated once token problem is fixed
 
+#==================================================================================================================================================================================
 class EmployeeDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Employee.objects.all()
     serializer_class = EmployeeSerializer
     permission_classes = [IsAuthenticated]
 
+#==================================================================================================================================================================================
 # Administrator Views (Only Admins can manage Admins)
 class AdministratorListView(generics.ListCreateAPIView):
     queryset = Administrator.objects.all()
     serializer_class = AdministratorSerializer
     permission_classes = [IsAdminUser]
 
+#==================================================================================================================================================================================
 class AdministratorDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Administrator.objects.all()
     serializer_class = AdministratorSerializer
     permission_classes = [IsAdminUser]
 
+#==================================================================================================================================================================================
 # Salary Views
 class SalaryListView(generics.ListCreateAPIView):
     queryset = Salary.objects.all()
     serializer_class = SalarySerializer
     permission_classes = [IsAdminUser]
 
+#==================================================================================================================================================================================
 class SalaryDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Salary.objects.all()
     serializer_class = SalarySerializer
     permission_classes = [IsAdminUser]
 
-# Trip Views
-# class TripListView(generics.ListCreateAPIView):
-#     queryset = Trip.objects.all()
-#     serializer_class = TripSerializer
-#     permission_classes = [IsAuthenticated]
-
+#==================================================================================================================================================================================
 class TripListView(generics.ListAPIView):
     serializer_class = TripSerializer
     permission_classes = [AllowAny]
@@ -308,28 +315,33 @@ class TripListView(generics.ListAPIView):
     def get_queryset(self):
         return Trip.objects.all()
 
+#==================================================================================================================================================================================
 class TripDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Trip.objects.all()
     serializer_class = TripSerializer
     permission_classes = [IsAuthenticated]
 
+#==================================================================================================================================================================================
 # Vehicle Views
 class VehicleListView(generics.ListCreateAPIView):
     queryset = Vehicle.objects.all()
     serializer_class = VehicleSerializer
     permission_classes = [AllowAny]
 
+#==================================================================================================================================================================================
 class VehicleDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Vehicle.objects.all()
     serializer_class = VehicleSerializer
     # permission_classes = [IsAuthenticated]
 
+#==================================================================================================================================================================================
 # Salary Report Views
 class SalaryReportListView(generics.ListCreateAPIView):
     queryset = SalaryReport.objects.all()
     serializer_class = SalaryReportSerializer
     permission_classes = [IsAdminUser]
 
+#==================================================================================================================================================================================
 class SalaryReportDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = SalaryReport.objects.all()
     serializer_class = SalaryReportSerializer
@@ -465,33 +477,51 @@ def get_users(request):
 
 #==================================================================================================================================================================================
 #SETTINGS SALARY CONFIGURATION
+# List and Create Salary Configuration
+class SalaryConfigurationListCreateView(generics.ListCreateAPIView):
+    queryset = SalaryConfiguration.objects.all()
+    serializer_class = SalaryConfigurationSerializer
+    permission_classes = [IsAuthenticated] 
+
+    def perform_create(self, serializer):
+        # You can enforce only one salary configuration (this could be an admin-only action)
+        if SalaryConfiguration.objects.exists():
+            raise ValidationError("Only one salary configuration can exist.")
+        serializer.save()
+        
+#==================================================================================================================================================================================
+# Retrieve, Update, and Delete Salary Configuration
+class SalaryConfigurationRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = SalaryConfiguration.objects.all()
+    serializer_class = SalaryConfigurationSerializer
+    permission_classes = [IsAuthenticated] 
+    
+    def get_queryset(self):
+        #Return the single, global SalaryConfiguration entry
+        return SalaryConfiguration.objects.all()
+    
+    def perform_update(self, serializer):
+        # You could enforce additional logic here if necessary
+        serializer.save()
+        
+#==================================================================================================================================================================================        
 class SalaryConfigurationListView(generics.ListAPIView):
     queryset = SalaryConfiguration.objects.all()
     serializer_class = SalaryConfigurationSerializer
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
-# ✅ List and Create Salary Configuration
-class SalaryConfigurationListCreateView(generics.ListCreateAPIView):
+#==================================================================================================================================================================================
+# Additional utility to fetch the global configuration
+class SalaryConfigurationGlobalView(generics.RetrieveAPIView):
     queryset = SalaryConfiguration.objects.all()
     serializer_class = SalaryConfigurationSerializer
-    permission_classes = [AllowAny]  # Ensure that the user is authenticated
+    permission_classes = [IsAuthenticated]
 
-    def perform_create(self, serializer):
-        """
-        You can override the `perform_create` method if you need to customize 
-        the creation logic, such as associating the user with the salary configuration.
-        """
-        # You can add logic to associate the user with the salary configuration if needed
-        serializer.save()
-
-
-# ✅ Retrieve, Update, and Delete Salary Configuration
-class SalaryConfigurationRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = SalaryConfiguration.objects.all()
-    serializer_class = SalaryConfigurationSerializer
-    permission_classes = [AllowAny]  # Ensure that the user is authenticated
-
+    def get_object(self):
+        # There should only be one global configuration
+        return SalaryConfiguration.objects.first()
+           
 #==================================================================================================================================================================================
 #SETTINGS DELETE ACCOUNT
 @csrf_exempt
@@ -515,6 +545,7 @@ def get_employee_profile(request):
     serializer = UserProfileSerializer(user)
     return Response(serializer.data)
 
+#==================================================================================================================================================================================
 class UserProfileView(generics.RetrieveAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = UserSerializer
@@ -556,6 +587,7 @@ class UserUpdateView(generics.UpdateAPIView):
     def perform_update(self, serializer):
         serializer.save()
 
+#==================================================================================================================================================================================
 # Reset password link validation
 class ValidateResetPasswordTokenView(APIView):
     permission_classes = [AllowAny]
@@ -581,6 +613,7 @@ class ValidateResetPasswordTokenView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         return Response({"message": "Token is valid."}, status=status.HTTP_200_OK)
+
 # =====================================================================================================
 # GET the currently assigned trip (status = pending)
 @api_view(["GET"])
@@ -596,7 +629,6 @@ def get_assigned_trip(request):
     except Employee.DoesNotExist:
         return Response({"error": "No employee profile found."}, status=400)
     
-
 # =====================================================================================================
 #Accept trips
 @api_view(['POST'])
@@ -615,6 +647,7 @@ def accept_trip(request, trip_id):
 
     except Trip.DoesNotExist:
         return Response({"error": "Trip not found."}, status=404)
+
 # =====================================================================================================
 # DECLINE TRIP
 @api_view(['POST'])
@@ -633,6 +666,7 @@ def decline_trip(request, trip_id):
 
     except Trip.DoesNotExist:
         return Response({"error": "Trip not found."}, status=404)
+
 # =====================================================================================================
 # GET trips that are accepted but not yet completed (Ongoing Trips)
 @api_view(["GET"])
@@ -653,6 +687,7 @@ def get_ongoing_trips(request):
 
     except Employee.DoesNotExist:
         return Response({"error": "No employee profile found."}, status=400)
+
 # =====================================================================================================
 # GET trips that are accepted or completed
 @api_view(["GET"])
@@ -669,6 +704,7 @@ def get_recent_trips(request):
         return Response(serializer.data)
     except Employee.DoesNotExist:
         return Response({"error": "No employee profile found."}, status=400)
+
 # =====================================================================================================
 #Get Unassigned Trips
 @api_view(["GET"])
@@ -680,6 +716,7 @@ def get_unassigned_trips(request):
     trips = Trip.objects.filter(employee__isnull=True).order_by("-start_date")
     serializer = TripSerializer(trips, many=True)
     return Response(serializer.data)
+
 # =====================================================================================================
 # =====================================================================================================
 # =====================================================================================================

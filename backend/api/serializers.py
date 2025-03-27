@@ -21,14 +21,9 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
 # ✅ SalaryConfiguration Serializer
 class SalaryConfigurationSerializer(serializers.ModelSerializer):
-    
     class Meta:
         model = SalaryConfiguration
-        fields = [
-            'sss', 'philhealth', 'pag_ibig', 'vale',
-            'sss_loan', 'pag_ibig_loan', 'cash_advance', 'cash_bond',
-            'charges', 'others', 'overtime', 'additionals'
-        ]
+        fields = ['sss', 'philhealth', 'pag_ibig']
 
 # ✅ Salary Serializer
 class SalarySerializer(serializers.ModelSerializer):
@@ -74,7 +69,7 @@ class TripSerializer(serializers.ModelSerializer):
         model = Trip
         fields = [
             'trip_id', 'employee', 'vehicle', 'helper',
-            'client_info', 'distance_traveled',
+            'client_info', 'distance_traveled', 'multiplier'
             'user_latitude', 'user_longitude',
             'destination_latitude', 'destination_longitude',
             'street_number', 'street_name', 'barangay',

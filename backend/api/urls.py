@@ -9,7 +9,7 @@ from .views import (
     SalaryReportListView, SalaryReportDetailView, generate_pdf, RegisterUserView, RegisterVehicleView, RegisterTripView, decline_trip, get_assigned_trip, get_recent_trips,
     SendPasswordLinkView, ResetPasswordView, get_vehicles, get_employees, get_users, SalaryConfigurationListCreateView, SalaryConfigurationRetrieveUpdateDestroyView,
     EmployeeCreateView, delete_user, get_employee_profile, UserProfileView, update_employee_profile, UserUpdateView,
-    ValidateResetPasswordTokenView, accept_trip, get_ongoing_trips
+    ValidateResetPasswordTokenView, accept_trip, get_ongoing_trips, SalaryConfigurationGlobalView,
 )
 from django.contrib.auth.views import (
     PasswordResetView,
@@ -73,9 +73,10 @@ urlpatterns = [
     #CREATE NEW TRIP GET EMPLOYEES
     path('employees/', get_employees, name='get_employees'),
     
-    # Generic SalaryConfiguration Views
-    path('salary-configurations/', SalaryConfigurationListCreateView.as_view(), name='salary-configuration-list'),
-    path('salary-configurations/<int:pk>/', SalaryConfigurationRetrieveUpdateDestroyView.as_view(), name='salary-configuration-retrieve-update-destroy'),
+    # SalaryConfiguration API Routes
+    path('salary-configurations/', SalaryConfigurationListCreateView.as_view(), name='salary-configuration-list-create'),
+    path('salary-configurations/<int:pk>/', SalaryConfigurationRetrieveUpdateDestroyView.as_view(), name='salary-configuration-detail'),
+    path('salary-configurations/global/', SalaryConfigurationGlobalView.as_view(), name='salary-configuration-global'),
     
     #Delete User
     path('delete-user/<int:user_id>/', delete_user, name='delete-user'),

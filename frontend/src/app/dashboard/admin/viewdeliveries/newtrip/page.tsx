@@ -49,6 +49,7 @@ const CreateNewTripPage = () => {
     country: "Philippines",
     destination: "",
     distance: "",
+    multiplier: "",
     num_of_drops: "",
     curr_drops: "0",
     client_info: "",
@@ -120,6 +121,7 @@ const CreateNewTripPage = () => {
     
       destination: fullDestination,
       distance_traveled: tripFormData.distance ? parseFloat(tripFormData.distance) : null,
+      multiplier: tripFormData.multiplier ? parseFloat(tripFormData.multiplier) : null,
       num_of_drops: tripFormData.num_of_drops ? parseInt(tripFormData.num_of_drops) : null,  // ✅ fixed key
       curr_drops: tripFormData.curr_drops,
     
@@ -159,6 +161,7 @@ const CreateNewTripPage = () => {
         country: "Philippines",
         destination: "",
         distance: "",
+        multiplier: "",
         num_of_drops: "",
         curr_drops: "0",
         client_info: "",
@@ -520,6 +523,15 @@ const CreateNewTripPage = () => {
             className="input-field text-black rounded placeholder:text-sm"
             value={tripFormData.distance}
             onChange={(e) => setTripFormData({ ...tripFormData, distance: e.target.value })}
+          />
+
+          <input
+            type="number"
+            step="0.01"
+            placeholder="Multiplier"
+            className="input-field text-black rounded placeholder:text-sm"
+            value={tripFormData.multiplier}
+            onChange={(e) => setTripFormData({ ...tripFormData, multiplier: e.target.value })}
           />
 
           <input

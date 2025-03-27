@@ -3,7 +3,7 @@ import AccountsClient from "./AccountsClient";
 import { getSession } from "@/lib/auth";
 
 export default async function AccountsPage() {
-  const session = getSession();
+  const session = await getSession();
   const url = `${process.env.DOMAIN}/users/`;
   const requestOptions: RequestInit = {
     cache: "no-store",
@@ -14,7 +14,22 @@ export default async function AccountsPage() {
   };
 
   const response = await fetch(url, requestOptions);
-  const users = (await response.json()) as User[];
+  const data = await response.json();
 
-  return <AccountsClient users={users} />;
+  if (!Array.isArray(data)) {
+    console.error("Unexpected users response:", data);
+    throw new Error("Failed to fetch users.");
+  }
+
+  console.log("Fetched users:", data);
+
+
+  return <AccountsClient users={data} />
+
+
+  // const response = await fetch(url, requestOptions);
+  // const users = (await response.json()) as User[];
+
+  // return <AccountsClient users={users} />;
+  
 }

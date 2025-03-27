@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { updateUserData } from "@/lib/actions";
+import { updateUserData } from "@/lib/actions/user.actions";
 import { PencilIcon } from "lucide-react";
 
 const AccountsPage = ({ users }: { users: User[] }) => {
