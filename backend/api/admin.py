@@ -4,7 +4,7 @@ from .models import User, Administrator, Employee, Salary, Trip, Vehicle, Salary
 
 # ✅ Custom User Admin
 class CustomUserAdmin(UserAdmin):
-    list_display = ('username', 'email', 'display_role', 'is_staff', 'is_superuser')
+    list_display = ('username', 'email', 'display_role', 'employee_type', 'is_staff', 'is_superuser')
     list_filter = ('role', 'is_staff', 'is_superuser')
 
     def display_role(self, obj):
@@ -13,7 +13,7 @@ class CustomUserAdmin(UserAdmin):
 
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
-        ('Personal Info', {'fields': ('email', 'first_name', 'last_name', 'cellphone_no', 'philhealth_no', 'pag_ibig_no', 'sss_no', 'license_no', 'profile_image')}),  # ✅ Added 'license_no'
+        ('Personal Info', {'fields': ('email', 'first_name', 'last_name', 'cellphone_no', 'philhealth_no', 'pag_ibig_no', 'sss_no', 'license_no', 'profile_image', 'employee_type')}),  # ✅ Added 'license_no'
         ('Permissions', {'fields': ('role', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
     )
 
@@ -35,9 +35,13 @@ class AdministratorAdmin(admin.ModelAdmin):
 
 # ✅ Employee Admin
 class EmployeeAdmin(admin.ModelAdmin):
-    list_display = ('employee_id', 'user', 'employee_type', 'salary')
-    search_fields = ('user__username', 'employee_type')
-    list_filter = ('employee_type',)
+    list_display = ('employee_id', 'user', 'get_employee_type', 'salary')
+    search_fields = ('user__username', 'user__employee_type')
+    list_filter = ('user__employee_type',)
+    
+    def get_employee_type(self, obj):
+        return obj.user.employee_type  # Fetch employee_type from the associated user
+    get_employee_type.short_description = 'Employee Type'
 
 # ✅ Vehicle Admin - Now Displays Plate Number
 class VehicleAdmin(admin.ModelAdmin):

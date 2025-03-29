@@ -42,7 +42,7 @@ class NestedEmployeeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Employee
-        fields = ['employee_id', 'user']
+        fields = ['employee_id', 'user', 'employee_type']
 # ================================
 
 # ✅ Vehicle Serializer (Updated)
@@ -69,7 +69,7 @@ class TripSerializer(serializers.ModelSerializer):
         model = Trip
         fields = [
             'trip_id', 'employee', 'vehicle', 'helper',
-            'client_info', 'distance_traveled', 'multiplier'
+            'client_info', 'distance_traveled', 'multiplier',
             'user_latitude', 'user_longitude',
             'destination_latitude', 'destination_longitude',
             'street_number', 'street_name', 'barangay',
@@ -105,6 +105,7 @@ class LoginSerializer(TokenObtainPairSerializer):
             'username': self.user.username,
             'role': self.user.role,
             'profile_image': self.user.profile_image.url if self.user.profile_image else None,
+            'employee_type': self.user.employee_type,
         }
         return data
 
@@ -127,7 +128,7 @@ class UserSerializer(serializers.ModelSerializer):
             'password', 'username', 
             'first_name', 'last_name', 'role', 
             'cellphone_no', 'email', 'philhealth_no', 'pag_ibig_no', 
-            'sss_no', 'license_no', 'profile_image',
+            'sss_no', 'license_no', 'profile_image', 'employee_type',
         ]
         extra_kwargs = {
             'password': {'write_only': True},

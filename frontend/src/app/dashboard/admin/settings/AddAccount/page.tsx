@@ -21,6 +21,7 @@ const AddAccountPage = () => {
     sss_no: "",
     license_no: "",
     role: "",
+    employee_type: "",
   });
 
   const [error, setError] = useState<string | null>(null);
@@ -59,32 +60,38 @@ const AddAccountPage = () => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
-  
+
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match.");
       return;
     }
-  
+
     try {
       const data = new FormData();
-  
+
       // Append form fields
       Object.entries(formData).forEach(([key, value]) => {
-        data.append(key, value);
+        if (value) data.append(key, value);
       });
-  
+
       // Append image if selected
-      const fileInput = document.getElementById("profile-upload") as HTMLInputElement;
+      const fileInput = document.getElementById(
+        "profile-upload"
+      ) as HTMLInputElement;
       if (fileInput?.files?.[0]) {
         data.append("profile_image", fileInput.files[0]);
       }
-  
-      const response = await axios.post("http://127.0.0.1:8000/api/register/", data, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-  
+
+      const response = await axios.post(
+        "http://127.0.0.1:8000/api/register/",
+        data,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
       console.log("API Response:", response);
       setSuccess("Account successfully created!");
       setFormData({
@@ -100,15 +107,19 @@ const AddAccountPage = () => {
         sss_no: "",
         license_no: "",
         role: "",
+        employee_type: "",
       });
       setProfilePicture(null);
       fileInput.value = "";
+
+      setTimeout(() => {
+        setSuccess(null);
+      }, 5000);
     } catch (error: any) {
       console.error("API Error:", error.response?.data);
       setError(error.response?.data?.error || "Failed to create account.");
     }
   };
-  
 
   return (
     <div className="min-h-screen flex flex-col items-center py-8 px-4 md:px-8">
@@ -212,16 +223,16 @@ const AddAccountPage = () => {
                 onChange={handleChange}
               />
             </div>
-             {/* 👁 Single toggle under both password fields */}
-              <div className="mt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="text-xs text-gray-600 underline hover:text-gray-800"
-                >
-                  {showPassword ? "Hide Passwords" : "Show Passwords"}
-                </button>
-              </div>
+            {/* 👁 Single toggle under both password fields */}
+            <div className="mt-2">
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="text-xs text-gray-600 underline hover:text-gray-800"
+              >
+                {showPassword ? "Hide Passwords" : "Show Passwords"}
+              </button>
+            </div>
           </div>
 
           {/* Other fields remain as individual grid items */}
@@ -295,6 +306,18 @@ const AddAccountPage = () => {
                 <option value="super_admin">Super Admin</option>
                 <option value="admin">Admin</option>
                 <option value="employee">Employee</option>
+              </select>
+              <select
+                name="employee_type"
+                className="input-field text-gray-700"
+                value={formData.employee_type}
+                onChange={handleChange}
+                required
+              >
+                <option value="">Select Employee Type*</option>
+                <option value="Driver">Driver</option>
+                <option value="Helper">Helper</option>
+                <option value="Staff">Staff</option>
               </select>
             </div>
           </div>

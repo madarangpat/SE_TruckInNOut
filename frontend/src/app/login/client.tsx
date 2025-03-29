@@ -21,12 +21,19 @@ const LoginClient = () => {
     setError(null);
     try {
       const user = await login(username, password);
-      console.log(user)
-
-      user.role === "admin" || "super_admin"
-        ? router.push("/dashboard/admin/home")
-        : router.push("/dashboard/employee/home");
-        router.refresh()
+      if (user.role === "admin" || user.role === "super_admin") {
+        router.push("/dashboard/admin/home");
+      } else if (user.role === "employee") {        
+        // If employee, check employee_type
+        if (user.employee_type === "Staff" ) {
+          //Redirect to staff directory         
+          router.push("/dashboard/staff/home");
+        } else {
+          //Redirect to employee directory
+          router.push("/dashboard/employee/home");
+        }
+      }
+      router.refresh();
     } catch (error) {
       setError((error as Error).message);
     }

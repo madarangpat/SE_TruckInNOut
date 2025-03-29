@@ -1,7 +1,9 @@
 type BaseUser = {
+  id: string
   username: string;
   role: "super_admin" | "admin" | "employee" | "N/A";
   profile_image?: string;
+  employee_type?: "Driver" | "Helper" | "Staff";
 };
 
 type User = BaseUser & {
@@ -16,19 +18,10 @@ type User = BaseUser & {
   [key: string]: any;
 };
 
-type SalConfig = BaseUser & {
+type SalConfig = {
   sss?: number;
   philhealth?: number;
   pag_ibig?: number;
-  vale?: number;
-  sss_loan?: number;
-  pag_ibig_loan?: number;
-  cash_advance?: number;
-  cash_bond?: number;
-  charges?: number;
-  others?: number;
-  overtime?: number;
-  additionals?: number;
 };
 
 type Vehicle = {

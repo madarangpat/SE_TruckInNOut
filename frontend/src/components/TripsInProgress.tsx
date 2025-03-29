@@ -58,7 +58,7 @@ const TripsInProgress = () => {
         </h2>
       </div>
 
-      <div className="innerwrapper max-h-[300px] min-h-[150px] p-5 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 flex items-center justify-center">
+      <div className="innerwrapper max-h-[250px] overflow-y-auto rounded-lg p-3 flex flex-col">
         {loading ? (
           <p className="text-white text-center text-lg">Loading trips...</p>
         ) : trips.length > 0 ? (
@@ -87,7 +87,7 @@ const TripsInProgress = () => {
             </div>
           ))
         ) : (
-          <p className="text-white text-center text-lg">No Current Trip/s.</p>
+          <p className="text-black text-center text-lg">No Current Trip/s.</p>
         )}
       </div>
     </div>

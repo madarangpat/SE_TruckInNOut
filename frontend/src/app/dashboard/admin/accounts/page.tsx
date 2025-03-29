@@ -24,12 +24,5 @@ export default async function AccountsPage() {
   console.log("Fetched users:", data);
 
 
-  return <AccountsClient users={data} />
-
-
-  // const response = await fetch(url, requestOptions);
-  // const users = (await response.json()) as User[];
-
-  // return <AccountsClient users={users} />;
-  
+  return <AccountsClient users={data} /> 
 }

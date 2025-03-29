@@ -120,7 +120,7 @@ const RecentTrips = () => {
             </div>
           ))
         ) : (
-          <p className="text-white text-center text-lg">No Recent Trips.</p>
+          <p className="text-black text-center text-lg">No Recent Trips.</p>
         )}
       </div>
 

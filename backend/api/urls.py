@@ -9,7 +9,7 @@ from .views import (
     SalaryReportListView, SalaryReportDetailView, generate_pdf, RegisterUserView, RegisterVehicleView, RegisterTripView, decline_trip, get_assigned_trip, get_recent_trips,
     SendPasswordLinkView, ResetPasswordView, get_vehicles, get_employees, get_users, SalaryConfigurationListCreateView, SalaryConfigurationRetrieveUpdateDestroyView,
     EmployeeCreateView, delete_user, get_employee_profile, UserProfileView, update_employee_profile, UserUpdateView,
-    ValidateResetPasswordTokenView, accept_trip, get_ongoing_trips, SalaryConfigurationGlobalView,
+    ValidateResetPasswordTokenView, accept_trip, get_ongoing_trips, SalaryConfigurationGlobalView, generate_gross_payroll_pdf, generate_salary_breakdown_pdf, update_user_profile
 )
 from django.contrib.auth.views import (
     PasswordResetView,
@@ -23,6 +23,7 @@ urlpatterns = [
     path('users/', UserListView.as_view(), name='user-list'),
     path('users/profile/', UserProfileView.as_view(), name='user-profile-view'),
     path('users/profile/update/', UserUpdateView.as_view(), name='user-profile-update-view'),
+    path("update_user/<int:user_id>/", update_user_profile, name="update_user_profile"),
 
     path('employees/create/', EmployeeCreateView.as_view(), name='employee-create'),
     path('employees/', EmployeeListView.as_view(), name='employee-list'),
@@ -48,6 +49,8 @@ urlpatterns = [
     
     #Generate PDF
     path("generate-pdf/", generate_pdf, name="generate_pdf"),
+    path("generate-pdf/gross-payroll/", generate_gross_payroll_pdf, name="generate_gross_payroll_pdf"),
+    path("generate-pdf/salary-breakdown/", generate_salary_breakdown_pdf, name="generate_salary_breakdown_pdf"),
     
     #Add Account
     path('register/', RegisterUserView.as_view(), name='register'),

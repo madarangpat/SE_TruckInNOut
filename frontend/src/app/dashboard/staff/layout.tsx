@@ -1,4 +1,5 @@
-import EmployeeNavbar from "@/components/EmployeeNavbar";
+import StaffNavbar from "@/components/StaffNavbar";
+
 
 export default function DashboardLayout({
   children,
@@ -7,7 +8,7 @@ export default function DashboardLayout({
 }>) {
   return (
     <div className="flex flex-1 flex-col">
-      <EmployeeNavbar />
+      <StaffNavbar />
       <div className="flex-1 overflow-auto p-4">{children}</div>
     </div>
   );

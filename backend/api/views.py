@@ -42,8 +42,30 @@ from django.db.models import Q
 User = get_user_model()
 
 #==================================================================================================================================================================================
+@api_view(["PATCH"])
+@permission_classes([IsAuthenticated])
+def update_user_profile(request, user_id):
+    """Update a specific user's profile based on the user ID in the URL"""
+    try:
+        user = User.objects.get(id=user_id)  # Fetch the user by ID
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=404)
+
+    # Only allow admins to update other users' profiles (you can modify this permission)
+    if not request.user.is_superuser and request.user.id != user.id:
+        return Response({"error": "You do not have permission to update this user."}, status=403)
+
+    # Serialize the user with the provided data
+    serializer = UserProfileSerializer(user, data=request.data, partial=True)
+
+    if serializer.is_valid():
+        serializer.save()
+        return Response({"message": "Profile updated successfully!", "user": serializer.data})
+
+    return Response(serializer.errors, status=400)
+#==================================================================================================================================================================================
 # [Function]
-@api_view(["PUT"])
+@api_view(["PATCH"])
 @permission_classes([IsAuthenticated])
 def update_employee_profile(request):
     """Update the currently logged-in user's profile"""
@@ -78,13 +100,17 @@ class RegisterUserView(APIView):
                 password=request.data["password"],
                 email=request.data["email"],
                 role=request.data["role"],
-                cellphone_no=request.data.get("cellphone_no", ""),
+                employee_type=request.data.get("employee_type"),  # Corrected
+                first_name=request.data.get("firstName", ""),  # Use default value if not provided
+                last_name=request.data.get("lastName", ""),  # Use default value if not provided
+                cellphone_no=request.data.get("cellphone_no", ""), 
                 philhealth_no=request.data.get("philhealth_no", ""),
                 pag_ibig_no=request.data.get("pag_ibig_no", ""),
                 sss_no=request.data.get("sss_no", ""),
                 license_no=request.data.get("license_no", ""),
                 profile_image=profile_image,  # ✅ Save image with user
             )
+                
             return Response({"message": "User created successfully."}, status=status.HTTP_201_CREATED)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
@@ -428,6 +454,129 @@ def generate_pdf(request):
 
     response = HttpResponse(buffer, content_type='application/pdf')
     response['Content-Disposition'] = 'attachment; filename="salary_report.pdf"'
+    return response
+
+#==================================================================================================================================================================================
+#GROSS PAYROLL PDF GENERATION
+def generate_gross_payroll_pdf(request):
+    buffer = BytesIO()
+    pdf = canvas.Canvas(buffer, pagesize=landscape(letter))
+    width, height = landscape(letter)
+
+    # Title
+    title_text = "Gross Payroll Report – November 2024, 2nd Week"
+    pdf.setFont("Helvetica-Bold", 16)
+    text_width = pdf.stringWidth(title_text, "Helvetica-Bold", 16)
+    x_position = (width - text_width) / 2
+    pdf.drawString(x_position, height - 50, title_text)
+
+    # Placeholder table for Gross Payroll (adjust later)
+    payroll_data = [
+        ["Employee", "Total Trips", "Gross Pay"],
+        ["Juan Dela Cruz", "5", "₱ 8,500"],
+        ["Maria Clara", "4", "₱ 7,200"],
+        ["Jose Rizal", "6", "₱ 9,100"]
+    ]
+
+    def draw_table(data, x, y):
+        table = Table(data, colWidths=[150] * len(data[0]), repeatRows=1)
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+        ]))
+        table.wrapOn(pdf, width, height)
+        table.drawOn(pdf, x, y)
+
+    draw_table(payroll_data, 50, height - 150)
+
+    pdf.showPage()
+    pdf.save()
+    buffer.seek(0)
+
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="gross_payroll.pdf"'
+    return response
+
+#==================================================================================================================================================================================
+#SALARY BREAKDOWN PDF GENERATION
+def generate_salary_breakdown_pdf(request):
+    buffer = BytesIO()
+    pdf = canvas.Canvas(buffer, pagesize=landscape(letter))
+    width, height = landscape(letter)
+
+    # Title
+    title_text = "Salary Breakdown Report – November 2024, 2nd Week"
+    pdf.setFont("Helvetica-Bold", 16)
+    text_width = pdf.stringWidth(title_text, "Helvetica-Bold", 16)
+    x_position = (width - text_width) / 2
+    pdf.drawString(x_position, height - 50, title_text)
+
+    # Reuse your breakdown table structure
+    trip_data = [
+        ["Trips Completed"],
+        ["TripID", "StartDate", "Base Salary", "Location", "Multiplier", "Additional Pay", "Final Salary"],
+        [1, "03/12/2024", "₱ 690", "Cavite", "1.3", "₱ 250", "₱ 1,147"],
+        [2, "04/12/2024", "₱ 760", "Laguna", "1.5", "₱ 500", "₱ 1,640"],
+        [3, "06/12/2024", "₱ 690", "Marikina", "1.3", "₱ 250", "₱ 1,147"],
+        [4, "07/12/2024", "₱ 690", "Bulacan", "1.3", "₱ 250", "₱ 1,147"]
+    ]
+
+    additional_data = [ 
+        ["ADDITIONALS"],               
+        ["Bonuses", "₱ 0"],
+        ["Additional Pay", "₱ 1,250"]
+    ]
+    
+    deduction_data = [
+        ["DEDUCTIONS"],
+        ["SSS (14%)", "₱ 0"],
+        ["Pag-IBIG (2%)", "₱ 0"],
+        ["PhilHealth (5%)", "₱ 260"],
+        ["Vale", "₱ 300"],
+        ["SSS Loan", "₱ 0"],
+        ["Pag-IBIG Loan", "₱ 0"],
+        ["Cash Advance", "₱ 0"],
+        ["Cash Bond", "₱ 150"],
+        ["Charges", "₱ 0"],
+        ["Others", "₱ 100"]
+    ]
+
+    salary_summary = [
+        ["TOTALS"],
+        ["Accumulated Salary", "₱ 5,081"],
+        ["Additionals", "₱ 1,250"],
+        ["Deductions", "- ₱ 810"],
+        ["Current Salary", "₱ 5,521"]
+    ]
+
+    def draw_table(data, x, y):
+        table = Table(data, colWidths=[100] * len(data[0]), repeatRows=1)
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+        ]))
+        table.wrapOn(pdf, width, height)
+        table.drawOn(pdf, x, y)
+
+    draw_table(trip_data, 50, height - 180)
+    draw_table(additional_data, 50, height - 250)
+    draw_table(deduction_data, 260, height - 394)
+    draw_table(salary_summary, 470, height - 285)
+
+    pdf.showPage()
+    pdf.save()
+    buffer.seek(0)
+
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="salary_breakdown.pdf"'
     return response
 
 #==================================================================================================================================================================================

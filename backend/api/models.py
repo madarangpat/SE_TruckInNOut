@@ -29,16 +29,28 @@ class User(AbstractUser):
     role = models.CharField(
         max_length=15, 
         choices=ROLE_CHOICES, 
-        null=True,  # ✅ Allows NULL in the database
-        blank=True  # ✅ Allows empty values when creating a user
-    )
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
+        null=True, 
+        blank=True  
+    )   
+    EMPLOYEE_TYPE_CHOICES = [
+        ("Driver", "Driver"),
+        ("Helper", "Helper"),
+        ("Staff", "Staff"),
+        ("Not Applicable", "Not Applicable"),
+    ]
+    employee_type = models.CharField(
+        max_length=50,
+        choices=EMPLOYEE_TYPE_CHOICES,
+        null=True, 
+        blank=True,
+    )  
     cellphone_no = models.CharField(max_length=15, unique=True, null=True, blank=True)
     email = models.EmailField(unique=True)
     philhealth_no = models.CharField(max_length=20, unique=True, null=True, blank=True)
     pag_ibig_no = models.CharField(max_length=20, unique=True, null=True, blank=True)
     sss_no = models.CharField(max_length=20, unique=True, null=True, blank=True)
     license_no = models.CharField(max_length=20, unique=True, null=True, blank=True)  
+    
     profile_image = models.ImageField(
         upload_to="user-media",
         validators=[
@@ -105,7 +117,7 @@ class Administrator(models.Model):
     def __str__(self):
         return f"Admin {self.admin_id}"
 
-class Employee(models.Model):
+class Employee(models.Model):   
     employee_id = models.AutoField(primary_key=True)
     user = models.OneToOneField(
         User, 
@@ -113,15 +125,6 @@ class Employee(models.Model):
         related_name="employee_profile"
     )
     salary = models.ForeignKey('Salary', on_delete=models.CASCADE, null=True, blank=True)
-    employee_type = models.CharField(max_length=50, null=True, blank=True)
-
-    def save(self, *args, **kwargs):
-        # Only create a default salary configuration when this is a new instance
-        if not self.pk and self.salary_configuration is None:
-            # Create a default SalaryConfiguration instance (defaults are used)
-            salary_config = SalaryConfiguration.objects.create()
-            self.salary_configuration = salary_config
-        super().save(*args, **kwargs)
 
     def __str__(self):
         employee_count = Employee.objects.filter(employee_id__lte=self.employee_id).count()

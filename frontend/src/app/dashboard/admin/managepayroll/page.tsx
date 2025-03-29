@@ -1,20 +1,34 @@
+// import React from "react";
+// import ManagePayrollClient from "./ManagePayrollClient";
+// import { getSession } from "@/lib/auth";
+// import { getUsers } from "@/lib/actions/user.actions";
+
+// export default async function ManagePayroll() {
+//   const users = await getUsers();
+
+//   return <ManagePayrollClient users={users} />;
+// }
+
+
+
 import React from "react";
 import ManagePayrollClient from "./ManagePayrollClient";
 import { getSession } from "@/lib/auth";
+import { getUsers } from "@/lib/actions/user.actions";
 
 export default async function ManagePayroll() {
-  const session = getSession();
-  const url = `${process.env.DOMAIN}/users/`;
-  const requestOptions: RequestInit = {
-    cache: "no-store",
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${session?.access!}`,
-    },
-  };
+  try {
+    const session = await getSession();
+    const users = await getUsers();
 
-  const response = await fetch(url, requestOptions);
-  const users = (await response.json()) as User[];
+    if (!session) {
+      // Handle unauthenticated access
+      return <div>You need to be logged in to view this page.</div>;
+    }
 
-  return <ManagePayrollClient users={users} />
+    return <ManagePayrollClient users={users} />;
+  } catch (error) {
+    console.error("Error fetching users or session", error);
+    return <div>Error loading data. Please try again later.</div>;
+  }
 }

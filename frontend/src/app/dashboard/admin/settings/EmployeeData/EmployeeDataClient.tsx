@@ -10,7 +10,6 @@ const EmployeeDataClient = ({ users }: { users: User[] }) => {
   const [selectedProfileImage, setSelectedProfileImage] =
     useState("/tinoicon.png");
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  // const [searchQuery, setSearchQuery] = useState("");
 
   // Handle User Selection
   const [userData, setUserData] = useState<User>({
