@@ -1,11 +1,29 @@
 import React from "react";
 import Image from "next/image";
 
-const SalaryBreakdownPDF: React.FC = () => {
+interface Props {
+  employeeUsername: string | undefined;
+  startDate: Date | null;
+  endDate: Date | null;
+  tripSalaries?: any[];
+}
+
+const SalaryBreakdownPDF: React.FC<Props> = ({ employeeUsername, startDate, endDate }) => {
   const handleDownload = () => {
-    const pdfUrl = "http://localhost:8000/api/generate-pdf/salary-breakdown/";
-    window.open(pdfUrl, "_blank");
+    if (!employeeUsername || !startDate || !endDate) {
+      alert("Please select an employee and date range."); 
+      return;
+    }
+    const params = new URLSearchParams({
+      employee: employeeUsername,
+      start_date: startDate.toISOString(),
+      end_date: endDate.toISOString(),
+    });
+
+    const url = `http://localhost:8000/api/generate-pdf/salary-breakdown/?${params.toString()}`;
+    window.open(url, "_blank");
   };
+
 
   return (
     <button

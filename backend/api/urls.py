@@ -6,7 +6,7 @@ from .views import (
     SalaryListView, SalaryDetailView,
     TripListView, TripDetailView,
     VehicleListView, VehicleDetailView,
-    generate_pdf, RegisterUserView, RegisterVehicleView, RegisterTripView, get_recent_trips, 
+    RegisterUserView, RegisterVehicleView, RegisterTripView, get_recent_trips, employee_trip_salaries, 
     SendPasswordLinkView, ResetPasswordView, get_vehicles, get_employees, get_users, update_salary_configuration, get_all_salary_configurations,
     EmployeeCreateView, delete_user, get_employee_profile, UserProfileView, update_employee_profile, UserUpdateView,
     ValidateResetPasswordTokenView, get_ongoing_trips, generate_gross_payroll_pdf, generate_salary_breakdown_pdf, update_user_profile
@@ -48,7 +48,9 @@ urlpatterns = [
     path("logout/", TokenBlacklistView.as_view(), name="logout"),
     
     #Generate PDF
-    path("generate-pdf/", generate_pdf, name="generate_pdf"),
+    path('employee-trip-salaries/', employee_trip_salaries),
+    
+    # path("generate-pdf/", generate_pdf, name="generate_pdf"),
     path("generate-pdf/gross-payroll/", generate_gross_payroll_pdf, name="generate_gross_payroll_pdf"),
     path("generate-pdf/salary-breakdown/", generate_salary_breakdown_pdf, name="generate_salary_breakdown_pdf"),
     

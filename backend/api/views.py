@@ -31,8 +31,12 @@ from io import BytesIO
 from reportlab.lib.pagesizes import letter, landscape
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
-from reportlab.platypus import Table, TableStyle
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
 from rest_framework import viewsets
+from django.utils.dateparse import parse_datetime
+from reportlab.lib.enums import TA_LEFT
+from reportlab.lib.styles import ParagraphStyle
 
 User = get_user_model()
 
@@ -196,7 +200,9 @@ class RegisterTripView(APIView):
                 dest_lng=request.data.get("dest_lng", []),
                 completed=request.data.get("completed", []),
                 multiplier=request.data.get("multiplier"),
+                base_salary=request.data.get("base_salary"),
                 num_of_drops=request.data.get("num_of_drops"),
+                additionals=request.data.get("additionals"),
                 start_date=request.data.get("start_date"),
                 end_date=request.data.get("end_date"),
             )
@@ -377,89 +383,6 @@ class VehicleDetailView(generics.RetrieveUpdateDestroyAPIView):
     # permission_classes = [IsAuthenticated]
     
 #==================================================================================================================================================================================
-#PDF GENERATION
-def generate_pdf(request):
-    buffer = BytesIO()
-    pdf = canvas.Canvas(buffer, pagesize=landscape(letter))
-    width, height = landscape(letter)
-
-    # Title
-    title_text = "November 2024, 2nd Week"
-    pdf.setFont("Helvetica-Bold", 16)
-
-    # Calculate text width and center it
-    text_width = pdf.stringWidth(title_text, "Helvetica-Bold", 16)
-    x_position = (width - text_width) / 2  # Center horizontally
-
-    pdf.drawString(x_position, height - 50, title_text)
-
-    #Data for the Table
-    trip_data = [
-        ["Trips Completed"],
-        ["TripID", "StartDate", "Base Salary", "Location", "Multiplier", "Additional Pay", "Final Salary"],
-        [1, "03/12/2024", "₱ 690", "Cavite", "1.3", "₱ 250", "₱ 1,147"],
-        [2, "04/12/2024", "₱ 760", "Laguna", "1.5", "₱ 500", "₱ 1,640"],
-        [3, "06/12/2024", "₱ 690", "Marikina", "1.3", "₱ 250", "₱ 1,147"],
-        [4, "07/12/2024", "₱ 690", "Bulacan", "1.3", "₱ 250", "₱ 1,147"]
-    ]
-        
-    additional_data = [ 
-        ["ADDITIONALS"],               
-        ["Bonuses", "₱ 0"],
-        ["Additional Pay", "₱ 1,250"]
-    ]
-    
-    deduction_data = [
-        ["DEDUCTIONS"],
-        ["SSS (14%)", "₱ 0"],
-        ["Pag-IBIG (2%)", "₱ 0"],
-        ["PhilHealth (5%)", "₱ 260"],
-        ["Vale", "₱ 300"],
-        ["SSS Loan", "₱ 0"],
-        ["Pag-IBIG Loan", "₱ 0"],
-        ["Cash Advance", "₱ 0"],
-        ["Cash Bond", "₱ 150"],
-        ["Charges", "₱ 0"],
-        ["Others", "₱ 100"]
-    ]
-    
-    salary_summary = [
-        ["TOTALS"],
-        ["Accumulated Salary", "₱ 5,081"],
-        ["Additionals", "₱ 1,250"],
-        ["Deductions", "- ₱ 810"],
-        ["Current Salary", "₱ 5,521"]
-    ]
-    
-     # Function to draw table
-    def draw_table(data, x, y):
-        table = Table(data, colWidths=[100] * len(data[0]), repeatRows=1)
-        table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
-        ]))
-        table.wrapOn(pdf, width, height)
-        table.drawOn(pdf, x, y)
-        
-    # Draw tables
-    draw_table(trip_data, 50, height - 180)
-    draw_table(additional_data, 50, height - 250)
-    draw_table(deduction_data, 260, height - 394)
-    draw_table(salary_summary, 470, height - 285)
-    
-    pdf.showPage()
-    pdf.save()
-    buffer.seek(0)
-
-    response = HttpResponse(buffer, content_type='application/pdf')
-    response['Content-Disposition'] = 'attachment; filename="salary_report.pdf"'
-    return response
-
-#==================================================================================================================================================================================
 #GROSS PAYROLL PDF GENERATION
 def generate_gross_payroll_pdf(request):
     buffer = BytesIO()
@@ -506,82 +429,154 @@ def generate_gross_payroll_pdf(request):
 
 #==================================================================================================================================================================================
 #SALARY BREAKDOWN PDF GENERATION
+@api_view(['GET'])
+@permission_classes([AllowAny])
 def generate_salary_breakdown_pdf(request):
+    username = request.GET.get("employee")
+    start = parse_datetime(request.GET.get("start_date"))
+    end = parse_datetime(request.GET.get("end_date"))
+
+    if not all([username, start, end]):
+        return Response({"error": "Missing parameters"}, status=400)
+
+    trips = Trip.objects.filter(employee__user__username=username, end_date__range=(start, end))
+    data = []
+    for trip in trips:
+        salary = Salary.objects.filter(trip=trip).first()
+        data.append({"trip": trip, "salary": salary})
+
     buffer = BytesIO()
-    pdf = canvas.Canvas(buffer, pagesize=landscape(letter))
-    width, height = landscape(letter)
+    doc = SimpleDocTemplate(buffer, pagesize=landscape(letter), topMargin=30, leftMargin=30, rightMargin=30, bottomMargin=30)
+    styles = getSampleStyleSheet()
 
-    # Title
-    title_text = "Salary Breakdown Report – November 2024, 2nd Week"
-    pdf.setFont("Helvetica-Bold", 16)
-    text_width = pdf.stringWidth(title_text, "Helvetica-Bold", 16)
-    x_position = (width - text_width) / 2
-    pdf.drawString(x_position, height - 50, title_text)
+    # Define left-aligned text style
+    left_align = ParagraphStyle(name='LeftAlign', parent=styles['Normal'], alignment=TA_LEFT)
+    left_heading = ParagraphStyle(name='LeftHeading', parent=styles['Heading4'], alignment=TA_LEFT)
 
-    # Reuse your breakdown table structure
-    trip_data = [
-        ["Trips Completed"],
-        ["TripID", "StartDate", "Base Salary", "Location", "Multiplier", "Additional Pay", "Final Salary"],
-        [1, "03/12/2024", "₱ 690", "Cavite", "1.3", "₱ 250", "₱ 1,147"],
-        [2, "04/12/2024", "₱ 760", "Laguna", "1.5", "₱ 500", "₱ 1,640"],
-        [3, "06/12/2024", "₱ 690", "Marikina", "1.3", "₱ 250", "₱ 1,147"],
-        [4, "07/12/2024", "₱ 690", "Bulacan", "1.3", "₱ 250", "₱ 1,147"]
-    ]
+    elements = []
 
-    additional_data = [ 
-        ["ADDITIONALS"],               
-        ["Bonuses", "₱ 0"],
-        ["Additional Pay", "₱ 1,250"]
-    ]
-    
-    deduction_data = [
-        ["DEDUCTIONS"],
-        ["SSS (14%)", "₱ 0"],
-        ["Pag-IBIG (2%)", "₱ 0"],
-        ["PhilHealth (5%)", "₱ 260"],
-        ["Vale", "₱ 300"],
-        ["SSS Loan", "₱ 0"],
-        ["Pag-IBIG Loan", "₱ 0"],
-        ["Cash Advance", "₱ 0"],
-        ["Cash Bond", "₱ 150"],
-        ["Charges", "₱ 0"],
-        ["Others", "₱ 100"]
-    ]
+    # Header
+    elements.append(Paragraph(f"<b>Salary Report for {username}</b>", left_align))
+    elements.append(Paragraph(f"<b>Date Range:</b> {start.date()} to {end.date()}", left_align))
+    elements.append(Spacer(1, 12))
 
-    salary_summary = [
-        ["TOTALS"],
-        ["Accumulated Salary", "₱ 5,081"],
-        ["Additionals", "₱ 1,250"],
-        ["Deductions", "- ₱ 810"],
-        ["Current Salary", "₱ 5,521"]
-    ]
+    # Trip Table
+    trip_table_data = [["Trip ID", "Num of Drops", "End Date", "Base Salary", "Multiplier", "Gross Amount"]]
+    gross_total = 0
 
-    def draw_table(data, x, y):
-        table = Table(data, colWidths=[100] * len(data[0]), repeatRows=1)
-        table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
-        ]))
-        table.wrapOn(pdf, width, height)
-        table.drawOn(pdf, x, y)
+    for record in data:
+        trip = record["trip"]
+        salary = record["salary"]
+        base = salary.base_salary if salary else 0
+        multiplier = float(getattr(trip, "multiplier", 1))
+        computed = base * multiplier
+        gross_total += computed
 
-    draw_table(trip_data, 50, height - 180)
-    draw_table(additional_data, 50, height - 250)
-    draw_table(deduction_data, 260, height - 394)
-    draw_table(salary_summary, 470, height - 285)
+        trip_table_data.append([
+            str(trip.trip_id),
+            str(getattr(trip, "num_of_drops", "N/A")),
+            trip.end_date.strftime("%Y-%m-%d"),
+            f" {base:.2f}",
+            str(multiplier),
+            f" {computed:.2f}"
+        ])
 
-    pdf.showPage()
-    pdf.save()
+    trip_table = Table(trip_table_data, repeatRows=1, hAlign='LEFT')
+    trip_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+    ]))
+    elements.append(Paragraph("<b>TRIP TABLE</b>", left_heading))
+    elements.append(trip_table)
+    elements.append(Spacer(1, 12))
+
+    # Additionals Table
+    bonus_sum = sum(s["salary"].bonuses for s in data if s["salary"])
+    additionals_sum = sum(s["salary"].additionals for s in data if s["salary"])
+    total_add = bonus_sum + additionals_sum
+    add_table_data = [["Bonuses", "Additionals"], [f" {bonus_sum:.2f}", f" {additionals_sum:.2f}"]]
+
+    add_table = Table(add_table_data, hAlign='LEFT')
+    add_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+    ]))
+    elements.append(Paragraph("<b>ADDITIONALS</b>", left_heading))
+    elements.append(add_table)
+    elements.append(Spacer(1, 12))
+
+    # Deductions Table
+    totals = {
+        "sss": 0, "pagibig": 0, "philhealth": 0, "vale": 0,
+        "sss_loan": 0, "pagibig_loan": 0, "cash_advance": 0,
+        "cash_bond": 0, "charges": 0, "others": 0
+    }
+
+    for s in data:
+        salary = s["salary"]
+        if salary:
+            totals["vale"] += salary.vale
+            totals["sss_loan"] += salary.sss_loan
+            totals["pagibig_loan"] += salary.pagibig_loan
+            totals["cash_advance"] += salary.cash_advance
+            totals["cash_bond"] += salary.cash_bond
+            totals["charges"] += salary.charges
+            totals["others"] += salary.others
+
+    deduction_total = sum(totals.values())
+    ded_table_data = [[
+        "SSS", "Pag-IBIG", "PhilHealth", "Vale", "SSS Loan",
+        "Pag-IBIG Loan", "Cash Advance", "Cash Bond", "Charges", "Others"
+    ], [
+        f" {totals['sss']:.2f}",
+        f" {totals['pagibig']:.2f}",
+        f" {totals['philhealth']:.2f}",
+        f" {totals['vale']:.2f}",
+        f" {totals['sss_loan']:.2f}",
+        f" {totals['pagibig_loan']:.2f}",
+        f" {totals['cash_advance']:.2f}",
+        f" {totals['cash_bond']:.2f}",
+        f" {totals['charges']:.2f}",
+        f" {totals['others']:.2f}",
+    ]]
+
+    ded_table = Table(ded_table_data, hAlign='LEFT')
+    ded_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+    ]))
+    elements.append(Paragraph("<b>DEDUCTIONS</b>", left_heading))
+    elements.append(ded_table)
+    elements.append(Spacer(1, 12))
+
+    # Totals Table
+    net_pay = gross_total + total_add - deduction_total
+    total_table_data = [["Gross Salary", "Additionals", "Deductions", "Net Pay"],
+                        [f" {gross_total:.2f}", f" {total_add:.2f}", f"-  {deduction_total:.2f}", f" {net_pay:.2f}"]]
+
+    total_table = Table(total_table_data, hAlign='LEFT')
+    total_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+    ]))
+    elements.append(Paragraph("<b>TOTALS</b>", left_heading))
+    elements.append(total_table)
+
+    # Build PDF
+    doc.build(elements)
     buffer.seek(0)
-
-    response = HttpResponse(buffer, content_type='application/pdf')
-    response['Content-Disposition'] = 'attachment; filename="salary_breakdown.pdf"'
-    return response
-
+    return HttpResponse(buffer, content_type='application/pdf', headers={
+        'Content-Disposition': f'attachment; filename="{username}_salary_breakdown.pdf"'
+    })
+    
 #==================================================================================================================================================================================
 #ADMIN SETTINGS EMPLOYEE DATA
 class UserListView(APIView):
@@ -789,4 +784,24 @@ def get_unassigned_trips(request):
 #         instance.save()
 #         return Response(self.serializer_class(instance).data)
 # =====================================================================================================
+@api_view(['GET'])
+def employee_trip_salaries(request):
+    username = request.GET.get("employee")
+    start = parse_datetime(request.GET.get("start_date"))
+    end = parse_datetime(request.GET.get("end_date"))
+
+    if not all([username, start, end]):
+        return Response({"error": "Missing parameters"}, status=400)
+
+    trips = Trip.objects.filter(employee__user__username=username, end_date__range=(start, end))
+    data = []
+
+    for trip in trips:
+        salary = Salary.objects.filter(trip=trip).first()
+        data.append({
+            "trip": TripSerializer(trip).data,
+            "salary": SalarySerializer(salary).data if salary else None
+        })
+
+    return Response(data)
 # =====================================================================================================

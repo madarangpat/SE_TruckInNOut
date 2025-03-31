@@ -56,9 +56,15 @@ class VehicleAdmin(admin.ModelAdmin):
 
 # ✅ Trip Admin - Shows Important Trip Info
 class TripAdmin(admin.ModelAdmin):
-    list_display = ('trip_id', 'vehicle', 'employee', 'helper', 'helper2', 'num_of_drops', 'start_date', 'end_date')
+    list_display = (
+        'trip_id', 'vehicle', 'employee', 'helper', 'helper2',  'base_salary', 'additionals',
+        'num_of_drops', 'start_date', 'end_date'
+    )
     list_filter = ('vehicle', 'employee', 'helper', 'helper2')
-    search_fields = ('vehicle__plate_number', 'employee__user__username', 'helper__user__username', 'helper2__user__username')
+    search_fields = (
+        'vehicle__plate_number', 'employee__user__username', 'helper__user__username', 
+        'helper2__user__username'
+    )
 
     # Optional: You can display the addresses and other lists if needed
     def get_addresses(self, obj):
@@ -88,6 +94,15 @@ class TripAdmin(admin.ModelAdmin):
     def get_completed(self, obj):
         return ", ".join(map(str, obj.completed))
     get_completed.short_description = "Completion Status"
+    
+    # Adding the new fields to the admin display
+    def get_base_salary(self, obj):
+        return obj.base_salary
+    get_base_salary.short_description = "Base Salary"
+
+    def get_additionals(self, obj):
+        return obj.additionals
+    get_additionals.short_description = "Additionals"
       
 # ✅ SalaryConfiguration Admin
 class SalaryConfigurationAdmin(admin.ModelAdmin):

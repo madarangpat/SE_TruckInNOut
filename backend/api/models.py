@@ -133,8 +133,6 @@ class Salary(models.Model):
     salary_id = models.AutoField(primary_key=True)
     trip = models.ForeignKey('Trip', on_delete=models.CASCADE)
     bonuses = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    base_salary = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    additionals = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     vale = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     cash_advance = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     cash_bond = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
@@ -164,6 +162,8 @@ class Trip(models.Model):
     completed = models.JSONField(default=list, blank=True)
     
     multiplier = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    base_salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    additionals = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     num_of_drops = models.IntegerField(null=True, blank=True)
     start_date = models.DateTimeField(null=True, blank=True)
     end_date = models.DateTimeField(null=True, blank=True)   

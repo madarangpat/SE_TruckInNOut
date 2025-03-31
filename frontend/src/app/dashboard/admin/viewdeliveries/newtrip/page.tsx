@@ -8,9 +8,13 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import AddressAutoComplete from "@/components/AddressAutoComplete";
 import { LargeNumberLike } from "crypto";
+import DriverDropdown from "@/components/DriverDropdown";
+import VehicleDropdown from "@/components/VehicleDropdown";
+import HelperDropdown from "@/components/HelperDropdown";
 
 interface User {
   username: string;
+  employee_type: string;
 }
 
 interface Vehicle {
@@ -23,7 +27,6 @@ interface Vehicle {
 interface Employee {
   employee_id: number;
   user: User;
-  employee_type: string;
 }
 
 interface GoogelAddress {
@@ -33,16 +36,11 @@ interface GoogelAddress {
 }
 
 const CreateNewTripPage = () => {
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [employees, setEmployees] = useState<Employee[]>([]);
-
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
-  const [vehicleDropdownOpen, setVehicleDropdownOpen] = useState(false);
-
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(
     null
   );
-  const [employeeDropdownOpen, setEmployeeDropdownOpen] = useState(false);
 
   const [selectedHelper, setSelectedHelper] = useState<Employee | null>(null);
   const [helperDropdownOpen, setHelperDropdownOpen] = useState(false);
@@ -84,56 +82,64 @@ const CreateNewTripPage = () => {
     dest_lng: string[]; // New field for destination longitudes
     completed: boolean[]; // New field for multiple completion statuses
     multiplier: string;
+    base_salary: string;
+    additionals: string;
     start_date: string;
     end_date: string;
   }
 
   const [tripFormData, setTripFormData] = useState<TripFormData>({
-    addresses: [""],
+    addresses: [""], // Initialize with empty address array
     clients: [""],
-    distances: [""],
+    distances: [""], // Initialize with empty distance array
     user_lat: ["14.65889"],
     user_lng: ["121.10419"],
     dest_lat: [""],
     dest_lng: [""],
     completed: [false],
     multiplier: "",
+    base_salary: "",
+    additionals: "",
     start_date: startDate ? startDate.toISOString() : "",
     end_date: endDate ? endDate.toISOString() : "",
   });
 
-  const numOfDrops = tripFormData.addresses.length;
+  // Then immediately calculate and update the distances
+  if (tripDestinations.length > 0) {
+    (async () => {
+      try {
+        const distances = [""];
+        let origin = { lat: 14.65889, lng: 121.10419 }; // Starting point
 
-  function haversineDistance(
-    lat1: number,
-    lon1: number,
-    lat2: number,
-    lon2: number
-  ): number {
-    const R = 6371; // Radius of Earth in kilometers
-    const toRad = (deg: number) => deg * (Math.PI / 180);
+        for (const destination of tripDestinations) {
+          const distance = await calculateDistance(origin, {
+            lat: destination.lat,
+            lng: destination.lng,
+          });
+          distances.push(distance.toString());
+          origin = { lat: destination.lat, lng: destination.lng }; // Previous destination becomes new origin
+        }
 
-    const dLat = toRad(lat2 - lat1);
-    const dLon = toRad(lon2 - lon1);
-
-    const a =
-      Math.sin(dLat / 2) ** 2 +
-      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-    return R * c; // returns distance in km
+        setTripFormData((prev) => ({ ...prev, distances }));
+      } catch (error) {
+        console.error("Error calculating distances:", error);
+      }
+    })();
   }
+
+  const numOfDrops = tripFormData.addresses.length;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setSuccess(null);
+    setError("");
+    // setSuccess(null);
 
     if (!selectedVehicle || !selectedEmployee) {
       setError("Please select both a vehicle and an employee.");
       return;
     }
+
+    console.log("Form submitted", { selectedVehicle, selectedEmployee });
 
     const toNullable = (value: string) => (value === "" ? null : value);
 
@@ -146,17 +152,27 @@ const CreateNewTripPage = () => {
 
       // Arrays
       num_of_drops: numOfDrops,
-      addresses: tripFormData.addresses,
+      addresses: [...tripDestinations.map((dest) => dest.address)],
       clients: tripFormData.clients,
       distances: tripFormData.distances,
       user_lat: tripFormData.user_lat,
       user_lng: tripFormData.user_lng,
-      dest_lat: tripFormData.dest_lat,
-      dest_lng: tripFormData.dest_lng,
+      dest_lat: [tripDestinations.map((dest) => dest.lat.toString())],
+      dest_lng: [tripDestinations.map((dest) => dest.lng.toString())],
       completed: tripFormData.completed,
-      multiplier: tripFormData.multiplier? parseFloat(tripFormData.multiplier): null,
+      multiplier: tripFormData.multiplier
+        ? parseFloat(tripFormData.multiplier)
+        : null,
+      base_salary: tripFormData.base_salary
+        ? parseFloat(tripFormData.base_salary)
+        : null,
+      additionals: tripFormData.additionals
+        ? parseFloat(tripFormData.additionals)
+        : null,
       start_date: new Date(tripFormData.start_date).toISOString(),
-      end_date: toNullable(tripFormData.end_date)? new Date(tripFormData.end_date).toISOString(): null,
+      end_date: toNullable(tripFormData.end_date)
+        ? new Date(tripFormData.end_date).toISOString()
+        : null,
     };
 
     try {
@@ -174,7 +190,7 @@ const CreateNewTripPage = () => {
 
       setSelectedVehicle(null);
       setSelectedEmployee(null);
-      setTripFormData({   
+      setTripFormData({
         addresses: [""],
         clients: [""],
         distances: [""],
@@ -184,6 +200,8 @@ const CreateNewTripPage = () => {
         dest_lng: [""],
         completed: [false],
         multiplier: "",
+        base_salary: "",
+        additionals: "",
         start_date: new Date().toISOString().split("T")[0],
         end_date: "",
       });
@@ -192,35 +210,6 @@ const CreateNewTripPage = () => {
       setError(error.response?.data?.error || "Failed to create trip.");
     }
   };
-
-  useEffect(() => {
-    // Fetch vehicles from Django API
-    fetch("http://localhost:8000/api/vehicles/")
-      .then((response) => response.json())
-      .then((data) => {
-        console.log("Fetched vehicles:", data);
-        if (Array.isArray(data)) {
-          setVehicles(data);
-        } else {
-          console.error("API response is not an array:", data);
-        }
-      })
-      .catch((error) => console.error("Error fetching vehicles:", error));
-
-    // Fetch employees from Django API
-    fetch("http://localhost:8000/api/employees/")
-      .then((response) => response.json())
-      .then((data) => {
-        console.log("Fetched employees:", data);
-        if (Array.isArray(data)) {
-          setEmployees(data);
-        } else {
-          console.error("API response is not an array:", data);
-        }
-      })
-      .catch((error) => console.error("Error fetching employees:", error));
-  }, []);
-
 
   useEffect(() => {
     const delay = setTimeout(async () => {
@@ -281,151 +270,18 @@ const CreateNewTripPage = () => {
         <div>
           <h3 className="text-lg font-bold mb-2 text-black/70">Selection</h3>
           <div className="space-y-3">
-            {/* Vehicle Dropdown */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setVehicleDropdownOpen(!vehicleDropdownOpen)}
-                className="w-full px-4 py-3 bg-zinc-700/40 text-white rounded-lg flex justify-between items-center hover:bg-black/40 shadow-md uppercase tracking-widest text-sm"
-              >
-                {selectedVehicle
-                  ? `${selectedVehicle.plate_number} (${selectedVehicle.vehicle_type})`
-                  : "Select Vehicle"}
-                <span>▼</span>
-              </button>
-              {vehicleDropdownOpen && (
-                <div className="absolute w-full bg-zinc-600 text-white mt-1 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
-                  {vehicles.length === 0 ? (
-                    <div className="w-full text-center px-4 py-2 text-sm">
-                      No available vehicles
-                    </div>
-                  ) : (
-                    vehicles.map((vehicle) => (
-                      <button
-                        key={vehicle.vehicle_id}
-                        onClick={() => {
-                          setSelectedVehicle(vehicle);
-                          setVehicleDropdownOpen(false);
-                        }}
-                        className="w-full text-left px-4 py-2 hover:bg-black/40 uppercase tracking-widest text-sm"
-                      >
-                        {vehicle.plate_number} ({vehicle.vehicle_type})
-                      </button>
-                    ))
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Employee Dropdown */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setEmployeeDropdownOpen(!employeeDropdownOpen)}
-                className="w-full px-4 py-3 bg-zinc-700/40 text-white rounded-lg flex justify-between items-center hover:bg-black/40 shadow-md uppercase tracking-widest text-sm"
-              >
-                {selectedEmployee
-                  ? selectedEmployee.user.username
-                  : "Select Employee"}
-                <span>▼</span>
-              </button>
-              {employeeDropdownOpen && (
-                <div className="absolute w-full bg-zinc-600 text-white mt-1 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
-                  {employees.length === 0 ? (
-                    <div className="w-full text-center px-4 py-2 text-sm">No available employees</div>
-                  ) : (
-                    employees.map((emp) => (
-                      <button
-                        key={emp.employee_id}
-                        onClick={() => {
-                          setSelectedEmployee(emp);
-                          setEmployeeDropdownOpen(false);
-                        }}
-                        className="w-full text-left px-4 py-2 hover:bg-black/40 uppercase tracking-widest text-sm"
-                      >
-                        {emp.user.username}
-                      </button>
-                    ))
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Helper Dropdown */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setHelperDropdownOpen(!helperDropdownOpen)}
-                className="w-full px-4 py-3 bg-zinc-700/40 text-white rounded-lg flex justify-between items-center hover:bg-black/40 shadow-md uppercase tracking-widest text-sm"
-              >
-                {selectedHelper
-                  ? selectedHelper.user.username
-                  : "Select Helper (Optional)"}
-                <span>▼</span>
-              </button>
-              {helperDropdownOpen && (
-                <div className="absolute w-full bg-zinc-600 text-white mt-1 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
-                  {employees
-                    .filter((emp) => emp.employee_type === "Helper") // Filter for employee_type "Helper"
-                    .length === 0 ? ( // Check if no helpers available
-                    <div className="w-full text-center px-4 py-2 text-sm">No available helpers</div>
-                  ) : (
-                    employees
-                      .filter((emp) => emp.employee_type === "Helper")
-                      .map((emp) => (
-                        <button
-                          key={emp.employee_id}
-                          onClick={() => {
-                            setSelectedHelper(emp);
-                            setHelperDropdownOpen(false);
-                          }}
-                          className="w-full text-left px-4 py-2 hover:bg-black/40 uppercase tracking-widest text-sm"
-                        >
-                          {emp.user.username}
-                        </button>
-                      ))
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Helper 2 Dropdown - Show only users with employee_type "Helper" */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setHelperDropdownOpen(!helperDropdownOpen)}
-                className="w-full px-4 py-3 bg-zinc-700/40 text-white rounded-lg flex justify-between items-center hover:bg-black/40 shadow-md uppercase tracking-widest text-sm"
-              >
-                {selectedHelper
-                  ? selectedHelper.user.username
-                  : "Select Second Helper (Optional)"}
-                <span>▼</span>
-              </button>
-              {helperDropdownOpen && (
-                <div className="absolute w-full bg-zinc-600 text-white mt-1 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
-                  {employees
-                    .filter((emp) => emp.employee_type === "Helper") // Filter for employee_type "Helper"
-                    .length === 0 ? ( // Check if no helpers available
-                    <div className="w-full text-center px-4 py-2 text-sm">No available helpers</div>
-                  ) : (
-                    employees
-                      .filter((emp) => emp.employee_type === "Helper")
-                      .map((emp) => (
-                        <button
-                          key={emp.employee_id}
-                          onClick={() => {
-                            setSelectedHelper(emp);
-                            setHelperDropdownOpen(false);
-                          }}
-                          className="w-full text-left px-4 py-2 hover:bg-black/40 uppercase tracking-widest text-sm"
-                        >
-                          {emp.user.username}
-                        </button>
-                      ))
-                  )}
-                </div>
-              )}
-            </div>
+            <VehicleDropdown
+              onSelect={({ vehicle }) => setSelectedVehicle(vehicle)}
+            />
+            <DriverDropdown
+              onSelect={({ employee }) => setSelectedEmployee(employee)}
+            />
+            <HelperDropdown
+              onSelect={({ employee }) => setSelectedEmployee(employee)}
+            />
+            <HelperDropdown
+              onSelect={({ employee }) => setSelectedEmployee(employee)}
+            />           
           </div>
         </div>
 
@@ -465,13 +321,20 @@ const CreateNewTripPage = () => {
 
                   setTripFormData({
                     ...tripFormData,
-                    addresses: [...tripFormData.addresses, ""],
+                    addresses: [
+                      ...tripDestinations.map((dest) => dest.address),
+                      "",
+                    ],
                     distances: [...tripFormData.distances, ""],
                     clients: [...tripFormData.clients, ""],
                     user_lat: [...tripFormData.user_lat, ...newLat],
                     user_lng: [...tripFormData.user_lng, ...newLng],
-                    dest_lat: [...tripFormData.dest_lat, ...newDestLat],
-                    dest_lng: [...tripFormData.dest_lng, ...newDestLng],
+                    dest_lat: [
+                      ...tripDestinations.map((dest) => dest.lat.toString()),
+                    ],
+                    dest_lng: [
+                      ...tripDestinations.map((dest) => dest.lng.toString()),
+                    ],
                     completed: [...tripFormData.completed, false],
                   });
                 }}
@@ -572,7 +435,7 @@ const CreateNewTripPage = () => {
                   newDistances[index] = e.target.value;
                   setTripFormData({ ...tripFormData, distances: newDistances });
                 }}
-              />             
+              />
             </div>
           ))}
         </div>
@@ -646,7 +509,7 @@ const CreateNewTripPage = () => {
                 placeholder="Destination Longitude"
                 className="input-field text-black rounded"
                 value={tripDestination.lng}
-              />              
+              />
             </div>
           ))}
         </div>
@@ -664,7 +527,7 @@ const CreateNewTripPage = () => {
                   newCompleted[index] = !status;
                   setTripFormData({ ...tripFormData, completed: newCompleted });
                 }}
-              />             
+              />
             </div>
           ))}
         </div>
@@ -680,6 +543,34 @@ const CreateNewTripPage = () => {
           value={tripFormData.multiplier}
           onChange={(e) =>
             setTripFormData({ ...tripFormData, multiplier: e.target.value })
+          }
+        />
+
+        {/* Base Salary */}
+        <h3 className="text-lg font-bold text-black/70">Base Salary</h3>
+        <input
+          type="number"
+          step="0.01"
+          placeholder="Base Salary"
+          className="input-field text-black rounded placeholder:text-sm"
+          style={{ marginTop: "4px" }}
+          value={tripFormData.base_salary}
+          onChange={(e) =>
+            setTripFormData({ ...tripFormData, base_salary: e.target.value })
+          }
+        />
+
+        {/* Additionals */}
+        <h3 className="text-lg font-bold text-black/70">Additionals</h3>
+        <input
+          type="number"
+          step="0.01"
+          placeholder="Additionals"
+          className="input-field text-black rounded placeholder:text-sm"
+          style={{ marginTop: "4px" }}
+          value={tripFormData.additionals}
+          onChange={(e) =>
+            setTripFormData({ ...tripFormData, additionals: e.target.value })
           }
         />
 

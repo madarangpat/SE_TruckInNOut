@@ -83,8 +83,8 @@ class TripSerializer(serializers.ModelSerializer):
         fields = [
             'trip_id', 'vehicle', 'employee', 'helper', 'helper2', 
             'addresses', 'clients', 'distances', 'user_lat', 'user_lng', 
-            'dest_lat', 'dest_lng', 'completed', 'multiplier', 'num_of_drops', 
-            'start_date', 'end_date'
+            'dest_lat', 'dest_lng', 'completed', 'multiplier', 'base_salary',
+            'additionals', 'num_of_drops', 'start_date', 'end_date'
         ]
 
 class LoginSerializer(TokenObtainPairSerializer):
