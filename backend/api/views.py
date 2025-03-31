@@ -1,16 +1,14 @@
 from datetime import datetime
-
-from django.db.models.signals import post_delete
 from django.dispatch import receiver
 from django.forms import ValidationError
 from rest_framework import generics
 from django.conf import settings
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from .models import User, Administrator, Employee, Salary, Trip, Vehicle, SalaryReport, PasswordReset, SalaryConfiguration
+from .models import User, Administrator, Employee, Salary, Trip, Vehicle, PasswordReset, SalaryConfiguration
 from .serializers import (
     UserSerializer, AdministratorSerializer, EmployeeSerializer,
-    SalarySerializer, TripSerializer, VehicleSerializer, SalaryReportSerializer,
+    SalarySerializer, TripSerializer, VehicleSerializer,
     LoginSerializer, ResetPasswordRequestSerializer, ResetPasswordSerializer, SalaryConfigurationSerializer, UserProfileSerializer
 )
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -26,21 +24,44 @@ from reportlab.pdfgen import canvas
 from io import BytesIO
 from rest_framework.views import APIView
 from django.http import JsonResponse
-from rest_framework import viewsets
 from rest_framework.decorators import api_view, permission_classes, parser_classes
-from rest_framework.parsers import MultiPartParser, FormParser
 from django.core.files.storage import default_storage
-from django.core.files.base import ContentFile
 from django.views.decorators.csrf import csrf_exempt
 from io import BytesIO
 from reportlab.lib.pagesizes import letter, landscape
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
 from reportlab.platypus import Table, TableStyle
-from django.db.models import Q
+from rest_framework import viewsets
 
 User = get_user_model()
 
+#==================================================================================================================================================================================
+@api_view(['GET'])
+def get_all_salary_configurations(request):
+    """
+    Fetch all salary configurations.
+    """
+    salary_configs = SalaryConfiguration.objects.all()  # Retrieve all salary configurations
+    serializer = SalaryConfigurationSerializer(salary_configs, many=True)
+    return Response(serializer.data)
+
+#==================================================================================================================================================================================
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def update_salary_configuration(request, configId):
+    try:
+        salary_config = SalaryConfiguration.objects.get(id=configId)  # Use the passed configId
+    except SalaryConfiguration.DoesNotExist:
+        return Response({"error": "Salary configuration not found"}, status=404)
+    
+    # Proceed to update the salary config
+    serializer = SalaryConfigurationSerializer(salary_config, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({"message": "Salary configuration updated successfully", "data": serializer.data}, status=200)
+    return Response({"error": serializer.errors}, status=400)
+    
 #==================================================================================================================================================================================
 @api_view(["PATCH"])
 @permission_classes([IsAuthenticated])
@@ -155,34 +176,29 @@ class RegisterTripView(APIView):
             helper = None
             if request.data.get("helper_id"):
                 helper = Employee.objects.get(pk=request.data["helper_id"])
+            helper2 = None
+            if request.data.get("helper2_id"):
+                helper2 = Employee.objects.get(pk=request.data["helper2_id"])
 
             trip = Trip.objects.create(
                 vehicle=vehicle,
                 employee=employee,
                 helper=helper,
+                helper2=helper2,
                 
-                street_number=request.data.get("street_number"),
-                street_name=request.data.get("street_name"),
-                barangay=request.data.get("barangay"),
-                city=request.data.get("city"),
-                postal_code=request.data.get("postal_code"),
-                
-                province=request.data.get("province"),
-                region=request.data.get("region"),
-                country=request.data.get("country"),
-                
-                distance_traveled=request.data.get("distance_traveled"),
+                # Pass the new array fields here
+                addresses=request.data.get("addresses", []),
+                clients=request.data.get("clients", []),
+                distances=request.data.get("distances", []),
+                user_lat=request.data.get("user_lat", []),
+                user_lng=request.data.get("user_lng", []),
+                dest_lat=request.data.get("dest_lat", []),
+                dest_lng=request.data.get("dest_lng", []),
+                completed=request.data.get("completed", []),
+                multiplier=request.data.get("multiplier"),
                 num_of_drops=request.data.get("num_of_drops"),
-                curr_drops=request.data.get("curr_drops", 0),
-                client_info=request.data.get("client_info"),
-                
                 start_date=request.data.get("start_date"),
                 end_date=request.data.get("end_date"),
-                
-                user_latitude=request.data.get("user_latitude"),
-                user_longitude=request.data.get("user_longitude"),
-                destination_latitude=request.data.get("destination_latitude"),
-                destination_longitude=request.data.get("destination_longitude"),
             )
 
             return Response({"message": "Trip created successfully."}, status=status.HTTP_201_CREATED)
@@ -359,19 +375,6 @@ class VehicleDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Vehicle.objects.all()
     serializer_class = VehicleSerializer
     # permission_classes = [IsAuthenticated]
-
-#==================================================================================================================================================================================
-# Salary Report Views
-class SalaryReportListView(generics.ListCreateAPIView):
-    queryset = SalaryReport.objects.all()
-    serializer_class = SalaryReportSerializer
-    permission_classes = [IsAdminUser]
-
-#==================================================================================================================================================================================
-class SalaryReportDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = SalaryReport.objects.all()
-    serializer_class = SalaryReportSerializer
-    permission_classes = [IsAdminUser]
     
 #==================================================================================================================================================================================
 #PDF GENERATION
@@ -623,54 +626,7 @@ def get_users(request):
     ]
 
     return JsonResponse({'users': users_list})
-
-#==================================================================================================================================================================================
-#SETTINGS SALARY CONFIGURATION
-# List and Create Salary Configuration
-class SalaryConfigurationListCreateView(generics.ListCreateAPIView):
-    queryset = SalaryConfiguration.objects.all()
-    serializer_class = SalaryConfigurationSerializer
-    permission_classes = [IsAuthenticated] 
-
-    def perform_create(self, serializer):
-        # You can enforce only one salary configuration (this could be an admin-only action)
-        if SalaryConfiguration.objects.exists():
-            raise ValidationError("Only one salary configuration can exist.")
-        serializer.save()
-        
-#==================================================================================================================================================================================
-# Retrieve, Update, and Delete Salary Configuration
-class SalaryConfigurationRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = SalaryConfiguration.objects.all()
-    serializer_class = SalaryConfigurationSerializer
-    permission_classes = [IsAuthenticated] 
-    
-    def get_queryset(self):
-        #Return the single, global SalaryConfiguration entry
-        return SalaryConfiguration.objects.all()
-    
-    def perform_update(self, serializer):
-        # You could enforce additional logic here if necessary
-        serializer.save()
-        
-#==================================================================================================================================================================================        
-class SalaryConfigurationListView(generics.ListAPIView):
-    queryset = SalaryConfiguration.objects.all()
-    serializer_class = SalaryConfigurationSerializer
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
-
-#==================================================================================================================================================================================
-# Additional utility to fetch the global configuration
-class SalaryConfigurationGlobalView(generics.RetrieveAPIView):
-    queryset = SalaryConfiguration.objects.all()
-    serializer_class = SalaryConfigurationSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_object(self):
-        # There should only be one global configuration
-        return SalaryConfiguration.objects.first()
-           
+             
 #==================================================================================================================================================================================
 #SETTINGS DELETE ACCOUNT
 @csrf_exempt
@@ -762,60 +718,7 @@ class ValidateResetPasswordTokenView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         return Response({"message": "Token is valid."}, status=status.HTTP_200_OK)
-
-# =====================================================================================================
-# GET the currently assigned trip (status = pending)
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])
-def get_assigned_trip(request):
-    try:
-        employee = request.user.employee_profile
-        trip = Trip.objects.filter(employee=employee, assignment_status="pending").first()
-        if not trip:
-            return Response({}, status=204)
-        serializer = TripSerializer(trip)
-        return Response(serializer.data)
-    except Employee.DoesNotExist:
-        return Response({"error": "No employee profile found."}, status=400)
-    
-# =====================================================================================================
-#Accept trips
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def accept_trip(request, trip_id):
-    try:
-        trip = Trip.objects.get(pk=trip_id)
-
-        # Only allow the assigned employee to accept it
-        if trip.employee and trip.employee.user == request.user:
-            trip.assignment_status = "accepted"
-            trip.save()
-            return Response({"message": "Trip accepted successfully."})
-        else:
-            return Response({"error": "Unauthorized or already accepted."}, status=403)
-
-    except Trip.DoesNotExist:
-        return Response({"error": "Trip not found."}, status=404)
-
-# =====================================================================================================
-# DECLINE TRIP
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def decline_trip(request, trip_id):
-    try:
-        trip = Trip.objects.get(pk=trip_id)
-
-        if trip.employee and trip.employee.user == request.user:
-            trip.assignment_status = "declined"
-            trip.employee = None
-            trip.save()
-            return Response({"message": "Trip declined successfully."})
-        else:
-            return Response({"error": "Unauthorized or already unassigned."}, status=403)
-
-    except Trip.DoesNotExist:
-        return Response({"error": "Trip not found."}, status=404)
-
+  
 # =====================================================================================================
 # GET trips that are accepted but not yet completed (Ongoing Trips)
 @api_view(["GET"])
@@ -828,7 +731,7 @@ def get_ongoing_trips(request):
         trips = Trip.objects.filter(
             employee=employee
         ).filter(
-            Q(assignment_status="accepted") & Q(is_completed=False)
+            is_completed=False
         ).order_by("-start_date")
 
         serializer = TripSerializer(trips, many=True)
@@ -867,5 +770,23 @@ def get_unassigned_trips(request):
     return Response(serializer.data)
 
 # =====================================================================================================
+# # Define the viewset for SalaryConfiguration
+# class SalaryConfigurationViewSet(viewsets.ModelViewSet):
+#     queryset = SalaryConfiguration.objects.all()
+#     serializer_class = SalaryConfigurationSerializer
+
+#     def update(self, request, *args, **kwargs):
+#         instance = self.get_object()
+#         data = request.data
+#         # Assuming the data is in the correct structure for the JSONField
+#         salary_data = {
+#             'sss': data.get('sss'),
+#             'philhealth': data.get('philhealth'),
+#             'pag_ibig': data.get('pag_ibig'),
+#         }
+#         # Update the `salary_data` field in the model
+#         instance.salary_data = salary_data
+#         instance.save()
+#         return Response(self.serializer_class(instance).data)
 # =====================================================================================================
 # =====================================================================================================

@@ -12,11 +12,13 @@ const SalaryConfigurationClient = ({ salConfig }: { salConfig: SalConfig[] }) =>
     pag_ibig: 0.0,
   });
 
+
   // If salConfig is not empty, set the salary data
   useEffect(() => {
     if (salConfig && salConfig.length > 0) {
       const config = salConfig[0]; // Fetch the first (and only) salary config
       setSalaryData({
+        id: config.id,
         sss: config.sss,
         philhealth: config.philhealth,
         pag_ibig: config.pag_ibig,
@@ -34,18 +36,33 @@ const SalaryConfigurationClient = ({ salConfig }: { salConfig: SalConfig[] }) =>
   // Handle Saving the Changes
   const handleSaveChanges = async () => {
     const session = getSession();
-    const url = `${process.env.DOMAIN}/salary-configurations/1/`; // Assuming there's only one configuration (id = 1)
+
+    const configId = salaryData.id;
+    console.log("Config: ",configId)
+
+    if (!configId) {
+      console.error("Error: Salary configuration ID is missing.");
+      alert("Error: Salary configuration ID is missing.");
+      return;
+    }
+
+    const url = `${process.env.DOMAIN}/salary-configurations/${configId}/`;  // Using configId in the URL
     const requestOptions: RequestInit = {
-      method: "PUT",
+      method: "PATCH",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${session?.access!}`,
       },
-      body: JSON.stringify(salaryData),
+      body: JSON.stringify({
+        sss: salaryData.sss,
+        philhealth: salaryData.philhealth,
+        pag_ibig: salaryData.pag_ibig,
+      }),
     };
 
     try {
       const response = await fetch(url, requestOptions);
+      console.log(response)
       if (response.ok) {
         alert("Salary Configuration updated successfully!");
       } else {
@@ -58,7 +75,9 @@ const SalaryConfigurationClient = ({ salConfig }: { salConfig: SalConfig[] }) =>
   };
 
   // Check if there are any changes made to the salary data
-  const hasChanges = salaryData.sss !== salConfig[0]?.sss || salaryData.philhealth !== salConfig[0]?.philhealth || salaryData.pag_ibig !== salConfig[0]?.pag_ibig;
+  const hasChanges = salaryData.sss !== salConfig[0]?.sss || 
+    salaryData.philhealth !== salConfig[0]?.philhealth ||  
+    salaryData.pag_ibig !== salConfig[0]?.pag_ibig;
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-10">
@@ -70,8 +89,8 @@ const SalaryConfigurationClient = ({ salConfig }: { salConfig: SalConfig[] }) =>
         {/* Salary Configuration Table (Editable Fields) */}
         <div className="p-3 text-black/80 text-xs sm:text-sm">
           {Object.entries(salaryData).map(([key, value], index) => (
-            <div key={index} className="flex justify-between items-center py-1 border-b-2 border-black/5">
-              <span className="text-black/40">{key.replace(/_/g, " ").replace(/([A-Z])/g, " $1")}</span>
+            <div key={index} className="flex justify-between items-center py-1 border-b-2 border-black/10">
+              <span className="text-black/80">{key.replace(/_/g, " ").replace(/([A-Z])/g, " $1")}</span>
               <input
                 type="number"
                 value={value}

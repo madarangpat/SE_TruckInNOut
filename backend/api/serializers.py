@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import User, Administrator, Employee, Salary, Trip, Vehicle, SalaryReport, SalaryConfiguration
+from .models import User, Administrator, Employee, Salary, Trip, Vehicle, SalaryConfiguration
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth import get_user_model
 
@@ -19,17 +19,31 @@ class UserProfileSerializer(serializers.ModelSerializer):
             return obj.profile_image.url  # Assumes profile_image is an ImageField
         return "/tinoicon.png"  # Default fallback image
 
-# ✅ SalaryConfiguration Serializer
 class SalaryConfigurationSerializer(serializers.ModelSerializer):
     class Meta:
         model = SalaryConfiguration
-        fields = ['sss', 'philhealth', 'pag_ibig']
+        fields = ['id','sss', 'philhealth', 'pag_ibig']  # Include the fields you want to expose
 
-# ✅ Salary Serializer
+    def to_representation(self, instance):
+        """
+        Customize the representation of the Salary Configuration object.
+        """
+        representation = super().to_representation(instance)
+        return {
+            'id': instance.id,
+            'sss': instance.sss,
+            'philhealth': instance.philhealth,
+            'pag_ibig': instance.pag_ibig
+        }
+    
 class SalarySerializer(serializers.ModelSerializer):
     class Meta:
         model = Salary
-        fields = '__all__'
+        fields = [
+            'salary_id', 'trip', 'base_salary', 'bonuses', 'additionals',
+            'vale', 'cash_advance', 'cash_bond', 'charges', 'others',
+            'sss_loan', 'pagibig_loan'
+        ]
     
 # new ones==================
 class NestedUserSerializer(serializers.ModelSerializer):
@@ -43,7 +57,6 @@ class NestedEmployeeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Employee
         fields = ['employee_id', 'user', 'employee_type']
-# ================================
 
 # ✅ Vehicle Serializer (Updated)
 class VehicleSerializer(serializers.ModelSerializer):
@@ -68,34 +81,11 @@ class TripSerializer(serializers.ModelSerializer):
     class Meta:
         model = Trip
         fields = [
-            'trip_id', 'employee', 'vehicle', 'helper',
-            'client_info', 'distance_traveled', 'multiplier',
-            'user_latitude', 'user_longitude',
-            'destination_latitude', 'destination_longitude',
-            'street_number', 'street_name', 'barangay',
-            'city', 'postal_code', 'province', 'region', 'country',
-            'start_date', 'end_date',
-            'num_of_drops', 'curr_drops',
-            'is_completed',
-            'assignment_status',
+            'trip_id', 'vehicle', 'employee', 'helper', 'helper2', 
+            'addresses', 'clients', 'distances', 'user_lat', 'user_lng', 
+            'dest_lat', 'dest_lng', 'completed', 'multiplier', 'num_of_drops', 
+            'start_date', 'end_date'
         ]
-
-    def to_representation(self, instance):
-        representation = super().to_representation(instance)
-        full_destination_parts = [
-            instance.street_number, instance.street_name,
-            instance.barangay, instance.city,
-            instance.province, instance.region, instance.country
-        ]
-        full_destination = ', '.join([part for part in full_destination_parts if part])
-        representation['full_destination'] = full_destination
-        return representation
-
-# ✅ Salary Report Serializer
-class SalaryReportSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = SalaryReport
-        fields = '__all__'
 
 class LoginSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
@@ -145,7 +135,7 @@ class AdministratorSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Administrator
-        fields = ['admin_id', 'user', 'salary_report']
+        fields = ['admin_id', 'user']
 
 # ✅ Employee Serializer
 class EmployeeSerializer(serializers.ModelSerializer):

@@ -16,7 +16,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <Script
-        src={`https://maps.googleapis.com/maps/api/js?key=${process.env.GOOGLE_API_KEY}&libraries=places`}
+        src={`https://maps.googleapis.com/maps/api/js?key=${process.env.GOOGLE_API_KEY}&libraries=places&callback=initAddressAutocomplete`}
         strategy="beforeInteractive"
       />
 

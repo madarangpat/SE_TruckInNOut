@@ -6,10 +6,10 @@ from .views import (
     SalaryListView, SalaryDetailView,
     TripListView, TripDetailView,
     VehicleListView, VehicleDetailView,
-    SalaryReportListView, SalaryReportDetailView, generate_pdf, RegisterUserView, RegisterVehicleView, RegisterTripView, decline_trip, get_assigned_trip, get_recent_trips,
-    SendPasswordLinkView, ResetPasswordView, get_vehicles, get_employees, get_users, SalaryConfigurationListCreateView, SalaryConfigurationRetrieveUpdateDestroyView,
+    generate_pdf, RegisterUserView, RegisterVehicleView, RegisterTripView, get_recent_trips, 
+    SendPasswordLinkView, ResetPasswordView, get_vehicles, get_employees, get_users, update_salary_configuration, get_all_salary_configurations,
     EmployeeCreateView, delete_user, get_employee_profile, UserProfileView, update_employee_profile, UserUpdateView,
-    ValidateResetPasswordTokenView, accept_trip, get_ongoing_trips, SalaryConfigurationGlobalView, generate_gross_payroll_pdf, generate_salary_breakdown_pdf, update_user_profile
+    ValidateResetPasswordTokenView, get_ongoing_trips, generate_gross_payroll_pdf, generate_salary_breakdown_pdf, update_user_profile
 )
 from django.contrib.auth.views import (
     PasswordResetView,
@@ -36,11 +36,11 @@ urlpatterns = [
     path('salaries/', SalaryListView.as_view(), name='salary-list'),
     path('salaries/<int:pk>/', SalaryDetailView.as_view(), name='salary-detail'),
 
+    #Trip Assignment
+    path("trips/recent/", get_recent_trips, name="get-recent-trips"),
+    path("trips/ongoing/", get_ongoing_trips, name="get-ongoing-trips"),
     path('trips/', TripListView.as_view(), name='trip-list'),
     path('trips/<int:pk>/', TripDetailView.as_view(), name='trip-detail'),
-
-    path('salary-reports/', SalaryReportListView.as_view(), name='salary-report-list'),
-    path('salary-reports/<int:pk>/', SalaryReportDetailView.as_view(), name='salary-report-detail'),
 
     # JWT Authentication Routes
     path('login/', LoginView.as_view(), name='get_token'),
@@ -77,20 +77,9 @@ urlpatterns = [
     path('employees/', get_employees, name='get_employees'),
     
     # SalaryConfiguration API Routes
-    path('salary-configurations/', SalaryConfigurationListCreateView.as_view(), name='salary-configuration-list-create'),
-    path('salary-configurations/<int:pk>/', SalaryConfigurationRetrieveUpdateDestroyView.as_view(), name='salary-configuration-detail'),
-    path('salary-configurations/global/', SalaryConfigurationGlobalView.as_view(), name='salary-configuration-global'),
+    path('salary-configurations/<int:configId>/', update_salary_configuration, name='salary-configuration-update'),
+    path('salary-configurations/', get_all_salary_configurations, name='salary-configuration-list'),  # For listing all salary configs
     
     #Delete User
     path('delete-user/<int:user_id>/', delete_user, name='delete-user'),
-    
-    #Trip Assignment
-    path('trips/<int:trip_id>/decline/', decline_trip, name='decline-trip'),
-    
-    path("trips/assigned/", get_assigned_trip, name="get-assigned-trip"),
-    path("trips/recent/", get_recent_trips, name="get-recent-trips"),
-    path('trips/<int:trip_id>/accept/', accept_trip, name='accept-trip'),
-    path("trips/ongoing/", get_ongoing_trips, name="get-ongoing-trips"),
-
-
 ]

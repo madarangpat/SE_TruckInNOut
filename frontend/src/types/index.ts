@@ -1,9 +1,9 @@
 type BaseUser = {
-  id: string
+  id?: string
   username: string;
-  role: "super_admin" | "admin" | "employee" | "N/A";
+  role: "super_admin" | "admin" | "employee" | "";
   profile_image?: string;
-  employee_type?: "Driver" | "Helper" | "Staff";
+  employee_type?: "Driver" | "Helper" | "Staff" | "" | undefined;
 };
 
 type User = BaseUser & {
@@ -19,6 +19,7 @@ type User = BaseUser & {
 };
 
 type SalConfig = {
+  id?: number;
   sss?: number;
   philhealth?: number;
   pag_ibig?: number;

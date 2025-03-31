@@ -4,6 +4,10 @@ import Image from "next/image";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import { getCoordinatesFromAddress, calculateDistance } from "@/lib/google";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import AddressAutoComplete from "@/components/AddressAutoComplete";
+import { LargeNumberLike } from "crypto";
 
 interface User {
   username: string;
@@ -22,6 +26,12 @@ interface Employee {
   employee_type: string;
 }
 
+interface GoogelAddress {
+  address: string;
+  lat: number;
+  lng: number;
+}
+
 const CreateNewTripPage = () => {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -36,56 +46,63 @@ const CreateNewTripPage = () => {
 
   const [selectedHelper, setSelectedHelper] = useState<Employee | null>(null);
   const [helperDropdownOpen, setHelperDropdownOpen] = useState(false);
+  const [selectedHelper2, setSelectedHelper2] = useState<Employee | null>(null);
+  const [helper2DropdownOpen, setHelper2DropdownOpen] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const router = useRouter();
 
+  const [startDate, setStartDate] = useState<Date | null>(new Date());
+  const [endDate, setEndDate] = useState<Date | null>(null);
+  const [tripDestinations, setTripDestinations] = useState<GoogelAddress[]>([]);
+
+  // Update tripFormData whenever the dates change
+  const handleStartDateChange = (date: Date | null) => {
+    setStartDate(date);
+    setTripFormData((prevData) => ({
+      ...prevData,
+      start_date: date ? date.toISOString() : "", // Store as ISO string
+    }));
+  };
+
+  const handleEndDateChange = (date: Date | null) => {
+    setEndDate(date);
+    setTripFormData((prevData) => ({
+      ...prevData,
+      end_date: date ? date.toISOString() : "", // Store as ISO string
+    }));
+  };
+
   interface TripFormData {
-    street_number: string;
-    street_name: string;
-    barangay: string;
-    city: string;
-    postal_code: string;
-    province: string;
-    region: string;
-    country: string;
-    destination: string;
-    distance: string;
+    addresses: string[]; // New field for multiple addresses
+    clients: string[]; // New field for clients
+    distances: string[];
+    user_lat: string[]; // New field for multiple latitudes
+    user_lng: string[]; // New field for multiple longitudes
+    dest_lat: string[]; // New field for destination latitudes
+    dest_lng: string[]; // New field for destination longitudes
+    completed: boolean[]; // New field for multiple completion statuses
     multiplier: string;
-    num_of_drops: string;
-    curr_drops: string;
-    client_info: string;
     start_date: string;
     end_date: string;
-    user_latitude: string;
-    user_longitude: string;
-    destination_latitude: string;  // Nullable type if latitude/longitude can be empty
-    destination_longitude: string;
   }
 
   const [tripFormData, setTripFormData] = useState<TripFormData>({
-    street_number: "",
-    street_name: "",
-    barangay: "",
-    city: "",
-    postal_code: "",
-    province: "",
-    region: "",
-    country: "Philippines",
-    destination: "",
-    distance: "",
+    addresses: [""],
+    clients: [""],
+    distances: [""],
+    user_lat: ["14.65889"],
+    user_lng: ["121.10419"],
+    dest_lat: [""],
+    dest_lng: [""],
+    completed: [false],
     multiplier: "",
-    num_of_drops: "",
-    curr_drops: "0",
-    client_info: "",
-    start_date: new Date().toISOString().split("T")[0],
-    end_date: "",
-    user_latitude: "14.65889",
-    user_longitude: "121.10419",
-    destination_latitude: "",
-    destination_longitude: "",
+    start_date: startDate ? startDate.toISOString() : "",
+    end_date: endDate ? endDate.toISOString() : "",
   });
+
+  const numOfDrops = tripFormData.addresses.length;
 
   function haversineDistance(
     lat1: number,
@@ -118,58 +135,28 @@ const CreateNewTripPage = () => {
       return;
     }
 
-    const fullDestination = [
-      tripFormData.street_number,
-      tripFormData.street_name,
-      tripFormData.barangay,
-      tripFormData.city,
-      tripFormData.postal_code,
-      tripFormData.province,
-      tripFormData.region,
-      tripFormData.country,
-    ]
-      .filter(Boolean)
-      .join(", ");
-
     const toNullable = (value: string) => (value === "" ? null : value);
 
     const payload: any = {
+      // People Included
       vehicle_id: selectedVehicle.vehicle_id,
       employee_id: selectedEmployee.employee_id,
       helper_id: selectedHelper?.employee_id || null,
+      helper2_id: selectedHelper2?.employee_id || null,
 
-      street_number: toNullable(tripFormData.street_number),
-      street_name: toNullable(tripFormData.street_name),
-      barangay: toNullable(tripFormData.barangay),
-      city: toNullable(tripFormData.city),
-      postal_code: toNullable(tripFormData.postal_code),
-
-      province: toNullable(tripFormData.province),
-      region: toNullable(tripFormData.region),
-      country: tripFormData.country,
-
-      destination: fullDestination,
-      distance_traveled: tripFormData.distance
-        ? parseFloat(tripFormData.distance)
-        : null,
-      multiplier: tripFormData.multiplier
-        ? parseFloat(tripFormData.multiplier)
-        : null,
-      num_of_drops: tripFormData.num_of_drops
-        ? parseInt(tripFormData.num_of_drops)
-        : null, // ✅ fixed key
-      curr_drops: tripFormData.curr_drops,
-
-      client_info: toNullable(tripFormData.client_info), // ✅ fixed key
+      // Arrays
+      num_of_drops: numOfDrops,
+      addresses: tripFormData.addresses,
+      clients: tripFormData.clients,
+      distances: tripFormData.distances,
+      user_lat: tripFormData.user_lat,
+      user_lng: tripFormData.user_lng,
+      dest_lat: tripFormData.dest_lat,
+      dest_lng: tripFormData.dest_lng,
+      completed: tripFormData.completed,
+      multiplier: tripFormData.multiplier? parseFloat(tripFormData.multiplier): null,
       start_date: new Date(tripFormData.start_date).toISOString(),
-      end_date: toNullable(tripFormData.end_date)
-        ? new Date(tripFormData.end_date).toISOString()
-        : null,
-
-      user_latitude: toNullable(tripFormData.user_latitude),
-      user_longitude: toNullable(tripFormData.user_longitude),
-      destination_latitude: toNullable(tripFormData.destination_latitude),
-      destination_longitude: toNullable(tripFormData.destination_longitude),
+      end_date: toNullable(tripFormData.end_date)? new Date(tripFormData.end_date).toISOString(): null,
     };
 
     try {
@@ -187,27 +174,18 @@ const CreateNewTripPage = () => {
 
       setSelectedVehicle(null);
       setSelectedEmployee(null);
-      setTripFormData({
-        street_number: "",
-        street_name: "",
-        barangay: "",
-        city: "",
-        province: "",
-        postal_code: "",
-        region: "",
-        country: "Philippines",
-        destination: "",
-        distance: "",
+      setTripFormData({   
+        addresses: [""],
+        clients: [""],
+        distances: [""],
+        user_lat: ["14.65889"],
+        user_lng: ["121.10419"],
+        dest_lat: [""],
+        dest_lng: [""],
+        completed: [false],
         multiplier: "",
-        num_of_drops: "",
-        curr_drops: "0",
-        client_info: "",
         start_date: new Date().toISOString().split("T")[0],
         end_date: "",
-        user_latitude: "14.65889",
-        user_longitude: "121.10419",
-        destination_latitude: "",
-        destination_longitude: "",
       });
     } catch (error: any) {
       console.error("API Error:", error.response?.data);
@@ -243,59 +221,39 @@ const CreateNewTripPage = () => {
       .catch((error) => console.error("Error fetching employees:", error));
   }, []);
 
+
   useEffect(() => {
-    const {
-      street_number,
-      street_name,
-      barangay,
-      city,
-      postal_code,
-      province,
-      region,
-      country,
-    } = tripFormData;
-
-    const fullDestination = [
-      street_number,
-      street_name,
-      barangay,
-      city,
-      postal_code,
-      province,
-      region,
-      country,
-    ]
-      .filter(Boolean)
-      .join(", ");
-
-    if ([street_name, city, province].some((v) => v.trim() === "")) return;
-
     const delay = setTimeout(async () => {
       try {
         const apiKey = process.env.GOOGLE_API_KEY;
-        const response = await fetch(
-          `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
-            fullDestination
-          )}&key=${apiKey}`
+
+        const updatedDestinations = await Promise.all(
+          tripDestinations.map(async (dest) => {
+            const response = await fetch(
+              `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+                dest.address
+              )}&key=${apiKey}`
+            );
+
+            const data = await response.json();
+            console.log("Auto-geocode Google response:", data);
+
+            if (!data.results || data.results.length === 0) return dest; // Keep original if no results
+
+            const { lat, lng } = data.results[0].geometry.location;
+
+            return { ...dest, lat, lng }; // Update with lat/lng
+          })
         );
-
-        const data = await response.json();
-        console.log("Auto-geocode OpenCage response:", data);
-
-        if (!data.results || data.results.length === 0) return;
-
-        const { lat, lng } = data.results[0].geometry;
 
         setTripFormData((prev) => ({
           ...prev,
-          destination: fullDestination,
-          destination_latitude: lat,
-          destination_longitude: lng,
+          destinations: updatedDestinations, // Store updated destinations array
         }));
       } catch (err) {
         console.error("Auto-geocoding failed:", err);
       }
-    }, 1500); // wait for 1.5s after typing stops
+    }, 1500);
 
     return () => clearTimeout(delay);
   }, [tripFormData]);
@@ -338,7 +296,9 @@ const CreateNewTripPage = () => {
               {vehicleDropdownOpen && (
                 <div className="absolute w-full bg-zinc-600 text-white mt-1 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
                   {vehicles.length === 0 ? (
-                    <div className="w-full text-center px-4 py-2 text-sm">No available vehicles</div>
+                    <div className="w-full text-center px-4 py-2 text-sm">
+                      No available vehicles
+                    </div>
                   ) : (
                     vehicles.map((vehicle) => (
                       <button
@@ -429,339 +389,343 @@ const CreateNewTripPage = () => {
               )}
             </div>
 
+            {/* Helper 2 Dropdown - Show only users with employee_type "Helper" */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setHelperDropdownOpen(!helperDropdownOpen)}
+                className="w-full px-4 py-3 bg-zinc-700/40 text-white rounded-lg flex justify-between items-center hover:bg-black/40 shadow-md uppercase tracking-widest text-sm"
+              >
+                {selectedHelper
+                  ? selectedHelper.user.username
+                  : "Select Second Helper (Optional)"}
+                <span>▼</span>
+              </button>
+              {helperDropdownOpen && (
+                <div className="absolute w-full bg-zinc-600 text-white mt-1 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
+                  {employees
+                    .filter((emp) => emp.employee_type === "Helper") // Filter for employee_type "Helper"
+                    .length === 0 ? ( // Check if no helpers available
+                    <div className="w-full text-center px-4 py-2 text-sm">No available helpers</div>
+                  ) : (
+                    employees
+                      .filter((emp) => emp.employee_type === "Helper")
+                      .map((emp) => (
+                        <button
+                          key={emp.employee_id}
+                          onClick={() => {
+                            setSelectedHelper(emp);
+                            setHelperDropdownOpen(false);
+                          }}
+                          className="w-full text-left px-4 py-2 hover:bg-black/40 uppercase tracking-widest text-sm"
+                        >
+                          {emp.user.username}
+                        </button>
+                      ))
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Address */}
+        {/* Number of Drops (Calculated Automatically) */}
+        <h3 className="text-lg font-bold text-black/70">Number of Drops</h3>
+        <input
+          type="text"
+          value={numOfDrops} // Set value to the number of addresses
+          readOnly
+          className="input-field text-black rounded placeholder:text-sm bg-white"
+          style={{ marginTop: "2px" }}
+          disabled
+        />
+
+        {/* ADDRESS ARRAY */}
         <div>
-          <h3 className="text-lg font-bold mb-2 text-black/70">
-            Address Destination
-          </h3>
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              "street_number",
-              "street_name",
-              "barangay",
-              "city",
-              "postal_code",
-              "province",
-              "region",
-              "country",
-              "destination",
-            ].map((field) => {
-              const isDestination = field === "destination";
-              return isDestination ? (
-                <div
-                  key={field}
-                  className="input-field text-black rounded bg-white px-3 py-2 overflow-x-auto whitespace-nowrap scrollbar-thin border border-gray-300"
-                  style={{ minHeight: "2.5rem" }}
-                >
-                  {tripFormData.destination}
-                </div>
-              ) : field === "region" ? (
-                <select
-                  key="region"
-                  value={tripFormData.region}
-                  onChange={(e) =>
-                    setTripFormData({ ...tripFormData, region: e.target.value })
-                  }
-                  className="input-field text-black rounded"
-                >
-                  <option value="">Select Region</option>
-                  <option value="Region I">Region I – Ilocos Region</option>
-                  <option value="Region II">Region II – Cagayan Valley</option>
-                  <option value="Region III">Region III – Central Luzon</option>
-                  <option value="Region IV‑A">Region IV‑A – CALABARZON</option>
-                  <option value="MIMAROPA">MIMAROPA Region</option>
-                  <option value="Region V">Region V – Bicol Region</option>
-                  <option value="Region VI">Region VI – Western Visayas</option>
-                  <option value="Region VII">
-                    Region VII – Central Visayas
-                  </option>
-                  <option value="Region VIII">
-                    Region VIII – Eastern Visayas
-                  </option>
-                  <option value="Region IX">
-                    Region IX – Zamboanga Peninsula
-                  </option>
-                  <option value="Region X">Region X – Northern Mindanao</option>
-                  <option value="Region XI">Region XI – Davao Region</option>
-                  <option value="Region XII">Region XII – SOCCSKSARGEN</option>
-                  <option value="Region XIII">Region XIII – Caraga</option>
-                  <option value="NCR">NCR – National Capital Region</option>
-                  <option value="CAR">
-                    CAR – Cordillera Administrative Region
-                  </option>
-                  <option value="BARMM">
-                    BARMM – Bangsamoro Autonomous Region in Muslim Mindanao
-                  </option>
-                  <option value="NIR">NIR – Negros Island Region</option>
-                </select>
-              ) : (
-                <input
-                  key={field}
-                  type="text"
-                  placeholder={field
-                    .replace(/_/g, " ")
-                    .replace(/\b\w/g, (c) => c.toUpperCase())}
-                  className="input-field text-black rounded"
-                  value={(tripFormData as any)[field]}
-                  onChange={(e) =>
-                    setTripFormData({
-                      ...tripFormData,
-                      [field]: e.target.value,
-                    })
-                  }
-                  readOnly={field === "country"}
+          <h3 className="w-full text-lg font-bold text-black/70">Address</h3>
+          {tripFormData.addresses.map((address, index) => (
+            <div key={index} className="flex gap-2">
+              <AddressAutoComplete
+                onSelect={({ address, lat, lng }) => {
+                  setTripDestinations((prev) => {
+                    const newDestinations = [...prev];
+                    newDestinations[index] = { address, lat, lng };
+                    return newDestinations;
+                  });
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  // Add corresponding entries for other fields when a new address is added
+                  const newLat = index === 1 ? ["14.65889"] : [""]; // Default value for the first field, empty for others
+                  const newLng = index === 1 ? ["121.10419"] : [""]; // Default value for the first field, empty for others
+                  const newDestLat = index === 1 ? ["14.65889"] : [""];
+                  const newDestLng = index === 1 ? ["14.65889"] : [""];
+
+                  setTripFormData({
+                    ...tripFormData,
+                    addresses: [...tripFormData.addresses, ""],
+                    distances: [...tripFormData.distances, ""],
+                    clients: [...tripFormData.clients, ""],
+                    user_lat: [...tripFormData.user_lat, ...newLat],
+                    user_lng: [...tripFormData.user_lng, ...newLng],
+                    dest_lat: [...tripFormData.dest_lat, ...newDestLat],
+                    dest_lng: [...tripFormData.dest_lng, ...newDestLng],
+                    completed: [...tripFormData.completed, false],
+                  });
+                }}
+                className="text-green-500"
+              >
+                <Image
+                  src="/plustrip2.png"
+                  alt="Add Address"
+                  width={20}
+                  height={20}
                 />
-              );
-            })}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  // Remove corresponding entries for other fields when an address is removed
+                  const newAddresses = tripFormData.addresses.filter(
+                    (_, i) => i !== index
+                  );
+                  const newDistances = tripFormData.distances.filter(
+                    (_, i) => i !== index
+                  );
+                  const newClients = tripFormData.clients.filter(
+                    (_, i) => i !== index
+                  );
+                  const newUserLat = tripFormData.user_lat.filter(
+                    (_, i) => i !== index
+                  );
+                  const newUserLng = tripFormData.user_lng.filter(
+                    (_, i) => i !== index
+                  );
+                  const newDestLat = tripFormData.dest_lat.filter(
+                    (_, i) => i !== index
+                  );
+                  const newDestLng = tripFormData.dest_lng.filter(
+                    (_, i) => i !== index
+                  );
+                  const newCompleted = tripFormData.completed.filter(
+                    (_, i) => i !== index
+                  );
 
-            {/* Add Latitude and Longitude here */}
-            <input
-              type="number"
-              placeholder="Destination Latitude"
-              className="input-field text-black rounded placeholder:text-sm"
-              value={tripFormData.destination_latitude}
-              onChange={(e) =>
-                setTripFormData({
-                  ...tripFormData,
-                  destination_latitude: e.target.value,
-                })
-              }
+                  setTripFormData({
+                    ...tripFormData,
+                    addresses: newAddresses,
+                    distances: newDistances,
+                    clients: newClients,
+                    user_lat: newUserLat,
+                    user_lng: newUserLng,
+                    dest_lat: newDestLat,
+                    dest_lng: newDestLng,
+                    completed: newCompleted,
+                  });
+                  setTripDestinations((prev) =>
+                    prev.filter((_, i) => i !== index)
+                  );
+                }}
+                className="text-red-500"
+                disabled={tripFormData.addresses.length === 1}
+              >
+                <Image src="/remove.png" alt="Remove" width={20} height={20} />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* CLIENTS ARRAY */}
+        <div>
+          <h3 className="text-lg font-bold text-black/70">Clients</h3>
+          {tripFormData.clients.map((client, index) => (
+            <div key={index} className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Client"
+                className="input-field text-black rounded"
+                value={client}
+                onChange={(e) => {
+                  const newClients = [...tripFormData.clients];
+                  newClients[index] = e.target.value;
+                  setTripFormData({ ...tripFormData, clients: newClients });
+                }}
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* DISTANCES ARRAY */}
+        <div>
+          <h3 className="text-lg font-bold text-black/70">Distances</h3>
+          {tripFormData.distances.map((distance, index) => (
+            <div key={index} className="flex gap-2">
+              <input
+                type="number"
+                placeholder="Distance"
+                className="input-field text-black rounded placeholder:text-sm"
+                value={distance}
+                onChange={(e) => {
+                  const newDistances = [...tripFormData.distances];
+                  newDistances[index] = e.target.value;
+                  setTripFormData({ ...tripFormData, distances: newDistances });
+                }}
+              />             
+            </div>
+          ))}
+        </div>
+
+        {/* USER LAT ARRAY */}
+        <div>
+          <h3 className="text-lg font-bold text-black/70">User Latitudes</h3>
+          {tripFormData.user_lat.map((lat, index) => (
+            <div key={index} className="flex gap-2">
+              <input
+                type="number"
+                placeholder="User Latitude"
+                className="input-field text-black rounded"
+                value={lat}
+                onChange={(e) => {
+                  const newLatitudes = [...tripFormData.user_lat];
+                  newLatitudes[index] = e.target.value;
+                  setTripFormData({ ...tripFormData, user_lat: newLatitudes });
+                }}
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* USER LNG ARRAY */}
+        <div>
+          <h3 className="text-lg font-bold text-black/70">User Longitudes</h3>
+          {tripFormData.user_lng.map((lng, index) => (
+            <div key={index} className="flex gap-2">
+              <input
+                type="number"
+                placeholder="User Longitude"
+                className="input-field text-black rounded"
+                value={lng}
+                onChange={(e) => {
+                  const newLongitudes = [...tripFormData.user_lng];
+                  newLongitudes[index] = e.target.value;
+                  setTripFormData({ ...tripFormData, user_lng: newLongitudes });
+                }}
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* DEST LAT ARRAY */}
+        <div>
+          <h3 className="text-lg font-bold text-black/70">
+            Destination Latitudes
+          </h3>
+          {tripDestinations.map((tripDestination, index) => (
+            <div key={index} className="flex gap-2">
+              <input
+                type="number"
+                placeholder="Destination Latitude"
+                className="input-field text-black rounded"
+                value={tripDestination.lat}
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* DEST LNG ARRAY */}
+        <div>
+          <h3 className="text-lg font-bold text-black/70">
+            Destination Longitudes
+          </h3>
+          {tripDestinations.map((tripDestination, index) => (
+            <div key={index} className="flex gap-2">
+              <input
+                type="number"
+                placeholder="Destination Longitude"
+                className="input-field text-black rounded"
+                value={tripDestination.lng}
+              />              
+            </div>
+          ))}
+        </div>
+
+        {/* COMPLETED ARRAY */}
+        <div>
+          <h3 className="text-lg font-bold text-black/70">Completion Status</h3>
+          {tripFormData.completed.map((status, index) => (
+            <div key={index} className="flex gap-2">
+              <input
+                type="checkbox"
+                checked={status}
+                onChange={() => {
+                  const newCompleted = [...tripFormData.completed];
+                  newCompleted[index] = !status;
+                  setTripFormData({ ...tripFormData, completed: newCompleted });
+                }}
+              />             
+            </div>
+          ))}
+        </div>
+
+        {/* MULTIPLIER */}
+        <h3 className="text-lg font-bold text-black/70">Multiplier</h3>
+        <input
+          type="number"
+          step="0.01"
+          placeholder="Multiplier"
+          className="input-field text-black rounded placeholder:text-sm"
+          style={{ marginTop: "4px" }}
+          value={tripFormData.multiplier}
+          onChange={(e) =>
+            setTripFormData({ ...tripFormData, multiplier: e.target.value })
+          }
+        />
+
+        {/* START DATE & END DATE */}
+        <div className="flex gap-4 mb-4">
+          {/* Start Date */}
+          <div className="w-1/2">
+            <label className="block text-sm text-black mb-1 font-bold">
+              Start Date
+            </label>
+            <DatePicker
+              selected={startDate}
+              onChange={handleStartDateChange}
+              dateFormat="MMMM d, yyyy"
+              placeholderText="Select start date"
+              className="w-full px-4 py-2 rounded-md shadow-md text-black cursor-pointer bg-white"
+              calendarClassName="rounded-lg"
             />
+          </div>
 
-            <input
-              type="number"
-              placeholder="Destination Longitude"
-              className="input-field text-black rounded placeholder:text-sm"
-              value={tripFormData.destination_longitude}
-              onChange={(e) =>
-                setTripFormData({
-                  ...tripFormData,
-                  destination_longitude: e.target.value,
-                })
-              }
+          {/* End Date */}
+          <div className="w-1/2">
+            <label className="block text-sm text-black mb-1 font-bold">
+              End Date
+            </label>
+            <DatePicker
+              selected={endDate}
+              onChange={handleEndDateChange}
+              dateFormat="MMMM d, yyyy"
+              placeholderText="Select end date"
+              minDate={startDate || undefined}
+              className="w-full px-4 py-2 rounded-md shadow-md text-black cursor-pointer bg-white"
+              calendarClassName="rounded-lg"
             />
-
           </div>
         </div>
 
         {/* Confirm and Clear Address Buttons */}
-        <div className="flex justify-start space-x-4">
+        {/* <div className="flex justify-start space-x-4">
           <button
             type="button"
             className="bg-[#668743] text-white px-6 py-2 rounded-lg hover:bg-[#345216] transition-all min-w-[160px] text-center"
-            onClick={async () => {
-              const fullDestination = [
-                tripFormData.street_number,
-                tripFormData.street_name,
-                tripFormData.barangay,
-                tripFormData.city,
-                tripFormData.postal_code,
-                tripFormData.province,
-                tripFormData.region,
-                tripFormData.country,
-              ]
-                .filter(Boolean)
-                .join(", ");
-
-              console.log(
-                "Confirm Address clicked. Destination:",
-                fullDestination
-              );
-
-              try {
-                // Use the imported function instead of direct API call
-                const coordinates = await getCoordinatesFromAddress(
-                  fullDestination
-                );
-
-                if (!coordinates) {
-                  setError("Location not found.");
-                  return;
-                }
-
-                const { lat, lng } = coordinates;
-
-                // You can also move this to a function in google.ts
-                const distanceKm = haversineDistance(
-                  parseFloat(tripFormData.user_latitude || "0"),
-                  parseFloat(tripFormData.user_longitude || "0"),
-                  lat,
-                  lng
-                );
-
-                setTripFormData((prev) => ({
-                  ...prev,
-                  destination: fullDestination,
-                  destination_latitude: lat,
-                  destination_longitude: lng,
-                  distance: distanceKm.toFixed(2),
-                }));
-
-                console.log("Distance set in form:", distanceKm.toFixed(2));
-
-                setError(null);
-              } catch (err) {
-                console.error("Geocoding error:", err);
-                setError("Failed to get coordinates.");
-              }
-            }}
           >
             Calculate Distance
           </button>
-
-          <button
-            type="button"
-            className="bg-[#668743] text-white px-6 py-2 rounded-lg hover:bg-[#345216] transition-all min-w-[160px] text-center"
-            onClick={() => {
-              setTripFormData((prev) => ({
-                ...prev,
-                street_number: "",
-                street_name: "",
-                barangay: "",
-                city: "",
-                postal_code: "",
-                province: "",
-                region: "",
-                country: "Philippines",
-                destination: "",
-              }));
-            }}
-          >
-            Clear Address
-          </button>
-        </div>
-
-        {/* Trip Details */}
-        <div>
-          <h3 className="text-lg font-bold mb-2 text-black/70">Trip Details</h3>
-          <div className="grid grid-cols-2 gap-3">
-            <input
-              type="number"
-              placeholder="Distance Traveled"
-              className="input-field text-black rounded placeholder:text-sm"
-              value={tripFormData.distance}
-              onChange={(e) =>
-                setTripFormData({ ...tripFormData, distance: e.target.value })
-              }
-            />
-
-            <input
-              type="number"
-              step="0.01"
-              placeholder="Multiplier"
-              className="input-field text-black rounded placeholder:text-sm"
-              value={tripFormData.multiplier}
-              onChange={(e) =>
-                setTripFormData({ ...tripFormData, multiplier: e.target.value })
-              }
-            />
-
-            <input
-              type="number"
-              placeholder="Num of Drops"
-              className="input-field text-black rounded placeholder:text-sm"
-              value={tripFormData.num_of_drops}
-              onChange={(e) =>
-                setTripFormData({
-                  ...tripFormData,
-                  num_of_drops: e.target.value,
-                })
-              }
-            />
-
-            <input
-              type="number"
-              placeholder="Curr Drops"
-              className="input-field text-black rounded placeholder:text-sm"
-              value={tripFormData.curr_drops}
-              readOnly
-            />
-
-            <input
-              type="text"
-              placeholder="Client Info"
-              className="input-field text-black rounded placeholder:text-sm"
-              value={tripFormData.client_info}
-              onChange={(e) =>
-                setTripFormData({
-                  ...tripFormData,
-                  client_info: e.target.value,
-                })
-              }
-            />
-
-            <input
-              type="date"
-              placeholder="Start Date"
-              className="input-field text-black rounded placeholder:text-sm"
-              value={tripFormData.start_date}
-              readOnly
-            />
-
-            <input
-              type="date"
-              placeholder="End Date"
-              className="input-field text-black rounded placeholder:text-sm"
-              value={tripFormData.end_date}
-              onChange={(e) =>
-                setTripFormData({ ...tripFormData, end_date: e.target.value })
-              }
-            />
-
-            <input
-              type="number"
-              placeholder="User Latitude"
-              className="input-field text-black rounded placeholder:text-sm"
-              value={tripFormData.user_latitude}
-              onChange={(e) =>
-                setTripFormData({
-                  ...tripFormData,
-                  user_latitude: e.target.value,
-                })
-              }
-            />
-
-            <input
-              type="number"
-              placeholder="User Longitude"
-              className="input-field text-black rounded placeholder:text-sm"
-              value={tripFormData.user_longitude}
-              onChange={(e) =>
-                setTripFormData({
-                  ...tripFormData,
-                  user_longitude: e.target.value,
-                })
-              }
-            />
-          </div>
-        </div>
-
-        <div className="flex justify-start">
-          <button
-            type="button"
-            className="bg-[#668743] text-white px-6 py-2 rounded-lg hover:bg-[#345216] transition-all min-w-[160px] text-center mt-2"
-            onClick={() => {
-              setTripFormData((prev) => ({
-                ...prev,
-                distance: "",
-                numdrops: "",
-                curr_drops: "0",
-                client_information: "",
-                start_date: new Date().toISOString().split("T")[0],
-                end_date: "",
-                // user_latitude: "",
-                // user_longitude: "",
-                destination_latitude: "",
-                destination_longitude: "",
-              }));
-            }}
-          >
-            Clear Details
-          </button>
-        </div>
+        </div> */}
 
         <button
           type="submit"

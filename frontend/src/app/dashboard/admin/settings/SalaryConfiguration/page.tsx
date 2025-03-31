@@ -15,7 +15,6 @@ export default async function SalaryConfigurationPage() {
 
   const response = await fetch(url, requestOptions);
   const salConfig = (await response.json()) as SalConfig[];
-  console.log(salConfig);
 
   return <SalaryConfigurationClient salConfig={salConfig} />;
 }

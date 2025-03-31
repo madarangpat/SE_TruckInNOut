@@ -14,13 +14,17 @@ const EmployeeDataClient = ({ users }: { users: User[] }) => {
   // Handle User Selection
   const [userData, setUserData] = useState<User>({
     username: "",
-    role: "N/A",
-    cellphone_no: "",
     email: "",
+    first_name: "",
+    last_name: "",
+    cellphone_no: "",
     philhealth_no: "",
     pag_ibig_no: "",
     sss_no: "",
     license_no: "",
+    profile_image: "", // default profile image
+    employee_type: "", // default employee type
+    role: "",   
   });
 
   const handleUserSelect = (user: User) => {
@@ -29,23 +33,20 @@ const EmployeeDataClient = ({ users }: { users: User[] }) => {
     setUserData({
       username: user.username, 
       role: user.role, 
+      email: user.email, 
+      first_name: user.first_name,
+      last_name: user.last_name,
       cellphone_no: user.cellphone_no,
-      email: user.email,
       philhealth_no: user.philhealth_no,
       pag_ibig_no: user.pag_ibig_no,
       sss_no: user.sss_no,
       license_no: user.license_no,
+      profile_image: user.profile_image, // ensure profile_image is updated
+      employee_type: user.employee_type, // use the selected user's employee_type or default to "Driver"
+           
     });
     setDropdownOpen(false);
   };
-
-  // Filter users based on search query
-  // const filteredUsers = users.filter(
-  //   (user) =>
-  //     user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-  //     user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-  //     user.role.toLowerCase().includes(searchQuery.toLowerCase())
-  // );
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-10">
@@ -94,9 +95,9 @@ const EmployeeDataClient = ({ users }: { users: User[] }) => {
           {Object.entries(userData).map(([key, value], index) => (
             <div
               key={index}
-              className="flex justify-between items-center py-2 border-b-2 border-black/5"
+              className="flex justify-between items-center py-2 border-b-2 border-black/70"
             >
-              <span className="text-black/40 capitalize">
+              <span className="text-black/80 capitalize">
                 {key.replace(/_/g, " ").replace(/([A-Z])/g, " $1")}
               </span>
               <span className="text-black text-xs sm:text-sm">{value}</span>
