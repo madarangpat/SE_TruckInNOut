@@ -49,14 +49,14 @@ class SalarySerializer(serializers.ModelSerializer):
 class NestedUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['username', 'profile_image']
+        fields = ['username', 'profile_image', 'employee_type']
 
 class NestedEmployeeSerializer(serializers.ModelSerializer):
     user = NestedUserSerializer()
 
     class Meta:
         model = Employee
-        fields = ['employee_id', 'user', 'employee_type']
+        fields = ['employee_id', 'user']
 
 # ✅ Vehicle Serializer (Updated)
 class VehicleSerializer(serializers.ModelSerializer):
@@ -84,7 +84,7 @@ class TripSerializer(serializers.ModelSerializer):
             'trip_id', 'vehicle', 'employee', 'helper', 'helper2', 
             'addresses', 'clients', 'distances', 'user_lat', 'user_lng', 
             'dest_lat', 'dest_lng', 'completed', 'multiplier', 'base_salary',
-            'additionals', 'num_of_drops', 'start_date', 'end_date'
+            'additionals', 'num_of_drops', 'start_date', 'end_date', 'is_in_progress',
         ]
 
 class LoginSerializer(TokenObtainPairSerializer):

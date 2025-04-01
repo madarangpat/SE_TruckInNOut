@@ -21,7 +21,6 @@ interface Vehicle {
   vehicle_id: number;
   plate_number: string;
   vehicle_type: string;
-  trip: number | null;
 }
 
 interface Employee {
@@ -37,14 +36,10 @@ interface GoogelAddress {
 
 const CreateNewTripPage = () => {
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(
-    null
-  );
-
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [selectedHelper, setSelectedHelper] = useState<Employee | null>(null);
   const [helperDropdownOpen, setHelperDropdownOpen] = useState(false);
-  const [selectedHelper2, setSelectedHelper2] = useState<Employee | null>(null);
+  // const [selectedHelper2, setSelectedHelper2] = useState<Employee | null>(null);
   const [helper2DropdownOpen, setHelper2DropdownOpen] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
@@ -132,7 +127,6 @@ const CreateNewTripPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    // setSuccess(null);
 
     if (!selectedVehicle || !selectedEmployee) {
       setError("Please select both a vehicle and an employee.");

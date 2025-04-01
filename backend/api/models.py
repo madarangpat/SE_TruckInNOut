@@ -166,7 +166,10 @@ class Trip(models.Model):
     additionals = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     num_of_drops = models.IntegerField(null=True, blank=True)
     start_date = models.DateTimeField(null=True, blank=True)
-    end_date = models.DateTimeField(null=True, blank=True)   
+    end_date = models.DateTimeField(null=True, blank=True)  
+    
+    # Boolean to check if the trip is in progress
+    is_in_progress = models.BooleanField(default=False) 
     
     def __str__(self):
         return f"Trip {self.trip_id}"

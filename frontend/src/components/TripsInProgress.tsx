@@ -6,7 +6,7 @@ import axios from "axios";
 
 interface Trip {
   trip_id: number;
-  is_completed: boolean;
+  is_in_progress: boolean;
   employee: {
     employee_id: number;
     user: {
@@ -27,7 +27,7 @@ const TripsInProgress = () => {
     const fetchTrips = async () => {
       try {
         const res = await axios.get("http://localhost:8000/api/trips/");       
-        const activeTrips = res.data.filter((trip: Trip) => trip.is_completed === false);
+        const activeTrips = res.data.filter((trip: Trip) => trip.is_in_progress === true);
         setTrips(activeTrips);
       } catch (err) {
         console.error("Failed to fetch trips:", err);
