@@ -7,7 +7,6 @@ import { getCoordinatesFromAddress, calculateDistance } from "@/lib/google";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import AddressAutoComplete from "@/components/AddressAutoComplete";
-import { LargeNumberLike } from "crypto";
 import DriverDropdown from "@/components/DriverDropdown";
 import VehicleDropdown from "@/components/VehicleDropdown";
 import HelperDropdown from "@/components/HelperDropdown";
@@ -38,9 +37,7 @@ const CreateNewTripPage = () => {
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [selectedHelper, setSelectedHelper] = useState<Employee | null>(null);
-  const [helperDropdownOpen, setHelperDropdownOpen] = useState(false);
-  // const [selectedHelper2, setSelectedHelper2] = useState<Employee | null>(null);
-  const [helper2DropdownOpen, setHelper2DropdownOpen] = useState(false);
+  const [selectedHelper2, setSelectedHelper2] = useState<Employee | null>(null);
 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -68,14 +65,14 @@ const CreateNewTripPage = () => {
   };
 
   interface TripFormData {
-    addresses: string[]; // New field for multiple addresses
-    clients: string[]; // New field for clients
+    addresses: string[];
+    clients: string[];
     distances: string[];
-    user_lat: string[]; // New field for multiple latitudes
-    user_lng: string[]; // New field for multiple longitudes
-    dest_lat: string[]; // New field for destination latitudes
-    dest_lng: string[]; // New field for destination longitudes
-    completed: boolean[]; // New field for multiple completion statuses
+    user_lat: string;
+    user_lng: string;
+    dest_lat: string[];
+    dest_lng: string[]; 
+    completed: boolean[];
     multiplier: string;
     base_salary: string;
     additionals: string;
@@ -84,11 +81,11 @@ const CreateNewTripPage = () => {
   }
 
   const [tripFormData, setTripFormData] = useState<TripFormData>({
-    addresses: [""], // Initialize with empty address array
+    addresses: [""],
     clients: [""],
-    distances: [""], // Initialize with empty distance array
-    user_lat: ["14.65889"],
-    user_lng: ["121.10419"],
+    distances: [""],
+    user_lat: "14.65889",
+    user_lng: "121.10419",
     dest_lat: [""],
     dest_lng: [""],
     completed: [false],
@@ -100,27 +97,27 @@ const CreateNewTripPage = () => {
   });
 
   // Then immediately calculate and update the distances
-  if (tripDestinations.length > 0) {
-    (async () => {
-      try {
-        const distances = [""];
-        let origin = { lat: 14.65889, lng: 121.10419 }; // Starting point
+  // if (tripDestinations.length > 0) {
+  //   (async () => {
+  //     try {
+  //       const distances = [""];
+  //       let origin = { lat: 14.65889, lng: 121.10419 }; // Starting point
 
-        for (const destination of tripDestinations) {
-          const distance = await calculateDistance(origin, {
-            lat: destination.lat,
-            lng: destination.lng,
-          });
-          distances.push(distance.toString());
-          origin = { lat: destination.lat, lng: destination.lng }; // Previous destination becomes new origin
-        }
+  //       for (const destination of tripDestinations) {
+  //         const distance = await calculateDistance(origin, {
+  //           lat: destination.lat,
+  //           lng: destination.lng,
+  //         });
+  //         distances.push(distance.toString());
+  //         origin = { lat: destination.lat, lng: destination.lng }; // Previous destination becomes new origin
+  //       }
 
-        setTripFormData((prev) => ({ ...prev, distances }));
-      } catch (error) {
-        console.error("Error calculating distances:", error);
-      }
-    })();
-  }
+  //       setTripFormData((prev) => ({ ...prev, distances }));
+  //     } catch (error) {
+  //       console.error("Error calculating distances:", error);
+  //     }
+  //   })();
+  // }
 
   const numOfDrops = tripFormData.addresses.length;
 
@@ -128,12 +125,18 @@ const CreateNewTripPage = () => {
     e.preventDefault();
     setError("");
 
+    console.log("Form submitted", { selectedVehicle, selectedEmployee, setSelectedHelper, selectedHelper2 });
+
     if (!selectedVehicle || !selectedEmployee) {
       setError("Please select both a vehicle and an employee.");
       return;
     }
 
-    console.log("Form submitted", { selectedVehicle, selectedEmployee });
+    // Ensure Helper 1 and Helper 2 are not the same
+    if (selectedHelper && selectedHelper2 && selectedHelper.employee_id === selectedHelper2.employee_id) {
+      setError("Helper 1 and Helper 2 cannot be the same person.");
+      return;
+    }
 
     const toNullable = (value: string) => (value === "" ? null : value);
 
@@ -188,8 +191,8 @@ const CreateNewTripPage = () => {
         addresses: [""],
         clients: [""],
         distances: [""],
-        user_lat: ["14.65889"],
-        user_lng: ["121.10419"],
+        user_lat: "14.65889",
+        user_lng: "121.10419",
         dest_lat: [""],
         dest_lng: [""],
         completed: [false],
@@ -271,10 +274,10 @@ const CreateNewTripPage = () => {
               onSelect={({ employee }) => setSelectedEmployee(employee)}
             />
             <HelperDropdown
-              onSelect={({ employee }) => setSelectedEmployee(employee)}
+              onSelect={({ employee }) => setSelectedHelper(employee)}
             />
             <HelperDropdown
-              onSelect={({ employee }) => setSelectedEmployee(employee)}
+              onSelect={({ employee }) => setSelectedHelper2(employee)}
             />           
           </div>
         </div>
@@ -308,8 +311,8 @@ const CreateNewTripPage = () => {
                 type="button"
                 onClick={() => {
                   // Add corresponding entries for other fields when a new address is added
-                  const newLat = index === 1 ? ["14.65889"] : [""]; // Default value for the first field, empty for others
-                  const newLng = index === 1 ? ["121.10419"] : [""]; // Default value for the first field, empty for others
+                  const newLat = "14.65889"; // Default value for the first field, empty for others
+                  const newLng = "121.10419"; // Default value for the first field, empty for others
                   const newDestLat = index === 1 ? ["14.65889"] : [""];
                   const newDestLng = index === 1 ? ["14.65889"] : [""];
 
@@ -321,8 +324,8 @@ const CreateNewTripPage = () => {
                     ],
                     distances: [...tripFormData.distances, ""],
                     clients: [...tripFormData.clients, ""],
-                    user_lat: [...tripFormData.user_lat, ...newLat],
-                    user_lng: [...tripFormData.user_lng, ...newLng],
+                    user_lat: newLat,
+                    user_lng: newLng,
                     dest_lat: [
                       ...tripDestinations.map((dest) => dest.lat.toString()),
                     ],
@@ -345,45 +348,24 @@ const CreateNewTripPage = () => {
                 type="button"
                 onClick={() => {
                   // Remove corresponding entries for other fields when an address is removed
-                  const newAddresses = tripFormData.addresses.filter(
-                    (_, i) => i !== index
-                  );
-                  const newDistances = tripFormData.distances.filter(
-                    (_, i) => i !== index
-                  );
-                  const newClients = tripFormData.clients.filter(
-                    (_, i) => i !== index
-                  );
-                  const newUserLat = tripFormData.user_lat.filter(
-                    (_, i) => i !== index
-                  );
-                  const newUserLng = tripFormData.user_lng.filter(
-                    (_, i) => i !== index
-                  );
-                  const newDestLat = tripFormData.dest_lat.filter(
-                    (_, i) => i !== index
-                  );
-                  const newDestLng = tripFormData.dest_lng.filter(
-                    (_, i) => i !== index
-                  );
-                  const newCompleted = tripFormData.completed.filter(
-                    (_, i) => i !== index
-                  );
+                  const newAddresses = tripFormData.addresses.filter((_, i) => i !== index);
+                  const newDistances = tripFormData.distances.filter((_, i) => i !== index);
+                  const newClients = tripFormData.clients.filter((_, i) => i !== index);
+                  const newDestLat = tripFormData.dest_lat.filter((_, i) => i !== index);
+                  const newDestLng = tripFormData.dest_lng.filter((_, i) => i !== index);
+                  const newCompleted = tripFormData.completed.filter((_, i) => i !== index);
 
                   setTripFormData({
                     ...tripFormData,
                     addresses: newAddresses,
                     distances: newDistances,
                     clients: newClients,
-                    user_lat: newUserLat,
-                    user_lng: newUserLng,
                     dest_lat: newDestLat,
                     dest_lng: newDestLng,
                     completed: newCompleted,
                   });
-                  setTripDestinations((prev) =>
-                    prev.filter((_, i) => i !== index)
-                  );
+
+                  setTripDestinations((prev) => prev.filter((_, i) => i !== index));
                 }}
                 className="text-red-500"
                 disabled={tripFormData.addresses.length === 1}
@@ -437,7 +419,19 @@ const CreateNewTripPage = () => {
         {/* USER LAT ARRAY */}
         <div>
           <h3 className="text-lg font-bold text-black/70">User Latitudes</h3>
-          {tripFormData.user_lat.map((lat, index) => (
+          <div className="flex gap-2">
+            <input
+              type="number"
+              placeholder="User Latitude"
+              className="input-field text-black rounded"
+              value={tripFormData.user_lat}
+              onChange={(e) =>
+                setTripFormData({ ...tripFormData, user_lat: e.target.value })
+              }
+            />
+          </div>
+
+          {/* {tripFormData.user_lat.map((lat, index) => (
             <div key={index} className="flex gap-2">
               <input
                 type="number"
@@ -451,13 +445,13 @@ const CreateNewTripPage = () => {
                 }}
               />
             </div>
-          ))}
+          ))} */}
         </div>
 
         {/* USER LNG ARRAY */}
         <div>
           <h3 className="text-lg font-bold text-black/70">User Longitudes</h3>
-          {tripFormData.user_lng.map((lng, index) => (
+          {/* {tripFormData.user_lng.map((lng, index) => (
             <div key={index} className="flex gap-2">
               <input
                 type="number"
@@ -471,7 +465,20 @@ const CreateNewTripPage = () => {
                 }}
               />
             </div>
-          ))}
+          ))} */}
+
+          <div className="flex gap-2">
+            <input
+              type="number"
+              placeholder="User Longitude"
+              className="input-field text-black rounded"
+              value={tripFormData.user_lng}
+              onChange={(e) =>
+                setTripFormData({ ...tripFormData, user_lng: e.target.value })
+              }
+            />
+          </div>
+
         </div>
 
         {/* DEST LAT ARRAY */}

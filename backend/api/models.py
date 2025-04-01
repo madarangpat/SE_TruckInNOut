@@ -151,12 +151,14 @@ class Trip(models.Model):
     helper = models.ForeignKey('Employee', on_delete=models.SET_NULL, null=True, blank=True, related_name='helper_trips')
     helper2 = models.ForeignKey('Employee', on_delete=models.SET_NULL, null=True, blank=True, related_name='helper2_trips')
     
+    # New fields for user_lat and user_lng as single decimal values
+    user_lat = models.DecimalField(max_digits=12, decimal_places=6, null=True, blank=True)
+    user_lng = models.DecimalField(max_digits=12, decimal_places=6, null=True, blank=True)
+    
     # Array fields
     addresses = models.JSONField(default=list, blank=True)
     clients = models.JSONField(default=list, blank=True)
     distances = models.JSONField(default=list, blank=True)
-    user_lat = models.JSONField(default=list, blank=True)
-    user_lng = models.JSONField(default=list, blank=True)
     dest_lat = models.JSONField(default=list, blank=True)
     dest_lng = models.JSONField(default=list, blank=True)
     completed = models.JSONField(default=list, blank=True)

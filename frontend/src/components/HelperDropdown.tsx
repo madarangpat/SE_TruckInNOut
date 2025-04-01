@@ -67,13 +67,13 @@ const HelperDropdown: React.FC<HelperDropdownProps> = ({ onSelect }) => {
         <div className="absolute w-full bg-zinc-600 text-white mt-1 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
           <button
             onClick={() => {
-              setSelectedEmployee(null);  // Reset selection (opt-out choice)
+              setSelectedEmployee(null); // Reset selection (opt-out choice)
               setEmployeeDropdownOpen(false);
             }}
             className="w-full text-left px-4 py-2 hover:bg-black/40 uppercase tracking-widest text-sm"
           >
             Select Helper
-          </button>    
+          </button>
           {employees.length === 0 ? (
             <div className="w-full text-center px-4 py-2 text-sm">
               No available helpers
@@ -99,3 +99,4 @@ const HelperDropdown: React.FC<HelperDropdownProps> = ({ onSelect }) => {
 };
 
 export default HelperDropdown;
+

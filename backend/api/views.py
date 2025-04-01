@@ -194,8 +194,8 @@ class RegisterTripView(APIView):
                 addresses=request.data.get("addresses", []),
                 clients=request.data.get("clients", []),
                 distances=request.data.get("distances", []),
-                user_lat=request.data.get("user_lat", []),
-                user_lng=request.data.get("user_lng", []),
+                user_lat=request.data.get("user_lat"),
+                user_lng=request.data.get("user_lng"),
                 dest_lat=request.data.get("dest_lat", []),
                 dest_lng=request.data.get("dest_lng", []),
                 completed=request.data.get("completed", []),
@@ -441,6 +441,28 @@ def generate_salary_breakdown_pdf(request):
     if not all([username, start, end]):
         return Response({"error": "Missing parameters"}, status=400)
 
+    # Get employee type
+    try:
+        employee = Employee.objects.select_related("user").get(user__username=username)
+    except Employee.DoesNotExist:
+        return Response({"error": "Employee not found"}, status=404)
+
+    # ✅ Handle Staff separately
+    if employee.employee_type.lower() == "staff":
+        buffer = BytesIO()
+        p = canvas.Canvas(buffer, pagesize=letter)
+        p.setFont("Helvetica-Bold", 16)
+        p.drawString(100, 750, f"Payroll PDF Placeholder for Staff: {username}")
+        p.drawString(100, 720, f"Date Range: {start.date()} to {end.date()}")
+        p.drawString(100, 690, "You can replace this with your actual Staff logic later.")
+        p.showPage()
+        p.save()
+        buffer.seek(0)
+        return HttpResponse(buffer, content_type='application/pdf', headers={
+            'Content-Disposition': f'attachment; filename="{username}_staff_salary_breakdown.pdf"'
+        })
+
+    # ✅ Proceed with current logic for Driver or Helper
     trips = Trip.objects.filter(employee__user__username=username, end_date__range=(start, end))
     data = []
     for trip in trips:
@@ -463,7 +485,7 @@ def generate_salary_breakdown_pdf(request):
     elements.append(Spacer(1, 12))
 
     # Trip Table
-    trip_table_data = [["Trip ID", "Num of Drops", "End Date", "Base Salary", "Multiplier", "Gross Amount"]]
+    trip_table_data = [["Trip ID", "Num of Drops", "End Date", "Base Salary", "Multiplier", "Accumulated Salary"]]
     gross_total = 0
 
     for record in data:
@@ -766,25 +788,6 @@ def get_unassigned_trips(request):
     serializer = TripSerializer(trips, many=True)
     return Response(serializer.data)
 
-# =====================================================================================================
-# # Define the viewset for SalaryConfiguration
-# class SalaryConfigurationViewSet(viewsets.ModelViewSet):
-#     queryset = SalaryConfiguration.objects.all()
-#     serializer_class = SalaryConfigurationSerializer
-
-#     def update(self, request, *args, **kwargs):
-#         instance = self.get_object()
-#         data = request.data
-#         # Assuming the data is in the correct structure for the JSONField
-#         salary_data = {
-#             'sss': data.get('sss'),
-#             'philhealth': data.get('philhealth'),
-#             'pag_ibig': data.get('pag_ibig'),
-#         }
-#         # Update the `salary_data` field in the model
-#         instance.salary_data = salary_data
-#         instance.save()
-#         return Response(self.serializer_class(instance).data)
 # =====================================================================================================
 @api_view(['GET'])
 def employee_trip_salaries(request):
