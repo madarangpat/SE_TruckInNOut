@@ -22,7 +22,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
 class SalaryConfigurationSerializer(serializers.ModelSerializer):
     class Meta:
         model = SalaryConfiguration
-        fields = ['id','sss', 'philhealth', 'pag_ibig']  # Include the fields you want to expose
+        fields = ['id','sss', 'philhealth', 'pag_ibig', 'pagibig_contribution']  # Include the fields you want to expose
 
     def to_representation(self, instance):
         """
@@ -40,8 +40,8 @@ class SalarySerializer(serializers.ModelSerializer):
     class Meta:
         model = Salary
         fields = [
-            'salary_id', 'trip', 'base_salary', 'bonuses', 'additionals',
-            'vale', 'cash_advance', 'cash_bond', 'charges', 'others',
+            'salary_id', 'trip', 'bonuses',
+            'bale', 'cash_advance', 'cash_bond', 'charges', 'others',
             'sss_loan', 'pagibig_loan'
         ]
     

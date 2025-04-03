@@ -2,9 +2,13 @@
 
 import React, { useState, useEffect } from "react";
 import SettingsOverlayTwo from "@/components/SettingsOverlayTwo";
-import { getSession } from "@/lib/auth";
+import { updateSalaryConfiguration } from "@/lib/actions/salary.actions";
 
-const SalaryConfigurationClient = ({ salConfig }: { salConfig: SalConfig[] }) => {
+const SalaryConfigurationClient = ({
+  salConfigs,
+}: {
+  salConfigs: SalConfig[];
+}) => {
   const [showSettings, setShowSettings] = useState(false);
   const [salaryData, setSalaryData] = useState<SalConfig>({
     sss: 0.0,
@@ -12,11 +16,10 @@ const SalaryConfigurationClient = ({ salConfig }: { salConfig: SalConfig[] }) =>
     pag_ibig: 0.0,
   });
 
-
   // If salConfig is not empty, set the salary data
   useEffect(() => {
-    if (salConfig && salConfig.length > 0) {
-      const config = salConfig[0]; // Fetch the first (and only) salary config
+    if (salConfigs && salConfigs.length > 0) {
+      const config = salConfigs[0]; // Fetch the first (and only) salary config
       setSalaryData({
         id: config.id,
         sss: config.sss,
@@ -24,9 +27,12 @@ const SalaryConfigurationClient = ({ salConfig }: { salConfig: SalConfig[] }) =>
         pag_ibig: config.pag_ibig,
       });
     }
-  }, [salConfig]);
+  }, [salConfigs]);
 
-  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>, field: string) => {
+  const handleInputChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+    field: string
+  ) => {
     setSalaryData({
       ...salaryData,
       [field]: parseFloat(event.target.value) || 0,
@@ -35,10 +41,8 @@ const SalaryConfigurationClient = ({ salConfig }: { salConfig: SalConfig[] }) =>
 
   // Handle Saving the Changes
   const handleSaveChanges = async () => {
-    const session = getSession();
-
     const configId = salaryData.id;
-    console.log("Config: ",configId)
+    console.log("Config: ", configId);
 
     if (!configId) {
       console.error("Error: Salary configuration ID is missing.");
@@ -46,38 +50,20 @@ const SalaryConfigurationClient = ({ salConfig }: { salConfig: SalConfig[] }) =>
       return;
     }
 
-    const url = `${process.env.DOMAIN}/salary-configurations/${configId}/`;  // Using configId in the URL
-    const requestOptions: RequestInit = {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session?.access!}`,
-      },
-      body: JSON.stringify({
-        sss: salaryData.sss,
-        philhealth: salaryData.philhealth,
-        pag_ibig: salaryData.pag_ibig,
-      }),
-    };
+    const body = JSON.stringify({
+      sss: salaryData.sss,
+      philhealth: salaryData.philhealth,
+      pag_ibig: salaryData.pag_ibig,
+    });
 
-    try {
-      const response = await fetch(url, requestOptions);
-      console.log(response)
-      if (response.ok) {
-        alert("Salary Configuration updated successfully!");
-      } else {
-        alert("Failed to update Salary Configuration.");
-      }
-    } catch (error) {
-      console.error("Error updating Salary Configuration:", error);
-      alert("An error occurred while saving changes.");
-    }
+    await updateSalaryConfiguration(body, configId)
   };
 
   // Check if there are any changes made to the salary data
-  const hasChanges = salaryData.sss !== salConfig[0]?.sss || 
-    salaryData.philhealth !== salConfig[0]?.philhealth ||  
-    salaryData.pag_ibig !== salConfig[0]?.pag_ibig;
+  const hasChanges =
+    salaryData.sss !== salConfigs[0]?.sss ||
+    salaryData.philhealth !== salConfigs[0]?.philhealth ||
+    salaryData.pag_ibig !== salConfigs[0]?.pag_ibig;
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-10">
@@ -89,8 +75,13 @@ const SalaryConfigurationClient = ({ salConfig }: { salConfig: SalConfig[] }) =>
         {/* Salary Configuration Table (Editable Fields) */}
         <div className="p-3 text-black/80 text-xs sm:text-sm">
           {Object.entries(salaryData).map(([key, value], index) => (
-            <div key={index} className="flex justify-between items-center py-1 border-b-2 border-black/10">
-              <span className="text-black/80">{key.replace(/_/g, " ").replace(/([A-Z])/g, " $1")}</span>
+            <div
+              key={index}
+              className="flex justify-between items-center py-1 border-b-2 border-black/10"
+            >
+              <span className="text-black/80">
+                {key.replace(/_/g, " ").replace(/([A-Z])/g, " $1")}
+              </span>
               <input
                 type="number"
                 value={value}
@@ -105,7 +96,9 @@ const SalaryConfigurationClient = ({ salConfig }: { salConfig: SalConfig[] }) =>
           <button
             onClick={handleSaveChanges}
             disabled={!hasChanges} // Disable if no changes
-            className={`px-4 sm:px-6 py-2 ${!hasChanges ? "bg-gray-400" : "bg-[#668743]"} text-white text-xs sm:text-sm rounded-lg hover:bg-[#345216] tracking-wide`}
+            className={`px-4 sm:px-6 py-2 ${
+              !hasChanges ? "bg-gray-400" : "bg-[#668743]"
+            } text-white text-xs sm:text-sm rounded-lg hover:bg-[#345216] tracking-wide`}
           >
             Save Changes
           </button>
@@ -121,7 +114,9 @@ const SalaryConfigurationClient = ({ salConfig }: { salConfig: SalConfig[] }) =>
         </div>
       </div>
 
-      {showSettings && <SettingsOverlayTwo onClose={() => setShowSettings(false)} />}
+      {showSettings && (
+        <SettingsOverlayTwo onClose={() => setShowSettings(false)} />
+      )}
     </div>
   );
 };

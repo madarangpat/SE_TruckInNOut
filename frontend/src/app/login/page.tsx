@@ -1,5 +1,6 @@
+import { getCurrentUser } from "@/auth/currentUser";
 import LoginClient from "./client";
 
-export default function LoginPage() {
-    return <LoginClient />
+export default async function LoginPage() {
+  return <LoginClient />;
 }

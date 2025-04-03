@@ -1,4 +1,5 @@
 "use client";
+import axios from "axios";
 import React, { useEffect, useState} from "react";
 import { useRouter } from "next/navigation";
 import DatePicker from "react-datepicker";
@@ -8,12 +9,12 @@ import SalaryBreakdownPDF from "@/components/SalaryBreakdownPDF";
 
 interface User {
   username: string;  
+  employee_type: string;
 }
 
 interface Employee {
   employee_id: number;
   user: User;
-  employee_type: string;
   profile_image: string;
 }
 
@@ -30,6 +31,15 @@ const SalaryBreakdown = () => {
   const [endDate, setEndDate] = useState<Date | null>(null);
 
   const [tripSalaries, setTripSalaries] = useState<any[]>([]);
+
+  // Add these at the top, alongside your other useState hooks
+  const [bale, setBale] = useState("");
+  const [bonuses, setBonuses] = useState("");
+  const [cashAdvance, setCashAdvance] = useState("");
+  const [cashBond, setCashBond] = useState("");
+  const [charges, setCharges] = useState("");
+  const [others, setOthers] = useState("");
+
 
 
   // Handle Employee Selection
@@ -174,39 +184,80 @@ const SalaryBreakdown = () => {
                 className = "mt-5"
               />
             </button>           
-          </div>        
+          </div> 
+
+          {/* Deduction Inputs */}
+          <div className="mt-1">
+            <h2 className="text-lg font-semibold text-black/70 mb-4">Update Deductions</h2>
+
+            {/* Input Fields with Labels */}
+            <div className="space-y-3">
+              {[
+                { label: "Bonuses", value: bonuses, setter: setBonuses, name: "bonuses" },
+                { label: "Bale", value: bale, setter: setBale, name: "bale" },
+                { label: "Cash Advance", value: cashAdvance, setter: setCashAdvance, name: "cashAdvance" },
+                { label: "Cash Bond", value: cashBond, setter: setCashBond, name: "cashBond" },
+                { label: "Charges", value: charges, setter: setCharges, name: "charges" },
+                { label: "Others", value: others, setter: setOthers, name: "others" },
+              ].map(({ label, value, setter, name }) => (
+                <div key={name} className="flex items-center gap-4">
+                  <label className="w-36 text-sm font-semibold text-black">{label}:</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={value}
+                    onChange={(e) => setter(e.target.value)}
+                    placeholder={label}
+                    className="flex-1 px-4 py-2 rounded-md text-black bg-white shadow"
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* Set Button */}
+            <button
+              onClick={async () => {
+                if (!selectedEmployee || !startDate || !endDate) {
+                  alert("Please select employee and date range");
+                  return;
+                }
+
+                try {
+                  await axios.post("http://localhost:8000/api/update-salary-deductions/", {
+                    username: selectedEmployee.user.username,
+                    start_date: startDate.toISOString(),
+                    end_date: endDate.toISOString(),
+                    bale,
+                    bonuses,
+                    cash_advance: cashAdvance,
+                    cash_bond: cashBond,
+                    charges,
+                    others,
+                  });
+                  alert("Deductions saved successfully!");
+                } catch (err) {
+                  console.error("Failed to update deductions:", err);
+                  alert("Something went wrong while saving deductions.");
+                }
+              }}
+              className="mt-4 bg-[#668743] hover:bg-[#345216] text-white py-2 px-4 rounded-lg shadow"
+            >
+              Set
+            </button>
+          </div>
+ 
+
         </div>
        
         {/* Buttons */}
         <div className="mt-1 flex w-auto items-center justify-center flex-col gap-2">
-            <SalaryBreakdownPDF
-              employeeUsername={selectedEmployee?.user.username}
-              startDate={startDate}
-              endDate={endDate}
-            />
-            {tripSalaries.length > 0 && (
-              <div className="mt-4 w-full">
-                <h2 className="text-lg font-semibold mb-2 text-white">Trip & Salary Breakdown</h2>
-                {tripSalaries.map((item, idx) => (
-                  <div key={idx} className="bg-white text-black p-4 mb-4 rounded-lg shadow">
-                    <h3 className="font-bold">Trip ID: {item.trip.id}</h3>
-                    <p><strong>Destination:</strong> {item.trip.destination}</p>
-                    <p><strong>End Date:</strong> {new Date(item.trip.end_date).toLocaleDateString()}</p>
-
-                    {item.salary ? (
-                      <>
-                        <p><strong>Base Salary:</strong> {item.salary.base_salary}</p>
-                        <p><strong>Bonuses:</strong> {item.salary.bonuses}</p>
-                        <p><strong>Cash Advance:</strong> {item.salary.cash_advance}</p>
-                        {/* Add other fields as needed */}
-                      </>
-                    ) : (
-                      <p className="text-red-500">No salary record found for this trip.</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+        <SalaryBreakdownPDF
+          employeeUsername={selectedEmployee?.user.username}
+          startDate={startDate}
+          endDate={endDate}
+          employee_type={selectedEmployee?.user.employee_type} // ✅ corrected
+        />
         </div>
       </div>
     </div>

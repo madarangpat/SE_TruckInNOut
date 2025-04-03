@@ -1,6 +1,5 @@
 "use client";
 
-import { login } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import "./layout.css";
@@ -8,34 +7,26 @@ import { FaUser } from "react-icons/fa";
 import { FaLock } from "react-icons/fa";
 import Image from "next/image";
 import Link from "next/link";
-
+import { login } from "@/auth/auth.actions";
 const LoginClient = () => {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault(); // Prevent form from refreshing the page
-    setError(null);
+    e.preventDefault();
+    
+    // Get form data directly
+    const formData = new FormData(e.currentTarget);
+    const username = formData.get('username') as string;
+    const password = formData.get('password') as string;
+    
     try {
-      const user = await login(username, password);
-      if (user.role === "admin" || user.role === "super_admin") {
-        router.push("/dashboard/admin/home");
-      } else if (user.role === "employee") {        
-        // If employee, check employee_type
-        if (user.employee_type === "Staff" ) {
-          //Redirect to staff directory         
-          router.push("/dashboard/staff/home");
-        } else {
-          //Redirect to employee directory
-          router.push("/dashboard/employee/home");
-        }
-      }
-      router.refresh();
-    } catch (error) {
-      setError((error as Error).message);
+      // Call login function with form values
+      await login(username, password);
+      router.push("/dashboard")
+    } catch (err) {
+      setError('Login failed. Please check your credentials.');
     }
   };
 
@@ -52,7 +43,6 @@ const LoginClient = () => {
         <span className="logo-text">TruckIn-N-Out</span>
       </div>
 
-      {/* Use onSubmit on the form */}
       <form onSubmit={handleSubmit}>
         <h1>Hello,</h1>
         <h1>Welcome Back!</h1>
@@ -62,8 +52,7 @@ const LoginClient = () => {
           <input
             type="text"
             placeholder="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            name="username"
             required
           />
           <FaUser className="icon" />
@@ -73,8 +62,7 @@ const LoginClient = () => {
           <input
             type={showPassword ? "text" : "password"}
             placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            name="password"
             required
           />
           <FaLock className="icon" />
@@ -89,7 +77,6 @@ const LoginClient = () => {
 
         {error && <span className="text-red-500">{error}</span>}
 
-        {/* Login Button */}
         <button type="submit">Login</button>
 
         <div className="forgot-password">

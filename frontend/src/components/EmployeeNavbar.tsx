@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import React from "react";
-import { logout } from "@/lib/auth";
+import { logout } from "@/auth/auth.actions";
 
 const EmployeeNavbar = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);

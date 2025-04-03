@@ -1,6 +1,60 @@
 "use server";
 
-import { getSession } from "../auth";
+import { jwtDecode } from "jwt-decode";
+import {
+  createSession,
+  deleteSession,
+  getSession,
+  SessionPayload,
+} from "./session";
+
+async function login(
+  username: string,
+  password: string
+): Promise<SessionPayload> {
+  const url = `${process.env.DOMAIN}/login/`;
+  const requestOptions: RequestInit = {
+    cache: "no-store",
+    body: JSON.stringify({ username, password }),
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  };
+
+  const response = await fetch(url, requestOptions);
+
+  if (!response.ok) {
+    throw new Error(`Login failed with status: ${response.status}`);
+  }
+
+  const sessionPayload = (await response.json()) as SessionPayload;
+  createSession(sessionPayload);
+  return sessionPayload;
+}
+
+async function logout() {
+  const url = `${process.env.DOMAIN}/logout/`;
+
+  // Blacklists the tokens in the backend
+
+  const requestOptions: RequestInit = {
+    cache: "no-store",
+    body: JSON.stringify({ refresh: getSession()?.refresh }),
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  };
+
+  const response = await fetch(url, requestOptions);
+
+  if (!response.ok) {
+    throw new Error(`Logout failed with status: ${response.status}`);
+  }
+  // Deletes the cookies stored in the session
+  deleteSession();
+}
 
 async function sendResetPasswordLink(email: string) {
   const url = `${process.env.DOMAIN}/password-reset/`;
@@ -76,6 +130,8 @@ async function validateResetPasswordLink(token: string) {
 }
 
 export {
+  login,
+  logout,
   sendResetPasswordLink,
   resetPassword,
   validateResetPasswordLink,

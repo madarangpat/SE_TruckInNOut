@@ -1,10 +1,9 @@
 import Link from "next/link";
 import Image from "next/image";
-import { getSession } from "@/lib/auth";
+import { getCurrentUser } from "@/auth/currentUser";
 
-const HomePage = () => {
-  const session = getSession();
-  const user = session?.user;
+const HomePage = async () => {
+  const user = await getCurrentUser()
   const navButtons = [
     {
       route: "/dashboard/employee/deliveries",

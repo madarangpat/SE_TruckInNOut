@@ -1,17 +1,17 @@
-import { getSession } from "@/lib/auth";
 import Link from "next/link";
 import Image from "next/image";
 import Menu from "@/components/Menu";
 import "leaflet/dist/leaflet.css";
 import "./layout.css";
+import AdminProfile from "@/components/AdminProfile";
+import { getCurrentUser } from "@/auth/currentUser";
 
 export default async function DashboardLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await getSession();
-  const user = session?.user;
+  const currentUser = await getCurrentUser({withEmployeeProfile: true})
 
   return (
     <div className="flex flex-1 flex-row h-screen">
@@ -33,19 +33,7 @@ export default async function DashboardLayout({
           </Link>
           <Menu />
         </div>
-        <div className="flex items-center gap-2">
-          <div className="relative size-20 bg-green-100 rounded-full overflow-hidden">
-            <Image
-              src={user?.profile_image ?? "/userplaceholder.png"}
-              alt="logo"
-              fill
-              className="object-cover"
-            />
-          </div>
-          <div className="hidden md:flex flex-col space-y-1">
-            <span>{user?.username ? user.username : "Loading..."}</span>
-          </div>
-        </div>
+        <AdminProfile user={currentUser} />
       </div>
 
       {/* RIGHT (Main Content) */}

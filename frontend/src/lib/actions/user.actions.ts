@@ -1,6 +1,7 @@
 "use server";
 
-import { getSession } from "../auth";
+import { getSession } from "@/auth/session";
+
 
 async function getUsers(): Promise<User[]> {
   const url = `${process.env.DOMAIN}/users/`;
@@ -30,7 +31,7 @@ async function updateUserData({
   email,
   cellPhoneNo,
 }: {
-  userId: string
+  userId: string;
   email: string;
   cellPhoneNo: string | undefined;
 }) {
@@ -62,6 +63,29 @@ async function updateUserData({
   return data; // Return parsed response
 }
 
+async function getUserProfile(): Promise<User> {
+  const url = `${process.env.DOMAIN}/users/profile/`;
+  const session = getSession();
+
+  const requestOptions: RequestInit = {
+    cache: "no-store",
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${session?.access}`,
+    },
+  };
+
+  const response = await fetch(url, requestOptions);
+
+  if (!response.ok) {
+    const errorMessage = await response.text(); // Capture error details
+    throw new Error(`Error fetching profile: ${errorMessage}`);
+  }
+
+  const data = await response.json() as User; // Parse JSON response
+  return data; // Return parsed response
+}
+
 async function uploadProfilePicture(formData: FormData) {
   const url = `${process.env.DOMAIN}/employee/upload-profile/`;
   const session = getSession();
@@ -86,4 +110,4 @@ async function uploadProfilePicture(formData: FormData) {
   return data; // Return parsed response
 }
 
-export { getUsers, updateUserData, uploadProfilePicture };
+export { getUsers, getUserProfile, updateUserData, uploadProfilePicture };

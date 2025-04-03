@@ -4,8 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { logout } from "@/lib/auth";
 import SettingsOverlayTwo from "@/components/SettingsOverlayTwo"; // Import the new settings overlay
+import { logout } from "@/auth/auth.actions";
 
 const menuItems = [
   {

@@ -12,38 +12,13 @@ const EmployeeDataClient = ({ users }: { users: User[] }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   // Handle User Selection
-  const [userData, setUserData] = useState<User>({
-    username: "",
-    email: "",
-    first_name: "",
-    last_name: "",
-    cellphone_no: "",
-    philhealth_no: "",
-    pag_ibig_no: "",
-    sss_no: "",
-    license_no: "",
-    profile_image: "", // default profile image
-    employee_type: "", // default employee type
-    role: "",   
-  });
+  const [userData, setUserData] = useState<User | undefined>(undefined);
 
   const handleUserSelect = (user: User) => {
     setSelectedUser(user.username);
     setSelectedProfileImage(user.profile_image ?? "/tinoicon.png");
     setUserData({
-      username: user.username, 
-      role: user.role, 
-      email: user.email, 
-      first_name: user.first_name,
-      last_name: user.last_name,
-      cellphone_no: user.cellphone_no,
-      philhealth_no: user.philhealth_no,
-      pag_ibig_no: user.pag_ibig_no,
-      sss_no: user.sss_no,
-      license_no: user.license_no,
-      profile_image: user.profile_image, // ensure profile_image is updated
-      employee_type: user.employee_type, // use the selected user's employee_type or default to "Driver"
-           
+      ...user
     });
     setDropdownOpen(false);
   };
@@ -92,17 +67,25 @@ const EmployeeDataClient = ({ users }: { users: User[] }) => {
 
         {/* User Information */}
         <div className="p-3 text-black/80 text-xs sm:text-sm">
-          {Object.entries(userData).map(([key, value], index) => (
-            <div
-              key={index}
-              className="flex justify-between items-center py-2 border-b-2 border-black/70"
-            >
-              <span className="text-black/80 capitalize">
-                {key.replace(/_/g, " ").replace(/([A-Z])/g, " $1")}
-              </span>
-              <span className="text-black text-xs sm:text-sm">{value}</span>
+          {userData ? (
+            Object.entries(userData).map(([key, value], index) => (
+              <div
+                key={index}
+                className="flex justify-between items-center py-2 border-b-2 border-black/70"
+              >
+                <span className="text-black/80 capitalize">
+                  {key.replace(/_/g, " ").replace(/([A-Z])/g, " $1")}
+                </span>
+                <span className="text-black text-xs sm:text-sm">
+                  {value?.toString() || "N/A"}
+                </span>
+              </div>
+            ))
+          ) : (
+            <div className="py-4 text-center text-black/60">
+              Select a user to view details
             </div>
-          ))}
+          )}
 
           {/* Back Button */}
           <div className="mt-6">

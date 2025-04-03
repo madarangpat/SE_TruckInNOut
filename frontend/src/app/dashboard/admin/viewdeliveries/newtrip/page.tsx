@@ -208,41 +208,41 @@ const CreateNewTripPage = () => {
     }
   };
 
-  useEffect(() => {
-    const delay = setTimeout(async () => {
-      try {
-        const apiKey = process.env.GOOGLE_API_KEY;
+  // useEffect(() => {
+  //   const delay = setTimeout(async () => {
+  //     try {
+  //       const apiKey = process.env.GOOGLE_API_KEY;
 
-        const updatedDestinations = await Promise.all(
-          tripDestinations.map(async (dest) => {
-            const response = await fetch(
-              `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
-                dest.address
-              )}&key=${apiKey}`
-            );
+  //       const updatedDestinations = await Promise.all(
+  //         tripDestinations.map(async (dest) => {
+  //           const response = await fetch(
+  //             `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+  //               dest.address
+  //             )}&key=${apiKey}`
+  //           );
 
-            const data = await response.json();
-            console.log("Auto-geocode Google response:", data);
+  //           const data = await response.json();
+  //           console.log("Auto-geocode Google response:", data);
 
-            if (!data.results || data.results.length === 0) return dest; // Keep original if no results
+  //           if (!data.results || data.results.length === 0) return dest; // Keep original if no results
 
-            const { lat, lng } = data.results[0].geometry.location;
+  //           const { lat, lng } = data.results[0].geometry.location;
 
-            return { ...dest, lat, lng }; // Update with lat/lng
-          })
-        );
+  //           return { ...dest, lat, lng }; // Update with lat/lng
+  //         })
+  //       );
 
-        setTripFormData((prev) => ({
-          ...prev,
-          destinations: updatedDestinations, // Store updated destinations array
-        }));
-      } catch (err) {
-        console.error("Auto-geocoding failed:", err);
-      }
-    }, 1500);
+  //       setTripFormData((prev) => ({
+  //         ...prev,
+  //         destinations: updatedDestinations, // Store updated destinations array
+  //       }));
+  //     } catch (err) {
+  //       console.error("Auto-geocoding failed:", err);
+  //     }
+  //   }, 1500);
 
-    return () => clearTimeout(delay);
-  }, [tripFormData]);
+  //   return () => clearTimeout(delay);
+  // }, [tripFormData]);
 
   return (
     <div className="min-h-screen flex flex-col items-center py-8 px-4 md:px-8">

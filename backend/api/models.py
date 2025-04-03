@@ -11,6 +11,7 @@ class SalaryConfiguration(models.Model):
     sss = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     philhealth = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     pag_ibig = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    pagibig_contribution = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
 
     def __str__(self):
         return "Global Salary Configuration"
@@ -131,16 +132,22 @@ class Employee(models.Model):
 
 class Salary(models.Model):
     salary_id = models.AutoField(primary_key=True)
-    trip = models.ForeignKey('Trip', on_delete=models.CASCADE)
+    trip = models.ForeignKey('Trip', on_delete=models.CASCADE)   
     bonuses = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    vale = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    
+    #Monthly Deductions
+    sss_contribution = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    sss_loan = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    philhealth_contribution = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    pagibig_loan = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    
+    #Weekly Deductions
+    bale = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     cash_advance = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     cash_bond = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     charges = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     others = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    sss_loan = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    pagibig_loan = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    
+     
     def __str__(self):
         return f"Salary {self.salary_id}"
 

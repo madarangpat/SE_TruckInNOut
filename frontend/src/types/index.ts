@@ -1,5 +1,5 @@
 type BaseUser = {
-  id?: string
+  id: string
   username: string;
   role: "super_admin" | "admin" | "employee" | "";
   profile_image?: string;

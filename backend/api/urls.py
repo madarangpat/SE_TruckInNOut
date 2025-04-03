@@ -6,7 +6,7 @@ from .views import (
     SalaryListView, SalaryDetailView,
     TripListView, TripDetailView,
     VehicleListView, VehicleDetailView,
-    RegisterUserView, RegisterVehicleView, RegisterTripView, get_recent_trips, employee_trip_salaries, 
+    RegisterUserView, RegisterVehicleView, RegisterTripView, get_recent_trips, employee_trip_salaries, update_salary_deductions,
     SendPasswordLinkView, ResetPasswordView, get_vehicles, get_employees, get_users, update_salary_configuration, get_all_salary_configurations,
     EmployeeCreateView, delete_user, get_employee_profile, UserProfileView, update_employee_profile, UserUpdateView,
     ValidateResetPasswordTokenView, get_ongoing_trips, generate_gross_payroll_pdf, generate_salary_breakdown_pdf, update_user_profile
@@ -43,7 +43,7 @@ urlpatterns = [
     path('trips/<int:pk>/', TripDetailView.as_view(), name='trip-detail'),
 
     # JWT Authentication Routes
-    path('login/', LoginView.as_view(), name='get_token'),
+    path('login/', TokenObtainPairView.as_view(), name='get_token'),
     path('token/refresh/', TokenRefreshView.as_view(), name='refresh'),
     path("logout/", TokenBlacklistView.as_view(), name="logout"),
     
@@ -84,4 +84,6 @@ urlpatterns = [
     
     #Delete User
     path('delete-user/<int:user_id>/', delete_user, name='delete-user'),
+    
+    path('update-salary-deductions/', update_salary_deductions, name='update_salary_deductions'),
 ]
