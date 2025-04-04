@@ -7,6 +7,7 @@ from storages.backends.s3boto3 import S3Boto3Storage
 from django.contrib.auth import get_user_model
 from django.core.validators import RegexValidator
 
+# SALARY CONFIGURATION MODEL
 class SalaryConfiguration(models.Model):
     sss = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     philhealth = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
@@ -15,7 +16,8 @@ class SalaryConfiguration(models.Model):
 
     def __str__(self):
         return "Global Salary Configuration"
-
+######################################################################################################################################
+# USER MODEL
 class User(AbstractUser):
     SUPER_ADMIN = 'super_admin'
     ADMIN = 'admin'
@@ -37,7 +39,6 @@ class User(AbstractUser):
         ("Driver", "Driver"),
         ("Helper", "Helper"),
         ("Staff", "Staff"),
-        ("Not Applicable", "Not Applicable"),
     ]
     employee_type = models.CharField(
         max_length=50,
@@ -62,7 +63,6 @@ class User(AbstractUser):
         blank=True,
         null=True,
     )
-
 
     groups = models.ManyToManyField(
         'auth.Group', related_name='api_users', blank=True
@@ -101,12 +101,16 @@ class User(AbstractUser):
         return self.get_role_display() if self.role else "No Role Assigned"
     
     get_role.short_description = 'Role'
-
+    
+######################################################################################################################################
+# PASSWORD RESET MODEL
 class PasswordReset(models.Model):
     email = models.EmailField()
     token = models.CharField(max_length=100)
     created_at = models.DateTimeField(auto_now_add=True)
-
+    
+######################################################################################################################################
+# ADMIN MODEL
 class Administrator(models.Model):
     admin_id = models.AutoField(primary_key=True)
     user = models.OneToOneField(
@@ -117,6 +121,8 @@ class Administrator(models.Model):
     def __str__(self):
         return f"Admin {self.admin_id}"
 
+######################################################################################################################################
+# EMPLOYEE MODEL
 class Employee(models.Model):   
     employee_id = models.AutoField(primary_key=True)
     user = models.OneToOneField(
@@ -125,11 +131,14 @@ class Employee(models.Model):
         related_name="employee_profile"
     )
     salary = models.ForeignKey('Salary', on_delete=models.CASCADE, null=True, blank=True)
+    completed_trip_count = models.PositiveIntegerField(default=0)
 
     def __str__(self):
         employee_count = Employee.objects.filter(employee_id__lte=self.employee_id).count()
         return f"{self.user.username} ({employee_count})"
 
+######################################################################################################################################
+# SALARY MODEL
 class Salary(models.Model):
     salary_id = models.AutoField(primary_key=True)
     trip = models.ForeignKey('Trip', on_delete=models.CASCADE)   
@@ -151,6 +160,8 @@ class Salary(models.Model):
     def __str__(self):
         return f"Salary {self.salary_id}"
 
+######################################################################################################################################
+# TRIP MODEL
 class Trip(models.Model):   
     trip_id = models.AutoField(primary_key=True)
     vehicle = models.ForeignKey('Vehicle', on_delete=models.CASCADE)
@@ -158,11 +169,9 @@ class Trip(models.Model):
     helper = models.ForeignKey('Employee', on_delete=models.SET_NULL, null=True, blank=True, related_name='helper_trips')
     helper2 = models.ForeignKey('Employee', on_delete=models.SET_NULL, null=True, blank=True, related_name='helper2_trips')
     
-    # New fields for user_lat and user_lng as single decimal values
     user_lat = models.DecimalField(max_digits=12, decimal_places=6, null=True, blank=True)
     user_lng = models.DecimalField(max_digits=12, decimal_places=6, null=True, blank=True)
     
-    # Array fields
     addresses = models.JSONField(default=list, blank=True)
     clients = models.JSONField(default=list, blank=True)
     distances = models.JSONField(default=list, blank=True)
@@ -177,12 +186,33 @@ class Trip(models.Model):
     start_date = models.DateTimeField(null=True, blank=True)
     end_date = models.DateTimeField(null=True, blank=True)  
     
-    # Boolean to check if the trip is in progress
     is_in_progress = models.BooleanField(default=False) 
     
     def __str__(self):
         return f"Trip {self.trip_id}"
+    
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        was_in_progress = None
 
+        if not is_new:
+            was_in_progress = Trip.objects.get(pk=self.pk).is_in_progress
+
+        super().save(*args, **kwargs)
+
+        if is_new and self.employee:
+            from api.models import Salary
+            Salary.objects.create(trip=self)
+
+        # ✅ Update completed trip count if trip has moved from in-progress to completed
+        if was_in_progress and not self.is_in_progress:
+            for emp in [self.employee, self.helper, self.helper2]:
+                if emp and emp.user.employee_type in ["Driver", "Helper"]:
+                    emp.completed_trip_count += 1
+                    emp.save()
+            
+######################################################################################################################################
+# VEHICLE MODEL
 class Vehicle(models.Model):
     vehicle_id = models.AutoField(primary_key=True)
     plate_number = models.CharField(
@@ -197,6 +227,8 @@ class Vehicle(models.Model):
         ownership = "Company" if self.is_company_owned else "Subcon"
         return f"{self.vehicle_id} - {self.plate_number} - {self.vehicle_type} ({ownership})"
 
+######################################################################################################################################
+# SALARY REPORT MODEL
 class SalaryReport(models.Model):
     salary_report_id = models.AutoField(primary_key=True)
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, null=True, blank=True)

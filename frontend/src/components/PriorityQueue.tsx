@@ -1,15 +1,30 @@
 "use client";
 import Image from "next/image";
+import { useEffect, useState } from "react";
 
-const priorityQueue = [
-  { id: 9, name: "Employee #9", trips: 60 },
-  { id: 5, name: "Employee #5", trips: 40 },
-  { id: 3, name: "Employee #3", trips: 30 },
-  { id: 2, name: "Employee #2", trips: 20 },
-  { id: 11, name: "Employee #11", trips: 18 },
-];
+interface Employee {
+  id: number;
+  name: string;
+  completed_trip_count: number;
+}
 
 const PriorityQueue = () => {
+  const [employees, setEmployees] = useState<Employee[]>([]);
+
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        const res = await fetch("http://localhost:8000/api/priority-queue/"); // 🔁 Update this path if needed
+        const data = await res.json();
+        setEmployees(data);
+      } catch (error) {
+        console.error("Error fetching priority queue:", error);
+      }
+    };
+
+    fetchEmployees();
+  }, []);
+
   return (
     <div className="wrapper rounded-2xl p-4 flex-1 shadow-md h-full w-full flex flex-col">
       <div className="flex justify-center items-center mx-3 gap-2">
@@ -25,14 +40,14 @@ const PriorityQueue = () => {
         />
       </div>
       <div className="flex-1 overflow-auto bg-black/40 rounded-lg p-3">
-        {priorityQueue.map((employee) => (
+        {employees.map((employee) => (
           <div
             key={employee.id}
             className="flex justify-between items-center p-2 border-b border-gray-600 text-white"
           >
             <span>{employee.name}</span>
             <span className="text-xs bg-black/25 text-white px-2 py-1 rounded-lg">
-              {employee.trips} TRIP/S COMPLETED
+              {employee.completed_trip_count} TRIP/S COMPLETED
             </span>
           </div>
         ))}

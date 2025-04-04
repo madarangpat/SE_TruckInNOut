@@ -18,18 +18,18 @@ const AccountsPage = ({ users }: { users: User[] }) => {
   const editableFields = ["email", "cellphone_no"];
 
   const formFields = [
-    "username", // fixed
-    "first_name", // fixed
-    "last_name", // fixed
-    "email", //EDITABLE
-    "role", // fixed
-    "employee_type", // fixed
-    "cellphone_no", //EDITABLE
-    "philhealth_no", // fixed
-    "pag_ibig_no", // fixed
-    "sss_no", // fixed
-    "license_no", // fixed
-    "profile_image", //EDITABLE
+    "username", 
+    "first_name", 
+    "last_name", 
+    "email", 
+    "role",
+    "employee_type", 
+    "cellphone_no", 
+    "philhealth_no", 
+    "pag_ibig_no", 
+    "sss_no", 
+    "license_no", 
+    "profile_image", 
   ];
 
   const handleUserSelect = (user: User) => {

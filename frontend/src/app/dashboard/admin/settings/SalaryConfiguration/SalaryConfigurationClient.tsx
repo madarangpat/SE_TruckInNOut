@@ -14,6 +14,7 @@ const SalaryConfigurationClient = ({
     sss: 0.0,
     philhealth: 0.0,
     pag_ibig: 0.0,
+    pagibig_contribution: 0.0
   });
 
   // If salConfig is not empty, set the salary data
@@ -21,10 +22,10 @@ const SalaryConfigurationClient = ({
     if (salConfigs && salConfigs.length > 0) {
       const config = salConfigs[0]; // Fetch the first (and only) salary config
       setSalaryData({
-        id: config.id,
         sss: config.sss,
         philhealth: config.philhealth,
         pag_ibig: config.pag_ibig,
+        pagibig_contribution: config.pagibig_contribution,
       });
     }
   }, [salConfigs]);
@@ -54,6 +55,7 @@ const SalaryConfigurationClient = ({
       sss: salaryData.sss,
       philhealth: salaryData.philhealth,
       pag_ibig: salaryData.pag_ibig,
+      pagibig_contribution: salaryData.pagibig_contribution,
     });
 
     await updateSalaryConfiguration(body, configId)
@@ -64,6 +66,7 @@ const SalaryConfigurationClient = ({
     salaryData.sss !== salConfigs[0]?.sss ||
     salaryData.philhealth !== salConfigs[0]?.philhealth ||
     salaryData.pag_ibig !== salConfigs[0]?.pag_ibig;
+    salaryData.pagibig_contribution !== salConfigs[0]?.pagibig_contribution
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-10">

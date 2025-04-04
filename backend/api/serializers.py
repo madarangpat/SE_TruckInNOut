@@ -140,10 +140,16 @@ class AdministratorSerializer(serializers.ModelSerializer):
 # ✅ Employee Serializer
 class EmployeeSerializer(serializers.ModelSerializer):
     user = UserSerializer()
+    completed_trip_count = serializers.IntegerField(read_only=True)
+    name = serializers.SerializerMethodField()
 
     class Meta:
         model = Employee
-        fields = ['employee_id', 'user']
+        fields = ['employee_id', 'user', 'completed_trip_count', 'name']
+        
+    def get_name(self, obj):
+        full_name = f"{obj.user.first_name} {obj.user.last_name}".strip()
+        return full_name if full_name else obj.user.username
 
     def create(self, validated_data):
         user_data = validated_data.pop('user')

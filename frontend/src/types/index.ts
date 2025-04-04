@@ -23,6 +23,7 @@ type SalConfig = {
   sss?: number;
   philhealth?: number;
   pag_ibig?: number;
+  pagibig_contribution?: number;
 };
 
 type Vehicle = {

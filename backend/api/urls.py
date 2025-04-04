@@ -8,7 +8,7 @@ from .views import (
     VehicleListView, VehicleDetailView,
     RegisterUserView, RegisterVehicleView, RegisterTripView, get_recent_trips, employee_trip_salaries, update_salary_deductions,
     SendPasswordLinkView, ResetPasswordView, get_vehicles, get_employees, get_users, update_salary_configuration, get_all_salary_configurations,
-    EmployeeCreateView, delete_user, get_employee_profile, UserProfileView, update_employee_profile, UserUpdateView,
+    EmployeeCreateView, delete_user, get_employee_profile, UserProfileView, update_employee_profile, UserUpdateView, priority_queue_view,
     ValidateResetPasswordTokenView, get_ongoing_trips, generate_gross_payroll_pdf, generate_salary_breakdown_pdf, update_user_profile
 )
 from django.contrib.auth.views import (
@@ -83,7 +83,9 @@ urlpatterns = [
     path('salary-configurations/', get_all_salary_configurations, name='salary-configuration-list'),  # For listing all salary configs
     
     #Delete User
-    path('delete-user/<int:user_id>/', delete_user, name='delete-user'),
-    
+    path('delete-user/<int:user_id>/', delete_user, name='delete-user'), 
     path('update-salary-deductions/', update_salary_deductions, name='update_salary_deductions'),
+    
+    #Priority Queue
+    path('priority-queue/', priority_queue_view),
 ]

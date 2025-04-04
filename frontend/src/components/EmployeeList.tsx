@@ -17,7 +17,7 @@ const EmployeeList = () => {
 
         const formattedEmployees = response.data.map((emp: any) => ({
           id: emp.employee_id,
-          name: emp.user.username,
+          name: `${emp.user.first_name} ${emp.user.last_name}`,
           status: "Active",
         }));
 
