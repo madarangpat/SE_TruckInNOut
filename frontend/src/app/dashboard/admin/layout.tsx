@@ -2,7 +2,6 @@ import Link from "next/link";
 import Image from "next/image";
 import Menu from "@/components/Menu";
 import "leaflet/dist/leaflet.css";
-import "./layout.css";
 import AdminProfile from "@/components/AdminProfile";
 import { getCurrentUser } from "@/auth/currentUser";
 

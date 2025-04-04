@@ -1,14 +1,17 @@
 from datetime import datetime
+from django.utils.dateformat import DateFormat
+from django.utils.dateparse import parse_date
+from datetime import date
 from django.dispatch import receiver
 from django.forms import ValidationError
 from rest_framework import generics
 from django.conf import settings
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from .models import User, Administrator, Employee, Salary, Trip, Vehicle, PasswordReset, SalaryConfiguration
+from .models import User, Administrator, Employee, Salary, Trip, Vehicle, PasswordReset, SalaryConfiguration, Totals
 from .serializers import (
     UserSerializer, AdministratorSerializer, EmployeeSerializer,
-    SalarySerializer, TripSerializer, VehicleSerializer,
+    SalarySerializer, TripSerializer, VehicleSerializer, TotalsSerializer,
     LoginSerializer, ResetPasswordRequestSerializer, ResetPasswordSerializer, SalaryConfigurationSerializer, UserProfileSerializer
 )
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -39,6 +42,11 @@ from reportlab.lib.enums import TA_LEFT
 from reportlab.lib.styles import ParagraphStyle
 from decimal import Decimal
 from calendar import monthcalendar, FRIDAY
+import json
+from datetime import datetime
+from django.db.models.functions import TruncDate
+from django.db.models import Sum
+from rest_framework.decorators import api_view
 
 User = get_user_model()
 
@@ -71,25 +79,23 @@ def update_salary_configuration(request, configId):
 #==================================================================================================================================================================================
 @api_view(["PATCH"])
 @permission_classes([IsAuthenticated])
+@csrf_exempt
 def update_user_profile(request, user_id):
-    """Update a specific user's profile based on the user ID in the URL"""
-    try:
-        user = User.objects.get(id=user_id)  # Fetch the user by ID
-    except User.DoesNotExist:
-        return Response({"error": "User not found"}, status=404)
+    if request.method == "PATCH":
+        try:
+            # Get the user by the ID from the URL, not request.user
+            user = User.objects.get(id=user_id)
 
-    # Only allow admins to update other users' profiles (you can modify this permission)
-    if not request.user.is_superuser and request.user.id != user.id:
-        return Response({"error": "You do not have permission to update this user."}, status=403)
+            data = json.loads(request.body)
+            user.email = data.get("email", user.email)
+            user.cellphone_no = data.get("cellPhoneNo", user.cellphone_no)
+            user.save()
 
-    # Serialize the user with the provided data
-    serializer = UserProfileSerializer(user, data=request.data, partial=True)
+            return JsonResponse({"message": "User updated successfully"})
+        except User.DoesNotExist:
+            return JsonResponse({"error": "User not found"}, status=404)
 
-    if serializer.is_valid():
-        serializer.save()
-        return Response({"message": "Profile updated successfully!", "user": serializer.data})
-
-    return Response(serializer.errors, status=400)
+    return JsonResponse({"error": "Invalid request method"}, status=400)
 #==================================================================================================================================================================================
 # [Function]
 @api_view(["PATCH"])
@@ -582,7 +588,11 @@ def employee_trip_salaries(request):
     if not all([username, start, end]):
         return Response({"error": "Missing parameters"}, status=400)
 
-    trips = Trip.objects.filter(employee__user__username=username, end_date__range=(start, end))
+    trips = Trip.objects.filter(
+        employee__user__username=username, 
+        end_date__range=(start, end),
+        is_completed=True
+    )
     data = []
 
     for trip in trips:
@@ -595,53 +605,70 @@ def employee_trip_salaries(request):
     return Response(data)
 # =====================================================================================================
 # Update salary deductions
-@api_view(["POST"])
+@api_view(['POST'])
 @permission_classes([AllowAny])
 def update_salary_deductions(request):
-    data = request.data
-    username = data.get("username")
-    start_date = parse_datetime(data.get("start_date"))
-    end_date = parse_datetime(data.get("end_date"))
+    print("✅ update_salary_deductions endpoint was hit")
+    print("Incoming data:", request.data)
 
-    if not all([username, start_date, end_date]):
-        return Response({"error": "Missing data"}, status=400)
+    data = request.data
+    username = data.get('username')
+    start_date = data.get('start_date')
+    end_date = data.get('end_date')
 
     try:
-        employee = Employee.objects.get(user__username=username)
-    except Employee.DoesNotExist:
-        return Response({"error": "Employee not found"}, status=404)
+        start = datetime.fromisoformat(start_date).date()
+        end = datetime.fromisoformat(end_date).date()
+        
+        user = User.objects.get(username=username)
+        employee = Employee.objects.get(user=user)
+        config = SalaryConfiguration.objects.first()
 
-    # Filter only completed trips
-    trips = Trip.objects.filter(
-        employee=employee,
-        is_in_progress=False,
-        end_date__range=(start_date, end_date)
-    )
+        trips = Trip.objects.filter(
+            employee=employee,
+            end_date__range=[start, end],
+            is_completed=True
+        )
 
-    for trip in trips:
-        salary, created = Salary.objects.get_or_create(trip=trip)
-        salary.bonuses = data.get("bonuses", 0) or 0
-        salary.bale = data.get("bale", 0) or 0
-        salary.cash_advance = data.get("cash_advance", 0) or 0
-        salary.cash_bond = data.get("cash_bond", 0) or 0
-        salary.charges = data.get("charges", 0) or 0
-        salary.others = data.get("others", 0) or 0
-        salary.save()
+        for trip in trips:
+            adjusted_salary = Decimal(str(trip.base_salary * trip.multiplier))
+            sss_contribution = adjusted_salary * config.sss
+            philhealth_contribution = adjusted_salary * config.philhealth
+            pagibig_contribution = adjusted_salary * config.pag_ibig
+            pagibig_loan = config.pagibig_contribution
+            sss_loan = 0  # or leave it as None
 
-    return Response({"status": "success"})
+            Salary.objects.update_or_create(
+                trip=trip,
+                defaults={
+                    "adjusted_salary": adjusted_salary,
+                    "sss_contribution": sss_contribution,
+                    "philhealth_contribution": philhealth_contribution,
+                    "pagibig_contribution": pagibig_contribution,
+                    "pagibig_loan": pagibig_loan,
+                    "sss_loan": sss_loan,
+                    "bonuses": data.get("bonuses", 0),
+                    "bale": data.get("bale", 0),
+                    "cash_advance": data.get("cash_advance", 0),
+                    "cash_bond": data.get("cash_bond", 0),
+                    "charges": data.get("charges", 0),
+                    "others": data.get("others", 0),
+                }
+            )
+        
+        return Response({"success": True, "message": "Salaries and deductions updated."})
+
+    except Exception as e:
+        print("Error updating salary:", e)
+        return Response({"error": str(e)}, status=500)
 #==============================================================================================================================
-#SALARY BREAKDOWN PDF GENERATION [ADMIN SIDE]
-def get_week_of_month(date):
-    day = date.day
-    week_number = (day - 1) // 7 + 1
-    return week_number
-
+# SALARY BREAKDOWN PDF
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def generate_salary_breakdown_pdf(request):
     username = request.GET.get("employee")
-    start = parse_datetime(request.GET.get("start_date"))
-    end = parse_datetime(request.GET.get("end_date"))
+    start = date.fromisoformat(request.GET.get("start_date"))
+    end = date.fromisoformat(request.GET.get("end_date"))
 
     if not all([username, start, end]):
         return Response({"error": "Missing parameters"}, status=400)
@@ -652,13 +679,13 @@ def generate_salary_breakdown_pdf(request):
     except Employee.DoesNotExist:
         return Response({"error": "Employee not found"}, status=404)
 
+    # For staff - placeholder
     if user_type == "staff":
         buffer = BytesIO()
         p = canvas.Canvas(buffer, pagesize=letter)
         p.setFont("Helvetica-Bold", 16)
         p.drawString(100, 750, f"Payroll PDF Placeholder for Staff: {username}")
-        p.drawString(100, 720, f"Date Range: {start.date()} to {end.date()}")
-        p.drawString(100, 690, "You can replace this with your actual Staff logic later.")
+        p.drawString(100, 720, f"Date Range: {start} to {end}")
         p.showPage()
         p.save()
         buffer.seek(0)
@@ -666,21 +693,15 @@ def generate_salary_breakdown_pdf(request):
             'Content-Disposition': f'attachment; filename="{username}_staff_salary_breakdown.pdf"'
         })
 
-    try:
-        config = SalaryConfiguration.objects.last()
-        sss_pct = config.sss
-        philhealth_pct = config.philhealth
-        pagibig_pct = config.pag_ibig
-    except:
-        return Response({"error": "Missing Salary Configuration."}, status=500)
-
     trips = Trip.objects.filter(
-        employee=employee, 
+        employee=employee,
         end_date__range=(start, end),
-        is_in_progress=False
+        is_completed=True
     )
+
     if not trips.exists():
         return Response({"error": "No completed trips found in this range."}, status=400)
+
     data = [{"trip": t, "salary": Salary.objects.filter(trip=t).first()} for t in trips]
 
     buffer = BytesIO()
@@ -691,33 +712,32 @@ def generate_salary_breakdown_pdf(request):
     elements = []
 
     elements.append(Paragraph(f"<b>Salary Report for {username}</b>", left_align))
-    elements.append(Paragraph(f"<b>Date Range:</b> {start.date()} to {end.date()}", left_align))
+    elements.append(Paragraph(f"<b>Date Range:</b> {start} to {end}", left_align))
     elements.append(Spacer(1, 12))
 
+    # Trip Table
     trip_table_data = [["Trip ID", "Num of Drops", "End Date", "Base Salary", "Multiplier", "Final Drop Made", "Adjusted Salary"]]
     gross_total = 0
 
     for record in data:
         trip = record["trip"]
         salary = record["salary"]
-        base = salary.trip.base_salary if salary and salary.trip else 0
-        multiplier = float(getattr(trip, "multiplier", 1))
-        adjusted = base * Decimal(str(multiplier))
+        if not salary:
+            continue
+
+        adjusted = salary.adjusted_salary or 0
         gross_total += adjusted
-        
+
+        final_drop = "N/A"
         if hasattr(trip, "addresses") and trip.addresses and hasattr(trip, "clients") and trip.clients:
-            last_address = trip.addresses[-1]
-            last_client = trip.clients[-1]
-            final_drop = f"{last_address} (Client: {last_client})"
-        else:
-            final_drop = "N/A"
+            final_drop = f"{trip.addresses[-1]} (Client: {trip.clients[-1]})"
 
         trip_table_data.append([
             str(trip.trip_id),
             str(getattr(trip, "num_of_drops", "N/A")),
             trip.end_date.strftime("%Y-%m-%d"),
-            f"{base:.2f}",
-            str(multiplier),
+            f"{trip.base_salary:.2f}",
+            str(trip.multiplier),
             final_drop,
             f"{adjusted:.2f}"
         ])
@@ -733,8 +753,9 @@ def generate_salary_breakdown_pdf(request):
     elements.append(trip_table)
     elements.append(Spacer(1, 12))
 
+    # Additionals
     bonus_total = sum(s["salary"].bonuses for s in data if s["salary"])
-    additionals_total = sum(s["salary"].trip.additionals for s in data if s["salary"])
+    additionals_total = sum(getattr(s["trip"], "additionals", 0) for s in data if s["salary"])
     elements.append(Paragraph("<b>ADDITIONALS</b>", left_heading))
     add_table = Table([["Bonuses", "Additionals"], [f"{bonus_total:.2f}", f"{additionals_total:.2f}"]], hAlign='LEFT')
     add_table.setStyle(TableStyle([
@@ -746,49 +767,37 @@ def generate_salary_breakdown_pdf(request):
     elements.append(add_table)
     elements.append(Spacer(1, 12))
 
-    monthly_deductions = {
-        "Pag-IBIG Contribution": 0,
-        "PhilHealth Contribution": 0,
-        "SSS Contribution": 0,              
-        "SSS Loan": 0,
-        "Pag-IBIG Loan": 0,
-    }
+    # Monthly deductions based on week of export date
+    def get_week_of_month(d):
+        return ((d.day - 1) // 7) + 1
 
-    for record in data:
-        trip = record["trip"]
-        salary = record["salary"]
-        if not salary:
-            continue
+    week_index = get_week_of_month(date.today())
+    monthly_deductions = {}
 
-        base = salary.trip.base_salary if salary and salary.trip else 0
-        multiplier = float(getattr(trip, "multiplier", 1))
-        adjusted = base * Decimal(str(multiplier))
-        week_index = get_week_of_month(trip.end_date)
+    if week_index == 1:
+        monthly_deductions["Pag-IBIG Contribution"] = sum(s["salary"].pagibig_contribution or 0 for s in data if s["salary"])
+    elif week_index == 2:
+        monthly_deductions["PhilHealth Contribution"] = sum(s["salary"].philhealth_contribution or 0 for s in data if s["salary"])
+    elif week_index == 3:
+        monthly_deductions["SSS Contribution"] = sum(s["salary"].sss_contribution or 0 for s in data if s["salary"])
+    elif week_index == 4:
+        monthly_deductions["SSS Loan"] = sum(s["salary"].sss_loan or 0 for s in data if s["salary"])
+        monthly_deductions["Pag-IBIG Loan"] = sum(s["salary"].pagibig_loan or 0 for s in data if s["salary"])
 
-        if week_index == 1:
-            monthly_deductions["Pag-IBIG Contribution"] += salary.pagibig_contribution or 0
-        elif week_index == 2:
-            monthly_deductions["PhilHealth Contribution"] += salary.philhealth_contribution or 0
-        elif week_index == 3:
-            monthly_deductions["SSS Contribution"] += salary.sss_contribution or 0
-        elif week_index == 4:
-            monthly_deductions["SSS Loan"] += salary.sss_loan or 0
-            monthly_deductions["Pag-IBIG Loan"] += salary.pagibig_loan or 0
-        else:
-            pass # ignore if 5th week, no monthly deductions
+    if monthly_deductions:
+        monthly_table_data = [["Monthly Deduction", "Amount"]] + [[k, f"{v:.2f}"] for k, v in monthly_deductions.items()]
+        elements.append(Paragraph("<b>MONTHLY DEDUCTIONS</b>", left_heading))
+        monthly_table = Table(monthly_table_data, hAlign='LEFT')
+        monthly_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ]))
+        elements.append(monthly_table)
+        elements.append(Spacer(1, 12))
 
-    monthly_table_data = [["Monthly Deduction", "Amount"]] + [[k, f"{v:.2f}"] for k, v in monthly_deductions.items()]
-    elements.append(Paragraph("<b>MONTHLY DEDUCTIONS</b>", left_heading))
-    monthly_table = Table(monthly_table_data, hAlign='LEFT')
-    monthly_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-    ]))
-    elements.append(monthly_table)
-    elements.append(Spacer(1, 12))
-
+    # Weekly Deductions
     weekly_deductions = {
         "Bale": sum(s["salary"].bale for s in data if s["salary"]),
         "Cash Advance": sum(s["salary"].cash_advance for s in data if s["salary"]),
@@ -796,7 +805,6 @@ def generate_salary_breakdown_pdf(request):
         "Charges": sum(s["salary"].charges for s in data if s["salary"]),
         "Others": sum(s["salary"].others for s in data if s["salary"]),
     }
-
     weekly_table_data = [["Weekly Deduction", "Amount"]] + [[k, f"{v:.2f}"] for k, v in weekly_deductions.items()]
     elements.append(Paragraph("<b>WEEKLY DEDUCTIONS</b>", left_heading))
     weekly_table = Table(weekly_table_data, hAlign='LEFT')
@@ -809,11 +817,11 @@ def generate_salary_breakdown_pdf(request):
     elements.append(weekly_table)
     elements.append(Spacer(1, 12))
 
+    # Totals
     total_deductions = sum(monthly_deductions.values()) + sum(weekly_deductions.values())
     net_pay = gross_total + bonus_total + additionals_total - total_deductions
     totals_table_data = [["Gross Salary", "Additionals", "Deductions", "Net Pay"],
                          [f"{gross_total:.2f}", f"{bonus_total + additionals_total:.2f}", f"- {total_deductions:.2f}", f"{net_pay:.2f}"]]
-
     elements.append(Paragraph("<b>TOTALS</b>", left_heading))
     totals_table = Table(totals_table_data, hAlign='LEFT')
     totals_table.setStyle(TableStyle([
@@ -832,12 +840,28 @@ def generate_salary_breakdown_pdf(request):
     
 #==================================================================================================================================================================================
 #GROSS PAYROLL PDF GENERATION [ADMIN]
+@api_view(['GET'])
+@permission_classes([AllowAny])
 def generate_gross_payroll_pdf(request):
-    start_date = parse_datetime(request.GET.get("start_date"))
-    end_date = parse_datetime(request.GET.get("end_date"))
+    totals_id = request.GET.get("totals_id")
+
+    if not totals_id:
+        return HttpResponse("Missing totals_id", status=400)
+
+    try:
+        totals = Totals.objects.get(totals_id=totals_id)
+    except Totals.DoesNotExist:
+        return HttpResponse("No totals record found for the provided ID", status=404)
+
+    start_date = totals.start_date
+    end_date = totals.end_date
 
     if not start_date or not end_date:
-        return HttpResponse("Missing start or end date", status=400)
+        return HttpResponse("Start date or end date is missing in the Totals record.", status=400)
+
+    formatted_start = DateFormat(start_date).format('F d, Y')
+    formatted_end = DateFormat(end_date).format('F d, Y')
+    trips_count = Trip.objects.filter(end_date__range=(start_date, end_date), is_completed=True).count()
 
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=landscape(letter), topMargin=30, leftMargin=30, rightMargin=30, bottomMargin=30)
@@ -848,72 +872,50 @@ def generate_gross_payroll_pdf(request):
 
     elements = []
     elements.append(Paragraph("<b>BIG C TRUCKING SERVICES GROSS PAYROLL</b>", styles['Title']))
-    elements.append(Paragraph(f"<b>FOR:</b> {start_date.date()} to {end_date.date()}", left_align))
     elements.append(Spacer(1, 12))
+    elements.append(Paragraph(f"<b>PAYROLL PERIOD:</b> {formatted_start} to {formatted_end}", left_align))
+    elements.append(Paragraph(f"<b>TOTAL COMPLETED TRIPS:</b> {trips_count}", left_align))
+    elements.append(Spacer(1, 20))
 
-    # Fetch data
-    trips = Trip.objects.filter(end_date__range=(start_date, end_date))
-    total_trips = trips.count()
-    salaries = Salary.objects.filter(trip__in=trips)
+    combined_data = [
+        ["DESCRIPTION", "AMOUNT"],
 
-    # Deductions
-    bale = sum(s.bale or 0 for s in salaries)
-    cash_advance = sum(s.cash_advance or 0 for s in salaries)
-    cash_bond = sum(s.cash_bond or 0 for s in salaries)
-    sss_total = sum((s.sss_contribution or 0) + (s.sss_loan or 0) for s in salaries)
-    philhealth_total = sum(s.philhealth_contribution or 0 for s in salaries)
-    pagibig_total = sum(s.pagibig_loan or 0 for s in salaries)
-    others = sum(s.others or 0 for s in salaries)
-    bonuses = sum(s.bonuses or 0 for s in salaries)
-    charges = sum(s.charges or 0 for s in salaries)
+        ["--- WEEKLY & OTHER DEDUCTIONS ---", ""],
+        ["WEEKLY INSTALLMENT (Bale)", f"{totals.total_bale:.2f}"],
+        ["CASH ADVANCE", f"{totals.total_cash_advance:.2f}"],
+        ["CASH BOND", f"{totals.total_bond:.2f}"],
+        ["CHARGES", f"{totals.total_charges:.2f}"],
+        ["OTHERS", f"{totals.total_others:.2f}"],
 
-    deductions_total = bale + cash_advance + cash_bond + sss_total + philhealth_total + pagibig_total + others + bonuses + charges
+        ["--- MANDATORY CONTRIBUTIONS ---", ""],
+        ["SSS (including loan)", f"{(totals.total_sss + totals.total_sss_loan):.2f}"],
+        ["PHILHEALTH", f"{totals.total_philhealth:.2f}"],
+        ["PAG-IBIG (including loan)", f"{(totals.total_pagibig + totals.total_pagibig_loan):.2f}"],
 
-    # Earnings
-    base_salary = sum(t.base_salary or 0 for t in trips)
-    additionals = sum(t.additionals or 0 for t in trips)
+        ["--- EARNINGS ---", ""],
+        ["BONUSES", f"{totals.total_bonuses:.2f}"],
+        ["BASE SALARY", f"{totals.total_base_salary:.2f}"],
+        ["ADDITIONALS", f"{totals.total_additionals:.2f}"],
 
-    elements.append(Paragraph(f"<b>Total Trips Made:</b> {total_trips}", left_align))
-    elements.append(Spacer(1, 12))
-
-    # Deductions Table
-    deductions_data = [
-        ["WEEKLY INSTALLMENT (Bale)", f"{bale:.2f}"],
-        ["CASH ADVANCE", f"{cash_advance:.2f}"],
-        ["CASH BOND", f"{cash_bond:.2f}"],
-        ["SSS", f"{sss_total:.2f}"],
-        ["PHILHEALTH", f"{philhealth_total:.2f}"],
-        ["PAG-IBIG", f"{pagibig_total:.2f}"],
-        ["OTHERS", f"{others:.2f}"],
-        ["BONUSES", f"{bonuses:.2f}"],
-        ["CHARGES", f"{charges:.2f}"],
-        ["TOTAL", f"{deductions_total:.2f}"],
+        ["--- OVERALL TOTAL ---", ""],
+        ["OVERALL TOTAL", f"{totals.overall_total:.2f}"],
     ]
-    deductions_table = Table([["Deduction", "Amount"]] + deductions_data, hAlign='LEFT')
-    deductions_table.setStyle(TableStyle([
+
+    table = Table(combined_data, hAlign='LEFT', repeatRows=1)
+    table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
         ('GRID', (0, 0), (-1, -1), 1, colors.black),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('ALIGN', (1, 1), (-1, -1), 'RIGHT'),
+        ('SPAN', (0, 1), (-1, 1)),
+        ('SPAN', (0, 7), (-1, 7)),
+        ('SPAN', (0, 11), (-1, 11)),
+        ('SPAN', (0, 15), (-1, 15)),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER')
     ]))
-    elements.append(Paragraph("<b>DEDUCTIONS TABLE</b>", left_heading))
-    elements.append(deductions_table)
-    elements.append(Spacer(1, 24))
 
-    # Earnings Table
-    earnings_data = [
-        ["BASE SALARY", f"{base_salary:.2f}"],
-        ["ADDITIONALS", f"{additionals:.2f}"]
-    ]
-    earnings_table = Table([["Earning", "Amount"]] + earnings_data, hAlign='LEFT')
-    earnings_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-    ]))
-    elements.append(Paragraph("<b>EARNINGS TABLE</b>", left_heading))
-    elements.append(earnings_table)
+    elements.append(Paragraph("<b>GROSS PAYROLL SUMMARY</b>", left_heading))
+    elements.append(table)
 
     doc.build(elements)
     buffer.seek(0)
@@ -995,3 +997,149 @@ def delete_vehicle_by_plate(request, plate_number):
         except Vehicle.DoesNotExist:
             return JsonResponse({"error": "Vehicle not found"}, status=404)
     return JsonResponse({"error": "Invalid request method"}, status=400)
+
+#=========================================================================================================================================================
+class TotalsViewSet(viewsets.ModelViewSet):
+    queryset = Totals.objects.all()
+    serializer_class = TotalsSerializer
+    
+#=========================================================================================================================================================
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def calculate_totals(request):
+    start_date = request.data.get('start_date')
+    end_date = request.data.get('end_date')
+
+    if not start_date or not end_date:
+        return Response({'error': 'Start and end dates are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
+        end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
+    except ValueError:
+        return Response({'error': 'Invalid date format.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    trips = Trip.objects.filter(
+        is_completed=True,
+        end_date__range=(start_date, end_date)
+    )
+
+    salaries = Salary.objects.filter(trip__in=trips)
+
+    totals = {
+        'total_bale': salaries.aggregate(total=Sum('bale'))['total'] or 0,
+        'total_cash_advance': salaries.aggregate(total=Sum('cash_advance'))['total'] or 0,
+        'total_bond': salaries.aggregate(total=Sum('cash_bond'))['total'] or 0,
+        'total_sss': salaries.aggregate(total=Sum('sss_contribution'))['total'] or 0,
+        'total_sss_loan': salaries.aggregate(total=Sum('sss_loan'))['total'] or 0,
+        'total_philhealth': salaries.aggregate(total=Sum('philhealth_contribution'))['total'] or 0,
+        'total_pagibig': salaries.aggregate(total=Sum('pagibig_contribution'))['total'] or 0,
+        'total_pagibig_loan': salaries.aggregate(total=Sum('pagibig_loan'))['total'] or 0,
+        'total_others': salaries.aggregate(total=Sum('others'))['total'] or 0,
+        'total_bonuses': salaries.aggregate(total=Sum('bonuses'))['total'] or 0,
+        'total_charges': salaries.aggregate(total=Sum('charges'))['total'] or 0,
+        'total_base_salary': trips.aggregate(total=Sum('base_salary'))['total'] or 0,
+        'total_additionals': trips.aggregate(total=Sum('additionals'))['total'] or 0,
+    }
+
+    totals['overall_total'] = sum(totals.values())
+
+    totals_record = Totals.objects.create(
+        start_date=start_date,
+        end_date=end_date,
+        **totals
+    )
+
+    return Response({
+        'id': totals_record.totals_id,
+        **totals
+    }, status=status.HTTP_201_CREATED)
+    
+    
+class CompletedTripsSalariesView(APIView):
+    permission_classes = [IsAuthenticated]  # Optional
+
+    def get(self, request):
+        start_date_str = request.query_params.get('start_date')
+        end_date_str = request.query_params.get('end_date')
+
+        if not start_date_str or not end_date_str:
+            return Response({"error": "Start and end date are required"}, status=400)
+
+        try:
+            start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
+            end_date = datetime.strptime(end_date_str, "%Y-%m-%d")
+        except ValueError:
+            return Response({"error": "Invalid date format. Use YYYY-MM-DD."}, status=400)
+
+        trips = Trip.objects.filter(
+            is_completed=True,
+            end_date__range=(start_date, end_date)
+        ).order_by("end_date")
+
+        serializer = TripSerializer(trips, many=True)
+        return Response(serializer.data)
+    
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_completed_trips_salaries(request):
+    start_date = request.GET.get("start_date")
+    end_date = request.GET.get("end_date")
+
+    if not start_date or not end_date:
+        return Response({"error": "Start and end dates are required."}, status=400)
+
+    try:
+        start = datetime.fromisoformat(start_date).date()
+        end = datetime.fromisoformat(end_date).date()
+    except ValueError:
+        return Response({"error": "Invalid date format. Use YYYY-MM-DD."}, status=400)
+
+    trips = Trip.objects.filter(is_completed=True, end_date__range=(start, end))
+    serializer = TripSerializer(trips, many=True)
+    return Response(serializer.data)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def trips_by_date_range(request):
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+
+    if not start_date or not end_date:
+        return Response({'error': 'Start and end date required.'}, status=400)
+
+    try:
+        start_date = datetime.fromisoformat(start_date.replace('Z', '+00:00')).date()
+        end_date = datetime.fromisoformat(end_date.replace('Z', '+00:00')).date()
+    except ValueError:
+        return Response({'error': 'Invalid date format.'}, status=400)
+
+    trips = Trip.objects.filter(end_date__range=(start_date, end_date), is_completed=True)
+
+    data = []
+    for trip in trips:
+        salary = Salary.objects.filter(trip=trip).first()  # get the corresponding salary
+        data.append({
+            'id': trip.trip_id,
+            'driver': trip.employee.user.username if trip.employee and trip.employee.user else '',
+            'helper': trip.helper.user.username if trip.helper and trip.helper.user else '',
+            'helper2': trip.helper2.user.username if trip.helper2 and trip.helper2.user else '',
+            'base_salary': float(trip.base_salary or 0),
+            'additionals': float(trip.additionals or 0),
+            'end_date': trip.end_date,
+            'salary': {
+                'bale': float(salary.bale) if salary else 0,
+                'cash_advance': float(salary.cash_advance) if salary else 0,
+                'cash_bond': float(salary.cash_bond) if salary else 0,
+                'charges': float(salary.charges) if salary else 0,
+                'others': float(salary.others) if salary else 0,
+                'sss_contribution': float(salary.sss_contribution) if salary else 0,
+                'sss_loan': float(salary.sss_loan) if salary else 0,
+                'philhealth_contribution': float(salary.philhealth_contribution) if salary else 0,
+                'pagibig_contribution': float(salary.pagibig_contribution) if salary else 0,
+                'pagibig_loan': float(salary.pagibig_loan) if salary else 0,
+                'bonuses': float(salary.bonuses) if salary else 0,
+            }
+        })
+
+    return Response(data, status=200)

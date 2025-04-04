@@ -19,8 +19,8 @@ const SalaryBreakdownPDF: React.FC<Props> = ({ employeeUsername, startDate, endD
     try {
       const params = new URLSearchParams({
         employee: employeeUsername,
-        start_date: startDate.toISOString(),
-        end_date: endDate.toISOString(),
+        start_date: startDate.toISOString().split("T")[0],
+        end_date: endDate.toISOString().split("T")[0],
       });
 
       // Fetch all trips
@@ -28,7 +28,7 @@ const SalaryBreakdownPDF: React.FC<Props> = ({ employeeUsername, startDate, endD
       const allTrips = response.data;
 
       // Filter only completed trips
-      const completedTrips = allTrips.filter((record: any) => record.trip.is_in_progress === false);
+      const completedTrips = allTrips.filter((record: any) => record.trip.is_completed === true);
 
       if (completedTrips.length === 0) {
         alert("Cannot generate PDF. No completed trips in the selected range.");

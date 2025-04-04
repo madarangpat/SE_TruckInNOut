@@ -1,18 +1,20 @@
 "use client";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import axios from "axios";
 import dynamic from "next/dynamic";
+
 const LeafletMap = dynamic(() => import("@/components/LeafletMap"), {
-  ssr: false, // 👈 disables server-side rendering
+  ssr: false,
 });
 
 interface Trip {
   trip_id: number;
-  client_info: string;
-  destination_latitude: string;
-  destination_longitude: string;
+  clients: string[][];
+  dest_lat: string[][] | string[];
+  dest_lng: string[][] | string[];
+  completed: boolean[][];
   user_latitude: string;
   user_longitude: string;
   distance_traveled: string;
@@ -50,6 +52,14 @@ const MapsPage = () => {
           (t: Trip) => t.employee?.employee_id === Number(employeeId)
         );
         setTrip(filtered || null);
+
+        if (filtered) {
+          console.log("📦 Trip keys:", Object.keys(filtered));
+        } else {
+          console.warn("⚠️ No trip found matching employee ID");
+        }
+
+        console.log("🚚 Trip from API:", filtered);
       } catch (err) {
         console.error("Error fetching trip data:", err);
       }
@@ -74,21 +84,54 @@ const MapsPage = () => {
     return parts.filter(Boolean).join(", ");
   };
 
-  const dest_lat = parseFloat(trip?.destination_latitude || "");
-  const dest_lng = parseFloat(trip?.destination_longitude || "");
-  const user_lat = parseFloat(trip?.user_latitude || "");
-  const user_lng = parseFloat(trip?.user_longitude || "");
-  console.log(dest_lat + " " + dest_lng);
-  console.log(
-    "Raw lat/lng from trip:",
-    trip?.destination_latitude,
-    trip?.destination_longitude
-  );
+  const locations = useMemo(() => {
+    if (!trip?.dest_lat || !trip?.dest_lng) {
+      console.warn("⚠️ Destination lat/lng not found in trip object.");
+      return [];
+    }
+
+    try {
+      console.log("📍 Raw latitude string:", trip.dest_lat);
+      console.log("📍 Raw longitude string:", trip.dest_lng);
+
+      const rawLat = trip.dest_lat;
+const rawLng = trip.dest_lng;
+
+const latArray = (Array.isArray(rawLat[0]) ? rawLat[0] : rawLat) as string[];
+const lngArray = (Array.isArray(rawLng[0]) ? rawLng[0] : rawLng) as string[];
+
+const validLocations = latArray
+  .map((lat, idx) => {
+    const latNum = parseFloat(lat);
+    const lngNum = parseFloat(lngArray[idx]);
+    const completed =
+      Array.isArray(trip.completed?.[0])
+        ? trip.completed[0][idx]
+        : trip.completed?.[idx] ?? false;
+
+    if (!isNaN(latNum) && !isNaN(lngNum)) {
+      return {
+        lat: latNum,
+        lng: lngNum,
+        label: `Client: ${trip.clients?.[idx] ?? `Destination ${idx + 1}`}`,
+        completed: completed,
+      };
+    }
+    return null;
+  })
+  .filter(Boolean) as { lat: number; lng: number; label: string; completed: boolean }[];
+
+      console.log("✅ Final locations:", validLocations);
+      return validLocations;
+    } catch (error) {
+      console.error("❌ Failed to parse coordinates:", error);
+      return [];
+    }
+  }, [trip]);
 
   return (
     <div className="min-h-screen flex flex-col items-center py-8 px-4 md:px-8">
       <div className="wrapper w-full max-w-5xl mx-auto p-6 rounded-2xl bg-black/40 shadow-lg">
-        {/* ✅ Back Button */}
         <div className="flex justify-start mb-4">
           <button
             onClick={() => router.push("/dashboard/admin/viewdeliveries")}
@@ -113,7 +156,6 @@ const MapsPage = () => {
 
         {trip ? (
           <div className="wrapper p-4 rounded-lg border-2 border-white text-white">
-            {/* Employee Details */}
             <div className="flex flex-col md:flex-row items-center gap-4 mb-4">
               <div className="w-16 h-16 bg-black/25 rounded-full flex items-center justify-center border-2 border-white overflow-hidden">
                 <Image
@@ -130,11 +172,11 @@ const MapsPage = () => {
                   {trip.vehicle?.plate_number || "No Plate"})
                 </p>
                 <p className="text-sm bg-black/45 text-white px-2 py-1 rounded-md mt-1 w-full">
-                  <strong>CLIENT:</strong> {trip.client_info || "__________"}
+                  <strong>NUMBER OF CLIENTS:</strong>{" "}
+                  {trip.clients?.[0]?.length || "__________"}
                 </p>
                 <p className="text-sm bg-black/45 text-white px-2 py-1 rounded-md mt-1 w-full">
-                  <strong>DESTINATION:</strong> {getDestination()} (
-                  {trip.distance_traveled || "___"} km)
+                  <strong>DESTINATION:</strong> {getDestination()} (redacted km`)
                 </p>
                 <p className="text-sm bg-black/45 text-white px-2 py-1 rounded-md mt-1 w-full">
                   <strong>LOCATION:</strong> {trip.user_latitude},{" "}
@@ -143,16 +185,19 @@ const MapsPage = () => {
               </div>
             </div>
 
-            {/* Live Map*/}
             <div className="w-full h-96 bg-gray-700 rounded-lg mt-7">
-              <LeafletMap
-                lat={dest_lat}
-                lng={dest_lng}
-                destination={getDestination()}
-                userLat={user_lat}
-                userLng={user_lng}
-                isAdmin={true}
-              />
+              {locations.length > 0 ? (
+                <LeafletMap
+                  locations={locations}
+                  userLat={14.65889} // or parseFloat(trip.user_latitude)
+                  userLng={121.10419} // or parseFloat(trip.user_longitude)
+                  isAdmin={true}
+                />
+              ) : (
+                <p className="text-red-400 p-4">
+                  ⚠️ No valid destination coordinates found.
+                </p>
+              )}
             </div>
           </div>
         ) : (

@@ -7,9 +7,9 @@ from .views import (
     TripListView, TripDetailView,
     VehicleListView, VehicleDetailView,
     RegisterUserView, RegisterVehicleView, RegisterTripView, get_recent_trips, employee_trip_salaries, update_salary_deductions, delete_vehicle_by_plate,
-    SendPasswordLinkView, ResetPasswordView, get_vehicles, get_employees, get_users, update_salary_configuration, get_all_salary_configurations,
-    EmployeeCreateView, delete_user_by_username, get_employee_profile, UserProfileView, update_employee_profile, UserUpdateView, priority_queue_view,
-    ValidateResetPasswordTokenView, get_ongoing_trips, generate_gross_payroll_pdf, generate_salary_breakdown_pdf, update_user_profile
+    SendPasswordLinkView, ResetPasswordView, get_vehicles, get_employees, get_users, update_salary_configuration, get_all_salary_configurations, calculate_totals,
+    EmployeeCreateView, delete_user_by_username, get_employee_profile, UserProfileView, update_employee_profile, UserUpdateView, priority_queue_view, get_completed_trips_salaries,
+    ValidateResetPasswordTokenView, get_ongoing_trips, generate_gross_payroll_pdf, generate_salary_breakdown_pdf, update_user_profile, TotalsViewSet, trips_by_date_range
 )
 from django.contrib.auth.views import (
     PasswordResetView,
@@ -22,8 +22,7 @@ from django.contrib.auth.views import (
 urlpatterns = [
     path('users/', UserListView.as_view(), name='user-list'),
     path('users/profile/', UserProfileView.as_view(), name='user-profile-view'),
-    path('users/profile/update/', UserUpdateView.as_view(), name='user-profile-update-view'),
-    path("update_user/<int:user_id>/", update_user_profile, name="update_user_profile"),
+    path('users/profile/update/<int:user_id>/', update_user_profile, name='user-profile-update-view'),
 
     path('employees/create/', EmployeeCreateView.as_view(), name='employee-create'),
     path('employees/', EmployeeListView.as_view(), name='employee-list'),
@@ -49,7 +48,7 @@ urlpatterns = [
     
     #Generate PDF
     path('employee-trip-salaries/', employee_trip_salaries),
-    path("generate-pdf/gross-payroll/", generate_gross_payroll_pdf, name="generate_gross_payroll_pdf"),
+    path('generate_gross_payroll_pdf/', generate_gross_payroll_pdf, name='generate_gross_payroll_pdf'),
     path("generate-pdf/salary-breakdown/", generate_salary_breakdown_pdf, name="generate_salary_breakdown_pdf"),
     
     #Add Account
@@ -89,5 +88,14 @@ urlpatterns = [
     
     # Delete Vehicles
     path("delete-vehicle-by-plate/<str:plate_number>/", delete_vehicle_by_plate, name="delete-vehicle-by-plate"),
+
+    # Totals
+    path('totals/', TotalsViewSet.as_view({'get': 'list', 'post': 'create'})),
+    path('totals/<int:pk>/', TotalsViewSet.as_view({'get': 'retrieve', 'put': 'update'})),
+    path('calculate_totals/', calculate_totals, name='calculate-totals'),
+
+    path('completed-trips-salaries/', get_completed_trips_salaries),
+    
+    path('trips-by-date-range/', trips_by_date_range, name='trips_by_date_range'),
 
 ]

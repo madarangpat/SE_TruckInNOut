@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import User, Administrator, Employee, Salary, Trip, Vehicle, SalaryConfiguration
+from .models import User, Administrator, Employee, Salary, Trip, Vehicle, SalaryConfiguration, Totals
 
 # ✅ Custom User Admin
 class CustomUserAdmin(UserAdmin):
@@ -110,6 +110,30 @@ class SalaryConfigurationAdmin(admin.ModelAdmin):
     search_fields = ('sss', 'philhealth', 'pag_ibig')  # Allow searching by these fields
     list_filter = ('sss', 'philhealth', 'pag_ibig')
     
+# ✅ Totals Admin
+class TotalsAdmin(admin.ModelAdmin):
+    list_display = (
+        'totals_id',
+        'start_date',
+        'end_date',
+        'total_base_salary',
+        'total_additionals',
+        'total_bonuses',
+        'total_charges',
+        'total_bale',
+        'total_cash_advance',
+        'total_bond',
+        'total_sss',
+        'total_sss_loan',
+        'total_philhealth',
+        'total_pagibig',
+        'total_pagibig_loan',
+        'total_others',
+        'overall_total',
+    )
+    search_fields = ('totals_id', 'start_date', 'end_date')
+    list_filter = ('start_date', 'end_date')
+    
 # ✅ Register Models in Admin
 admin.site.register(User, CustomUserAdmin)
 admin.site.register(Administrator, AdministratorAdmin)  # ✅ Added custom admin
@@ -118,3 +142,4 @@ admin.site.register(Salary)
 admin.site.register(Trip, TripAdmin)  # ✅ Register with the custom TripAdmin
 admin.site.register(Vehicle, VehicleAdmin)  # ✅ Register with the custom VehicleAdmin
 admin.site.register(SalaryConfiguration)
+admin.site.register(Totals, TotalsAdmin)

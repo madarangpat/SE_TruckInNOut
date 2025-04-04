@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import User, Administrator, Employee, Salary, Trip, Vehicle, SalaryConfiguration
+from .models import User, Administrator, Employee, Salary, Trip, Vehicle, SalaryConfiguration, Totals
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth import get_user_model
 from django.db.models import Q
@@ -128,6 +128,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
+            'id',
             'password', 'username', 
             'first_name', 'last_name', 'role', 
             'cellphone_no', 'email', 'philhealth_no', 'pag_ibig_no', 
@@ -182,3 +183,8 @@ class EmployeeSerializer(serializers.ModelSerializer):
         employee = Employee.objects.create(user=user, **validated_data)
         employee.save()
         return employee
+    
+class TotalsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Totals
+        fields = '__all__'

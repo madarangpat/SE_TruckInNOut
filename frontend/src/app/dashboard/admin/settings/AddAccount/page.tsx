@@ -68,12 +68,42 @@ const AddAccountPage = () => {
     return regex.test(password);
   };
 
+  const validatePhilhealthNumber = (number: string) => {
+    const regex = /^\d{2}-\d{9}-\d{1}$/;
+    return regex.test(number);
+  };
+
+  const validateCellphoneNumber = (number: string) => {
+    const regex = /^09\d{9}$/;
+    return regex.test(number);
+  };
+
+  const validatePagIbigNumber = (number: string) => {
+    const regex = /^\d{12}$/;
+    return regex.test(number);
+  };
+
+  const validateLicenseNumber = (number: string) => {
+    const regex = /^[A-Z]{1}\d{2}-\d{2}-\d{6}$/i;
+    return regex.test(number);
+  };
+
+  const validateSSSNumber = (number: string) => {
+    const regex = /^\d{2}-\d{7}-\d{1}$/;
+    return regex.test(number);
+  };
+
+  const validateEmail = (email: string) => {
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return regex.test(email);
+  };
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
 
-    const { password, confirmPassword, role, employee_type } = formData;
+    const { password, confirmPassword, role, employee_type, cellphone_no } = formData;
 
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
@@ -84,6 +114,36 @@ const AddAccountPage = () => {
       setError(
         "\u274C Password must be at least 8 characters long and include uppercase, lowercase, number, and special character."
       );
+      return;
+    }
+
+    if (!validateCellphoneNumber(cellphone_no)) {
+      setError("❌ Invalid cellphone number. It must follow the local format: 0917XXXXXXX (11 digits starting with 09).");
+      return;
+    }
+
+    if (!validatePhilhealthNumber(formData.philhealth_no)) {
+      setError("❌ Invalid PhilHealth number. Format must be: XX-XXXXXXXXX-X (e.g., 12-123456789-0).");
+      return;
+    }
+
+    if (!validatePagIbigNumber(formData.pag_ibig_no)) {
+      setError("❌ Invalid Pag-IBIG number. It must be exactly 12 digits with no dashes (e.g., 123456789012).");
+      return;
+    }
+
+    if (!validateLicenseNumber(formData.license_no)) {
+      setError("❌ Invalid Driver's License number. Format must be: CXX-XX-XXXXXX (e.g., D12-34-567890).");
+      return;
+    }
+
+    if (!validateSSSNumber(formData.sss_no)) {
+      setError("❌ Invalid SSS number. Format must be: XX-XXXXXXX-X (e.g., 34-1234567-8).");
+      return;
+    }
+    
+    if (!validateEmail(formData.email)) {
+      setError("❌ Invalid email format. Please enter a valid email address (e.g., name@example.com).");
       return;
     }
 
@@ -143,25 +203,25 @@ const AddAccountPage = () => {
     } catch (error: any) {
       console.error("API Error:", error.response?.data);
       const rawError = error.response?.data?.error || "Failed to create account.";
-let friendlyMessage = rawError;
+      let friendlyMessage = rawError;
 
-if (rawError.includes("UNIQUE constraint failed: api_user.username")) {
-  friendlyMessage = "This username is already taken. Please choose another.";
-} else if (rawError.includes("UNIQUE constraint failed: api_user.email")) {
-  friendlyMessage = "An account with this email already exists.";
-} else if (rawError.includes("UNIQUE constraint failed: api_user.cellphone_no")) {
-  friendlyMessage = "This cellphone number is already in use.";
-} else if (rawError.includes("UNIQUE constraint failed: api_user.philhealth_no")) {
-  friendlyMessage = "This PhilHealth number already exists.";
-} else if (rawError.includes("UNIQUE constraint failed: api_user.pag_ibig_no")) {
-  friendlyMessage = "This Pag-IBIG number already exists.";
-} else if (rawError.includes("UNIQUE constraint failed: api_user.sss_no")) {
-  friendlyMessage = "This SSS number already exists.";
-} else if (rawError.includes("UNIQUE constraint failed: api_user.license_no")) {
-  friendlyMessage = "A user with this License Number already exists. Please use a different one.";
-}
+      if (rawError.includes("UNIQUE constraint failed: api_user.username")) {
+        friendlyMessage = "This username is already taken. Please choose another.";
+      } else if (rawError.includes("UNIQUE constraint failed: api_user.email")) {
+        friendlyMessage = "An account with this email already exists.";
+      } else if (rawError.includes("UNIQUE constraint failed: api_user.cellphone_no")) {
+        friendlyMessage = "This cellphone number is already in use.";
+      } else if (rawError.includes("UNIQUE constraint failed: api_user.philhealth_no")) {
+        friendlyMessage = "This PhilHealth number already exists.";
+      } else if (rawError.includes("UNIQUE constraint failed: api_user.pag_ibig_no")) {
+        friendlyMessage = "This Pag-IBIG number already exists.";
+      } else if (rawError.includes("UNIQUE constraint failed: api_user.sss_no")) {
+        friendlyMessage = "This SSS number already exists.";
+      } else if (rawError.includes("UNIQUE constraint failed: api_user.license_no")) {
+        friendlyMessage = "A user with this License Number already exists. Please use a different one.";
+      }
 
-setError(friendlyMessage);
+      setError(friendlyMessage);
     }
   };
 

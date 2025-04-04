@@ -33,6 +33,7 @@ const AccountsPage = ({ users }: { users: User[] }) => {
   ];
 
   const handleUserSelect = (user: User) => {
+    console.log("Selected user:", user); // 🔍 Add this
     setSelectedUser(user);
     setSelectedProfileImage(user.profile_image ?? "/tinoicon.png");
     setTempData(user);
@@ -72,7 +73,7 @@ const AccountsPage = ({ users }: { users: User[] }) => {
   
     // Ensure you have the userId, it should come from selectedUser
     const userId = selectedUser.id;  // Assuming `id` is the user's unique identifier
-    console.log(userId);
+    console.log("To be updated profile: ",userId);
     try {
       // Call updateUserData with userId, email, and cellphone_no
       await updateUserData({

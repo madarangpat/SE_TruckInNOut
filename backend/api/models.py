@@ -146,6 +146,7 @@ class Salary(models.Model):
     sss_contribution = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     sss_loan = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     philhealth_contribution = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    pagibig_contribution = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
     pagibig_loan = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     
     #Weekly Deductions
@@ -154,6 +155,7 @@ class Salary(models.Model):
     cash_bond = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     charges = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     others = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    adjusted_salary = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
      
     def __str__(self):
         return f"Salary {self.salary_id}"
@@ -181,10 +183,9 @@ class Trip(models.Model):
     base_salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     additionals = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     num_of_drops = models.IntegerField(null=True, blank=True)
-    start_date = models.DateTimeField(null=True, blank=True)
-    end_date = models.DateTimeField(null=True, blank=True)  
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)  
     
-    is_in_progress = models.BooleanField(default=False) 
     is_completed = models.BooleanField(default=False)
     
     def __str__(self):
@@ -237,3 +238,28 @@ class SalaryReport(models.Model):
     
     def __str__(self):
         return f"SalaryReport {self.salary_report_id}"
+    
+######################################################################################################################################
+# TOTALS MODEL
+class Totals(models.Model):
+    totals_id = models.AutoField(primary_key=True)
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
+
+    total_bale = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    total_cash_advance = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    total_bond = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    total_sss = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    total_sss_loan = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    total_philhealth = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    total_pagibig = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    total_pagibig_loan = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    total_others = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    total_bonuses = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    total_charges = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    total_base_salary = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    total_additionals = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    overall_total = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+
+    def __str__(self):
+        return f"Totals #{self.totals_id}"

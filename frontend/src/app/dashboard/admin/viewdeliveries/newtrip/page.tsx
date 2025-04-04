@@ -3,7 +3,6 @@ import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import axios from "axios";
 import { useRouter } from "next/navigation";
-import { getCoordinatesFromAddress, calculateDistance } from "@/lib/google";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import AddressAutoComplete from "@/components/AddressAutoComplete";
@@ -208,41 +207,41 @@ const CreateNewTripPage = () => {
     }
   };
 
-  // useEffect(() => {
-  //   const delay = setTimeout(async () => {
-  //     try {
-  //       const apiKey = process.env.GOOGLE_API_KEY;
+   useEffect(() => {
+     const delay = setTimeout(async () => {
+       try {
+         const apiKey = process.env.GOOGLE_API_KEY;
 
-  //       const updatedDestinations = await Promise.all(
-  //         tripDestinations.map(async (dest) => {
-  //           const response = await fetch(
-  //             `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
-  //               dest.address
-  //             )}&key=${apiKey}`
-  //           );
+         const updatedDestinations = await Promise.all(
+           tripDestinations.map(async (dest) => {
+             const response = await fetch(
+               `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+                 dest.address
+               )}&key=${apiKey}`
+             );
 
-  //           const data = await response.json();
-  //           console.log("Auto-geocode Google response:", data);
+             const data = await response.json();
+             console.log("Auto-geocode Google response:", data);
 
-  //           if (!data.results || data.results.length === 0) return dest; // Keep original if no results
+             if (!data.results || data.results.length === 0) return dest; // Keep original if no results
 
-  //           const { lat, lng } = data.results[0].geometry.location;
+             const { lat, lng } = data.results[0].geometry.location;
 
-  //           return { ...dest, lat, lng }; // Update with lat/lng
-  //         })
-  //       );
+             return { ...dest, lat, lng }; // Update with lat/lng
+           })
+         );
 
-  //       setTripFormData((prev) => ({
-  //         ...prev,
-  //         destinations: updatedDestinations, // Store updated destinations array
-  //       }));
-  //     } catch (err) {
-  //       console.error("Auto-geocoding failed:", err);
-  //     }
-  //   }, 1500);
+         setTripFormData((prev) => ({
+           ...prev,
+           destinations: updatedDestinations, // Store updated destinations array
+         }));
+       } catch (err) {
+         console.error("Auto-geocoding failed:", err);
+       }
+     }, 1500);
 
-  //   return () => clearTimeout(delay);
-  // }, [tripFormData]);
+     return () => clearTimeout(delay);
+   }, [tripFormData]);
 
   return (
     <div className="min-h-screen flex flex-col items-center py-8 px-4 md:px-8">
@@ -322,7 +321,7 @@ const CreateNewTripPage = () => {
                       ...tripDestinations.map((dest) => dest.address),
                       "",
                     ],
-                    distances: [...tripFormData.distances, ""],
+                //    distances: [...tripFormData.distances, ""],
                     clients: [...tripFormData.clients, ""],
                     user_lat: newLat,
                     user_lng: newLng,
@@ -395,8 +394,8 @@ const CreateNewTripPage = () => {
             </div>
           ))}
         </div>
-
-        {/* DISTANCES ARRAY */}
+        {/*
+        /* DISTANCES ARRAY 
         <div>
           <h3 className="text-lg font-bold text-black/70">Distances</h3>
           {tripFormData.distances.map((distance, index) => (
@@ -415,7 +414,7 @@ const CreateNewTripPage = () => {
             </div>
           ))}
         </div>
-
+          */}
         {/* USER LAT ARRAY */}
         <div>
           <h3 className="text-lg font-bold text-black/70">User Latitudes</h3>

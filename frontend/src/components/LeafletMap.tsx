@@ -4,21 +4,17 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useEffect, useState } from "react";
-import { calculateDistance } from "@/lib/google";
 
 // Fix Leaflet icon paths
 delete (L.Icon.Default.prototype as any).getIconUrl;
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl:
-    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
-// 🔴 Custom red icon
 const redIcon = new L.Icon({
-  iconUrl:
-    "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
+  iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
   iconSize: [25, 41],
   iconAnchor: [12, 41],
@@ -26,10 +22,8 @@ const redIcon = new L.Icon({
   shadowSize: [41, 41],
 });
 
-// 🔵 Custom blue icon for debug marker
 const blueIcon = new L.Icon({
-  iconUrl:
-    "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png",
+  iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png",
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
   iconSize: [25, 41],
   iconAnchor: [12, 41],
@@ -37,7 +31,15 @@ const blueIcon = new L.Icon({
   shadowSize: [41, 41],
 });
 
-// 🌍 Fit bounds helper
+const greenIcon = new L.Icon({
+  iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
+
 function MapBounds({ bounds }: { bounds: L.LatLngBoundsExpression }) {
   const map = useMap();
   useEffect(() => {
@@ -46,91 +48,64 @@ function MapBounds({ bounds }: { bounds: L.LatLngBoundsExpression }) {
   return null;
 }
 
-interface Props {
+interface LocationPoint {
   lat: number;
   lng: number;
-  destination: string;
+  label: string;
+  completed?: boolean;
+}
+
+interface Props {
+  locations: LocationPoint[];
   userLat: number;
   userLng: number;
   isAdmin: boolean;
 }
 
 export default function LeafletMap({
-  lat,
-  lng,
-  destination,
+  locations,
   userLat,
   userLng,
   isAdmin,
 }: Props) {
-  const destinationPos: [number, number] = [lat, lng];
   const userPos: [number, number] = [userLat, userLng];
-  const [distanceKm, setDistanceKm] = useState<number>(0);
-  
-  // Debug states
-  const [debugEnabled, setDebugEnabled] = useState<boolean>(false);
-  const [currentLocation, setCurrentLocation] = useState<{ lat: number, lng: number } | null>(null);
+  const [debugEnabled, setDebugEnabled] = useState(false);
+  const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [watchId, setWatchId] = useState<number | null>(null);
 
-  // Calculate bounds to include destination, user location, and current location (if debugging)
-  const bounds: L.LatLngBoundsExpression = currentLocation && debugEnabled
-    ? [
-        [lat, lng],
-        [userLat, userLng],
-        [currentLocation.lat, currentLocation.lng]
-      ]
-    : [
-        [lat, lng],
-        [userLat, userLng]
-      ];
+  let boundsArray: [number, number][] = [
+    ...locations.map((loc) => [loc.lat, loc.lng] as [number, number]),
+    userPos,
+  ];
+  if (debugEnabled && currentLocation) {
+    boundsArray.push([currentLocation.lat, currentLocation.lng]);
+  }
+  const bounds: L.LatLngBoundsExpression = boundsArray;
 
-  // Toggle debug mode function
+
   const toggleDebugMode = () => {
     if (!debugEnabled) {
       if (!navigator.geolocation) {
         console.warn("Geolocation not supported by this browser.");
         return;
       }
-      
-      // Get current position once
+
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
           setCurrentLocation({ lat: latitude, lng: longitude });
-          console.log("Debug: Current location captured", { lat: latitude, lng: longitude });
         },
-        (error) => {
-          console.error("Debug: Error getting position:", error);
-        },
+        (error) => console.error("Error getting position:", error),
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
-      
+
       setDebugEnabled(true);
     } else {
-      // Turn off debug mode
       setDebugEnabled(false);
       setCurrentLocation(null);
     }
   };
 
-  // Calculate distance on component mount
-  useEffect(() => {
-    const getDistance = async () => {
-      try {
-        const distance = await calculateDistance(
-          { lat: userLat, lng: userLng },
-          { lat, lng }
-        );
-        setDistanceKm(distance);
-      } catch (error) {
-        console.error("Error calculating distance:", error);
-      }
-    };
-
-    getDistance();
-  }, [lat, lng, userLat, userLng]);
-
-  // Clean up geolocation watch on unmount
   useEffect(() => {
     return () => {
       if (watchId !== null) {
@@ -141,7 +116,7 @@ export default function LeafletMap({
 
   return (
     <div className="relative h-full">
-      {/* Debug toggle button */}
+      {/* 🔘 Debug Toggle */}
       <div className="absolute top-2 right-2 z-[1000] flex gap-2">
         <button
           onClick={toggleDebugMode}
@@ -150,62 +125,44 @@ export default function LeafletMap({
         >
           {debugEnabled ? "Disable Debug" : "Enable Debug"}
         </button>
-        
-        {debugEnabled && (
-          <button
-            onClick={() => {
-              navigator.geolocation.getCurrentPosition(
-                (position) => {
-                  const { latitude, longitude } = position.coords;
-                  setCurrentLocation({ lat: latitude, lng: longitude });
-                  console.log("Debug: Current location refreshed", { lat: latitude, lng: longitude });
-                },
-                (error) => {
-                  console.error("Debug: Error getting position:", error);
-                },
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-              );
-            }}
-            className="bg-blue-500 text-white px-2 py-1 rounded shadow text-sm font-mono"
-            style={{ opacity: 0.8 }}
-          >
-            Refresh Location
-          </button>
-        )}
       </div>
 
       <MapContainer
-        center={destinationPos}
+        center={userPos}
         zoom={13}
         className="w-full"
         style={{ height: "100%", minHeight: "300px" }}
       >
-        <MapBounds bounds={bounds} />
+        <MapBounds bounds={boundsArray} />
 
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution="&copy; OpenStreetMap contributors"
         />
 
-        {/* 📍 Destination Marker */}
-        <Marker position={destinationPos}>
+        {/* ✅ Destination Markers */}
+        {locations.map((loc, idx) => (
+          <Marker
+            key={idx}
+            position={[loc.lat, loc.lng]}
+            icon={loc.completed ? greenIcon : blueIcon}
+          >
+            <Popup>
+              <strong>{loc.label}</strong>
+              <br />
+              
+            </Popup>
+          </Marker>
+        ))}
+
+        {/* 🔴 User Marker */}
+        <Marker position={userPos} icon={redIcon}>
           <Popup>
-            <strong>Destination:</strong>
-            <br />
-            {destination}
+            <strong>Your Location</strong>
           </Popup>
         </Marker>
 
-        {/* 🔴 User Location Marker */}
-        <Marker position={userPos} icon={redIcon}>
-          <Popup>
-            <strong>User Location</strong>
-            <br />
-            Distance: {distanceKm.toFixed(2)} km
-          </Popup>
-        </Marker>
-        
-        {/* 🔵 Debug Current Location Marker */}
+        {/* 🔵 Debug Marker */}
         {debugEnabled && currentLocation && (
           <Marker position={[currentLocation.lat, currentLocation.lng]} icon={blueIcon}>
             <Popup>
