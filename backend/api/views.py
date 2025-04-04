@@ -261,7 +261,6 @@ class IsEmployeeUser(IsAuthenticated):
 class UserListView(generics.ListAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
 #==================================================================================================================================================================================
@@ -323,7 +322,55 @@ class TripDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Trip.objects.all()
     serializer_class = TripSerializer
     permission_classes = [IsAuthenticated]
+    
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        was_in_progress = instance.is_in_progress
 
+        response = super().update(request, *args, **kwargs)
+        instance.refresh_from_db()
+
+        print(f"Trip {instance.trip_id} status: was_in_progress={was_in_progress}, now={instance.is_in_progress}")
+
+        if was_in_progress and not instance.is_in_progress:
+            print("✅ Trip was just completed — computing salary now.")
+            self.compute_and_store_deductions(instance)
+        else:
+            print("⚠️ Trip is already completed. No salary computation triggered.")
+
+        return response
+    
+    def compute_and_store_deductions(self, trip):
+        from .models import Salary, SalaryConfiguration
+
+        config = SalaryConfiguration.objects.last()
+        if not config:
+            print("⚠️ No Salary Configuration found.")
+            return
+
+        base = trip.base_salary or 0
+        multiplier = trip.multiplier or 1
+        adjusted = base * multiplier
+
+        Salary.objects.update_or_create(
+            trip=trip,
+            defaults={
+                "additionals": trip.additionals or 0,
+                "bonuses": 0,  # Optional: Update via a separate endpoint if needed
+                "sss_contribution": adjusted * config.sss,
+                "philhealth_contribution": adjusted * config.philhealth,
+                "pagibig_contribution": adjusted * config.pag_ibig,
+                "sss_loan": 0,
+                "pagibig_loan": 0,
+                "bale": 0,
+                "cash_advance": 0,
+                "cash_bond": 0,
+                "charges": 0,
+                "others": 0,
+            }
+        )
+        print(f"✅ Salary record created/updated for Trip ID {trip.trip_id}")
+            
 #==================================================================================================================================================================================
 # Vehicle Views
 class VehicleListView(generics.ListCreateAPIView):
@@ -367,7 +414,7 @@ User = get_user_model()
 
 def get_users(request):
     users = User.objects.all().values(
-        'username', 'email', 'cellphone_no', 'philhealth_no',
+        'id', 'username', 'email', 'cellphone_no', 'philhealth_no',
         'pag_ibig_no', 'sss_no', 'license_no', 'profile_image', 'is_staff', 'is_superuser'
     )
 
@@ -385,12 +432,12 @@ def get_users(request):
 #==================================================================================================================================================================================
 #SETTINGS DELETE ACCOUNT
 @csrf_exempt
-def delete_user(request, user_id):
+def delete_user_by_username(request, username):
     if request.method == "DELETE":
         try:
-            user = User.objects.get(id=user_id)
+            user = User.objects.get(username=username)
             user.delete()
-            return JsonResponse({"message": "User deleted successfully!"}, status=200)
+            return JsonResponse({"message": f"User '{username}' deleted successfully!"}, status=200)
         except User.DoesNotExist:
             return JsonResponse({"error": "User not found"}, status=404)
     return JsonResponse({"error": "Invalid request"}, status=400)
@@ -582,97 +629,7 @@ def update_salary_deductions(request):
         salary.save()
 
     return Response({"status": "success"})
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+#==============================================================================================================================
 #SALARY BREAKDOWN PDF GENERATION [ADMIN SIDE]
 def get_week_of_month(date):
     day = date.day
@@ -809,11 +766,11 @@ def generate_salary_breakdown_pdf(request):
         week_index = get_week_of_month(trip.end_date)
 
         if week_index == 1:
-            monthly_deductions["Pag-IBIG Contribution"] += adjusted * pagibig_pct
+            monthly_deductions["Pag-IBIG Contribution"] += salary.pagibig_contribution or 0
         elif week_index == 2:
-            monthly_deductions["PhilHealth Contribution"] += adjusted * philhealth_pct
+            monthly_deductions["PhilHealth Contribution"] += salary.philhealth_contribution or 0
         elif week_index == 3:
-            monthly_deductions["SSS Contribution"] += adjusted * sss_pct
+            monthly_deductions["SSS Contribution"] += salary.sss_contribution or 0
         elif week_index == 4:
             monthly_deductions["SSS Loan"] += salary.sss_loan or 0
             monthly_deductions["Pag-IBIG Loan"] += salary.pagibig_loan or 0
@@ -876,48 +833,94 @@ def generate_salary_breakdown_pdf(request):
 #==================================================================================================================================================================================
 #GROSS PAYROLL PDF GENERATION [ADMIN]
 def generate_gross_payroll_pdf(request):
+    start_date = parse_datetime(request.GET.get("start_date"))
+    end_date = parse_datetime(request.GET.get("end_date"))
+
+    if not start_date or not end_date:
+        return HttpResponse("Missing start or end date", status=400)
+
     buffer = BytesIO()
-    pdf = canvas.Canvas(buffer, pagesize=landscape(letter))
-    width, height = landscape(letter)
+    doc = SimpleDocTemplate(buffer, pagesize=landscape(letter), topMargin=30, leftMargin=30, rightMargin=30, bottomMargin=30)
 
-    # Title
-    title_text = "Gross Payroll Report – November 2024, 2nd Week"
-    pdf.setFont("Helvetica-Bold", 16)
-    text_width = pdf.stringWidth(title_text, "Helvetica-Bold", 16)
-    x_position = (width - text_width) / 2
-    pdf.drawString(x_position, height - 50, title_text)
+    styles = getSampleStyleSheet()
+    left_align = ParagraphStyle(name='LeftAlign', parent=styles['Normal'], alignment=TA_LEFT)
+    left_heading = ParagraphStyle(name='LeftHeading', parent=styles['Heading4'], alignment=TA_LEFT)
 
-    # Placeholder table for Gross Payroll (adjust later)
-    payroll_data = [
-        ["Employee", "Total Trips", "Gross Pay"],
-        ["Juan Dela Cruz", "5", "₱ 8,500"],
-        ["Maria Clara", "4", "₱ 7,200"],
-        ["Jose Rizal", "6", "₱ 9,100"]
+    elements = []
+    elements.append(Paragraph("<b>BIG C TRUCKING SERVICES GROSS PAYROLL</b>", styles['Title']))
+    elements.append(Paragraph(f"<b>FOR:</b> {start_date.date()} to {end_date.date()}", left_align))
+    elements.append(Spacer(1, 12))
+
+    # Fetch data
+    trips = Trip.objects.filter(end_date__range=(start_date, end_date))
+    total_trips = trips.count()
+    salaries = Salary.objects.filter(trip__in=trips)
+
+    # Deductions
+    bale = sum(s.bale or 0 for s in salaries)
+    cash_advance = sum(s.cash_advance or 0 for s in salaries)
+    cash_bond = sum(s.cash_bond or 0 for s in salaries)
+    sss_total = sum((s.sss_contribution or 0) + (s.sss_loan or 0) for s in salaries)
+    philhealth_total = sum(s.philhealth_contribution or 0 for s in salaries)
+    pagibig_total = sum(s.pagibig_loan or 0 for s in salaries)
+    others = sum(s.others or 0 for s in salaries)
+    bonuses = sum(s.bonuses or 0 for s in salaries)
+    charges = sum(s.charges or 0 for s in salaries)
+
+    deductions_total = bale + cash_advance + cash_bond + sss_total + philhealth_total + pagibig_total + others + bonuses + charges
+
+    # Earnings
+    base_salary = sum(t.base_salary or 0 for t in trips)
+    additionals = sum(t.additionals or 0 for t in trips)
+
+    elements.append(Paragraph(f"<b>Total Trips Made:</b> {total_trips}", left_align))
+    elements.append(Spacer(1, 12))
+
+    # Deductions Table
+    deductions_data = [
+        ["WEEKLY INSTALLMENT (Bale)", f"{bale:.2f}"],
+        ["CASH ADVANCE", f"{cash_advance:.2f}"],
+        ["CASH BOND", f"{cash_bond:.2f}"],
+        ["SSS", f"{sss_total:.2f}"],
+        ["PHILHEALTH", f"{philhealth_total:.2f}"],
+        ["PAG-IBIG", f"{pagibig_total:.2f}"],
+        ["OTHERS", f"{others:.2f}"],
+        ["BONUSES", f"{bonuses:.2f}"],
+        ["CHARGES", f"{charges:.2f}"],
+        ["TOTAL", f"{deductions_total:.2f}"],
     ]
+    deductions_table = Table([["Deduction", "Amount"]] + deductions_data, hAlign='LEFT')
+    deductions_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+    ]))
+    elements.append(Paragraph("<b>DEDUCTIONS TABLE</b>", left_heading))
+    elements.append(deductions_table)
+    elements.append(Spacer(1, 24))
 
-    def draw_table(data, x, y):
-        table = Table(data, colWidths=[150] * len(data[0]), repeatRows=1)
-        table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
-        ]))
-        table.wrapOn(pdf, width, height)
-        table.drawOn(pdf, x, y)
+    # Earnings Table
+    earnings_data = [
+        ["BASE SALARY", f"{base_salary:.2f}"],
+        ["ADDITIONALS", f"{additionals:.2f}"]
+    ]
+    earnings_table = Table([["Earning", "Amount"]] + earnings_data, hAlign='LEFT')
+    earnings_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+    ]))
+    elements.append(Paragraph("<b>EARNINGS TABLE</b>", left_heading))
+    elements.append(earnings_table)
 
-    draw_table(payroll_data, 50, height - 150)
-
-    pdf.showPage()
-    pdf.save()
+    doc.build(elements)
     buffer.seek(0)
 
-    response = HttpResponse(buffer, content_type='application/pdf')
-    response['Content-Disposition'] = 'attachment; filename="gross_payroll.pdf"'
-    return response
-
+    return HttpResponse(buffer, content_type='application/pdf', headers={
+        'Content-Disposition': 'attachment; filename="gross_payroll.pdf"'
+    })
 #==================================================================================================================================================================================
 # ADD TRIP [ADMIN SIDE]
 class RegisterTripView(APIView):
@@ -973,9 +976,22 @@ class RegisterTripView(APIView):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def priority_queue_view(request):
-    employees = Employee.objects.filter(user__employee_type__in=["Driver", "Helper"]) \
-                                .order_by("completed_trip_count")
-    sorted_employees = sorted(employees, key=lambda emp: emp.completed_trip_count)
-                                
-    serializer = EmployeeSerializer(sorted_employees, many=True)
-    return Response(serializer.data)
+    employees = Employee.objects.filter(user__employee_type__in=["Driver", "Helper"])                               
+    serializer = EmployeeSerializer(employees, many=True)
+    
+    # Sort using the dynamically computed count
+    sorted_employees = sorted(serializer.data, key=lambda e: e["completed_trip_count"])
+    return Response(sorted_employees)
+
+#==================================================================================================================================================================================
+# DELETE VEHICLES
+@csrf_exempt
+def delete_vehicle_by_plate(request, plate_number):
+    if request.method == "DELETE":
+        try:
+            vehicle = Vehicle.objects.get(plate_number=plate_number)
+            vehicle.delete()
+            return JsonResponse({"message": f"Vehicle '{plate_number}' deleted successfully!"}, status=200)
+        except Vehicle.DoesNotExist:
+            return JsonResponse({"error": "Vehicle not found"}, status=404)
+    return JsonResponse({"error": "Invalid request method"}, status=400)

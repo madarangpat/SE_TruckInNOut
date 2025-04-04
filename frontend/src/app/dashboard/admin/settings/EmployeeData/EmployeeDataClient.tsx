@@ -51,7 +51,7 @@ const EmployeeDataClient = ({ users }: { users: User[] }) => {
           </button>
 
           {dropdownOpen && (
-            <div className="absolute w-full bg-zinc-700/70 text-white mt-1 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto backdrop-blur-[10px]">
+            <div className="absolute w-full bg-white text-black mt-1 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto backdrop-blur-[10px]">
               {users.map((user) => (
                 <button
                   key={user.username}

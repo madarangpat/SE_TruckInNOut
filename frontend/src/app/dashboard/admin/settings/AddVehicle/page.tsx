@@ -9,7 +9,7 @@ import axios from "axios";
 const AddVehiclePage = () => {
   const [formData, setFormData] = useState({
     plate_number: "",
-    vehicle_type: "",
+    vehicle_type: "Truck", // Always default to "Truck"
     is_company_owned: false,
   });
 
@@ -30,7 +30,11 @@ const AddVehiclePage = () => {
     const { name, value, type } = e.target;
 
     const newValue =
-      type === "checkbox" ? (e.target as HTMLInputElement).checked : value;
+      type === "checkbox"
+        ? (e.target as HTMLInputElement).checked
+        : name === "plate_number"
+        ? value.toUpperCase()
+        : value;
 
     setFormData((prev) => ({
       ...prev,
@@ -58,12 +62,18 @@ const AddVehiclePage = () => {
       setSuccess("Vehicle successfully registered!");
       setFormData({
         plate_number: "",
-        vehicle_type: "",
+        vehicle_type: "Truck", // Reset back to "Truck"
         is_company_owned: false,
       });
+
+      // Auto-clear success message
+      setTimeout(() => setSuccess(null), 6000);
     } catch (error: any) {
       console.error("API Error:", error.response?.data);
       setError(error.response?.data?.error || "Failed to register vehicle.");
+
+      // Auto-clear error message
+      setTimeout(() => setError(null), 6000);
     }
   };
 
@@ -87,36 +97,47 @@ const AddVehiclePage = () => {
           Register a new company or personal vehicle.
         </p>
 
-        {error && <p className="text-red-500 mt-2">{error}</p>}
-        {success && <p className="text-green-500 mt-2">{success}</p>}
+        {error && (
+          <div className="mt-4 w-full bg-red-100 text-red-800 px-4 py-2 rounded-lg text-sm font-medium shadow">
+            {error}
+          </div>
+        )}
+
+        {success && (
+          <div className="mt-4 w-full bg-green-100 text-green-800 px-4 py-2 rounded-lg text-sm font-medium shadow">
+            {success}
+          </div>
+        )}
 
         {/* ✅ Vehicle Form */}
         <form
           onSubmit={handleSubmit}
           className="custom-form mt-6 w-full mx-auto grid grid-cols-1 md:grid-cols-1 gap-4 text-black"
         >
-          {/* Clustered group with header */}
           <div className="col-span-1">
             <h3 className="text-lg font-bold mb-2">Vehicle Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
               <input
                 type="text"
                 name="plate_number"
-                placeholder="Plate Number*"
+                placeholder="Plate Number (e.g., AB 1234)*"
                 className="input-field"
                 value={formData.plate_number}
                 onChange={handleChange}
+               pattern="^[A-Z]{3} \d{4}$"
+                title="Plate Number must follow the format LL DDDD (e.g., AB 1234)"
                 required
               />
+
+              {/* Vehicle type shown but disabled, fixed to "Truck" */}
               <input
                 type="text"
                 name="vehicle_type"
-                placeholder="Vehicle Type (e.g., Sedan, Truck)*"
-                className="input-field"
-                value={formData.vehicle_type}
-                onChange={handleChange}
-                required
+                className="input-field bg-gray-100 cursor-not-allowed"
+                value="Truck"
+                disabled
               />
+
               <div className="flex items-center">
                 <div className="ml-1">
                   <input
@@ -140,7 +161,6 @@ const AddVehiclePage = () => {
             </div>
           </div>
 
-          {/* Submit button spanning both columns */}
           <div className="col-span-2">
             <button
               type="submit"
@@ -150,7 +170,6 @@ const AddVehiclePage = () => {
             </button>
           </div>
 
-          {/* Back Button */}
           <div className="mt-6">
             <button
               onClick={() => setShowSettings(true)}
@@ -160,11 +179,8 @@ const AddVehiclePage = () => {
             </button>
           </div>
         </form>
-
-        {/* ✅ Back to Settings Button */}
       </div>
 
-      {/* Display Overlay if showSettings is true */}
       {showSettings && (
         <SettingsOverlayTwo onClose={() => setShowSettings(false)} />
       )}

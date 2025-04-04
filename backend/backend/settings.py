@@ -54,7 +54,7 @@ REST_FRAMEWORK = {
     ],
 }
 
-SIMPSIMPLE_JWT = {
+SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(days=7),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
     "ROTATE_REFRESH_TOKENS": True,
@@ -81,7 +81,6 @@ INSTALLED_APPS = [
     "api",
     "rest_framework",
     "corsheaders",
-    'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'storages',
     'boto3'

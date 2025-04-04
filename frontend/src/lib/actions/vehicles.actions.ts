@@ -19,4 +19,17 @@ async function getVehicles(): Promise<Vehicle[]> {
   return res.json();
 }
 
-export { getVehicles };
+async function deleteVehicleByPlate(plateNumber: string): Promise<boolean> {
+  const url = `${process.env.DOMAIN}/delete-vehicle-by-plate/${plateNumber}/`;
+
+  const res = await fetch(url, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${getSession()?.access}`,
+    },
+  });
+
+  return res.ok;
+}
+
+export { getVehicles, deleteVehicleByPlate };

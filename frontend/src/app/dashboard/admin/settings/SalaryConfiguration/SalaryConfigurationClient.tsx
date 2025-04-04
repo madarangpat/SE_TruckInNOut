@@ -11,22 +11,27 @@ const SalaryConfigurationClient = ({
 }) => {
   const [showSettings, setShowSettings] = useState(false);
   const [salaryData, setSalaryData] = useState<SalConfig>({
+    id: 0, // Placeholder value for the ID
     sss: 0.0,
     philhealth: 0.0,
     pag_ibig: 0.0,
-    pagibig_contribution: 0.0
+    pagibig_contribution: 0.0,
   });
 
   // If salConfig is not empty, set the salary data
   useEffect(() => {
     if (salConfigs && salConfigs.length > 0) {
       const config = salConfigs[0]; // Fetch the first (and only) salary config
+      console.log("✅ Loaded Salary Config from DB:", config); // ← LOG HERE
       setSalaryData({
+        id: config.id,
         sss: config.sss,
         philhealth: config.philhealth,
         pag_ibig: config.pag_ibig,
         pagibig_contribution: config.pagibig_contribution,
       });
+      console.log("✅ Loaded Salary Config from DB:", config); // ← LOG HERE
+      console.log("🧪 Final salaryData:", config); // <- add this
     }
   }, [salConfigs]);
 
@@ -43,30 +48,35 @@ const SalaryConfigurationClient = ({
   // Handle Saving the Changes
   const handleSaveChanges = async () => {
     const configId = salaryData.id;
-    console.log("Config: ", configId);
-
+  
     if (!configId) {
       console.error("Error: Salary configuration ID is missing.");
       alert("Error: Salary configuration ID is missing.");
       return;
     }
-
+  
     const body = JSON.stringify({
       sss: salaryData.sss,
       philhealth: salaryData.philhealth,
       pag_ibig: salaryData.pag_ibig,
       pagibig_contribution: salaryData.pagibig_contribution,
     });
-
-    await updateSalaryConfiguration(body, configId)
+  
+    const result = await updateSalaryConfiguration(body, configId);
+  
+    if (result.success) {
+      alert("✅ Salary configuration updated successfully!");
+    } else {
+      alert("❌ Failed to update: " + result.message);
+    }
   };
 
   // Check if there are any changes made to the salary data
   const hasChanges =
     salaryData.sss !== salConfigs[0]?.sss ||
     salaryData.philhealth !== salConfigs[0]?.philhealth ||
-    salaryData.pag_ibig !== salConfigs[0]?.pag_ibig;
-    salaryData.pagibig_contribution !== salConfigs[0]?.pagibig_contribution
+    salaryData.pag_ibig !== salConfigs[0]?.pag_ibig ||
+    salaryData.pagibig_contribution !== salConfigs[0]?.pagibig_contribution;
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-10">
@@ -77,22 +87,26 @@ const SalaryConfigurationClient = ({
 
         {/* Salary Configuration Table (Editable Fields) */}
         <div className="p-3 text-black/80 text-xs sm:text-sm">
-          {Object.entries(salaryData).map(([key, value], index) => (
-            <div
-              key={index}
-              className="flex justify-between items-center py-1 border-b-2 border-black/10"
-            >
-              <span className="text-black/80">
-                {key.replace(/_/g, " ").replace(/([A-Z])/g, " $1")}
-              </span>
-              <input
-                type="number"
-                value={value}
-                onChange={(e) => handleInputChange(e, key)}
-                className="border-b border-gray-400 text-black text-xs sm:text-sm w-20 sm:w-28 px-2 outline-none"
-              />
-            </div>
-          ))}
+          {Object.entries(salaryData).map(([key, value], index) => {
+            if (key === "id") return null; // ❌ Skip rendering the 'id' field
+
+            return (
+              <div
+                key={index}
+                className="flex justify-between items-center py-1 border-b-2 border-black/10"
+              >
+                <span className="text-black/80">
+                  {key.replace(/_/g, " ").replace(/([A-Z])/g, " $1")}
+                </span>
+                <input
+                  type="number"
+                  value={value}
+                  onChange={(e) => handleInputChange(e, key)}
+                  className="border-b border-gray-400 text-black text-xs sm:text-sm w-20 sm:w-28 px-2 outline-none"
+                />
+              </div>
+            );
+          })}
         </div>
 
         <div className="flex justify-center mt-4">

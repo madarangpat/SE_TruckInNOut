@@ -6,9 +6,9 @@ from .views import (
     SalaryListView, SalaryDetailView,
     TripListView, TripDetailView,
     VehicleListView, VehicleDetailView,
-    RegisterUserView, RegisterVehicleView, RegisterTripView, get_recent_trips, employee_trip_salaries, update_salary_deductions,
+    RegisterUserView, RegisterVehicleView, RegisterTripView, get_recent_trips, employee_trip_salaries, update_salary_deductions, delete_vehicle_by_plate,
     SendPasswordLinkView, ResetPasswordView, get_vehicles, get_employees, get_users, update_salary_configuration, get_all_salary_configurations,
-    EmployeeCreateView, delete_user, get_employee_profile, UserProfileView, update_employee_profile, UserUpdateView, priority_queue_view,
+    EmployeeCreateView, delete_user_by_username, get_employee_profile, UserProfileView, update_employee_profile, UserUpdateView, priority_queue_view,
     ValidateResetPasswordTokenView, get_ongoing_trips, generate_gross_payroll_pdf, generate_salary_breakdown_pdf, update_user_profile
 )
 from django.contrib.auth.views import (
@@ -49,8 +49,6 @@ urlpatterns = [
     
     #Generate PDF
     path('employee-trip-salaries/', employee_trip_salaries),
-    
-    # path("generate-pdf/", generate_pdf, name="generate_pdf"),
     path("generate-pdf/gross-payroll/", generate_gross_payroll_pdf, name="generate_gross_payroll_pdf"),
     path("generate-pdf/salary-breakdown/", generate_salary_breakdown_pdf, name="generate_salary_breakdown_pdf"),
     
@@ -83,9 +81,13 @@ urlpatterns = [
     path('salary-configurations/', get_all_salary_configurations, name='salary-configuration-list'),  # For listing all salary configs
     
     #Delete User
-    path('delete-user/<int:user_id>/', delete_user, name='delete-user'), 
+    path('delete-user-by-username/<str:username>/', delete_user_by_username, name='delete-user-by-username'),
     path('update-salary-deductions/', update_salary_deductions, name='update_salary_deductions'),
     
     #Priority Queue
     path('priority-queue/', priority_queue_view),
+    
+    # Delete Vehicles
+    path("delete-vehicle-by-plate/<str:plate_number>/", delete_vehicle_by_plate, name="delete-vehicle-by-plate"),
+
 ]

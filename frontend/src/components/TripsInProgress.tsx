@@ -6,7 +6,7 @@ import axios from "axios";
 
 interface Trip {
   trip_id: number;
-  is_in_progress: boolean;
+  is_completed: boolean;
   employee: {
     employee_id: number;
     user: {
@@ -14,8 +14,13 @@ interface Trip {
       profile_image: string | null;
     };
   } | null;
-  start_date: string;
-  end_date: string;
+  helper: {
+    username: string;
+  } | null;
+  helper2: {
+    username: string;
+  } | null;
+  addresses: string[];
 }
 
 const TripsInProgress = () => {
@@ -26,9 +31,9 @@ const TripsInProgress = () => {
   useEffect(() => {
     const fetchTrips = async () => {
       try {
-        const res = await axios.get("http://localhost:8000/api/trips/");       
-        const activeTrips = res.data.filter((trip: Trip) => trip.is_in_progress === true);
-        setTrips(activeTrips);
+        const res = await axios.get("http://localhost:8000/api/trips/");
+        const ongoingTrips = res.data.filter((trip: Trip) => trip.is_completed === false);
+        setTrips(ongoingTrips);
       } catch (err) {
         console.error("Failed to fetch trips:", err);
       } finally {
@@ -58,36 +63,50 @@ const TripsInProgress = () => {
         </h2>
       </div>
 
-      <div className="innerwrapper max-h-[250px] overflow-y-auto rounded-lg p-3 flex flex-col">
+      <div className="innerwrapper max-h-[250px] overflow-y-auto rounded-lg p-3 flex flex-wrap gap-3 justify-start">
         {loading ? (
-          <p className="text-white text-center text-lg">Loading trips...</p>
+          <p className="text-white text-center text-lg w-full">Loading trips...</p>
         ) : trips.length > 0 ? (
-          trips.map((trip) => (
-            <div
-              key={trip.trip_id}
-              className="wrappersmall flex flex-col items-center justify-center bg-[#668743] hover:bg-[#345216] transition rounded-lg p-4 cursor-pointer"
-              onClick={() => trip.employee && handleEmployeeClick(trip.employee.employee_id)}
-            >
-              <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center border-2 border-white">
-                <Image
-                  src={
-                    trip.employee?.user?.profile_image
-                      ? trip.employee.user.profile_image
-                    : "/accounts.png"
-                  }
-                  alt="Profile"
-                  width={70}
-                  height={70}
-                  className="rounded-full object-cover opacity-90"
-                />
+          trips.map((trip) => {
+            const lastDestination = trip.addresses?.[trip.addresses.length - 1] || "Unknown";
+            const driverName = trip.employee?.user?.username || "None";
+            const helperUsernames = [
+              trip.helper?.username,
+              trip.helper2?.username,
+            ].filter(Boolean);
+            const helpers = helperUsernames.length > 0 ? helperUsernames.join(", ") : "None";
+
+            return (
+              <div
+                key={trip.trip_id}
+                className="flex flex-col items-center justify-center bg-[#668743] hover:bg-[#345216] transition rounded-lg p-2 py-1 cursor-pointer w-full sm:w-[48%] md:w-[32%] lg:w-[30%]"
+                onClick={() =>
+                  trip.employee && handleEmployeeClick(trip.employee.employee_id)
+                }
+              >
+                <div className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center border-2 border-white">
+                  <Image
+                    src={
+                      trip.employee?.user?.profile_image
+                        ? trip.employee.user.profile_image
+                        : "/accounts.png"
+                    }
+                    alt="Profile"
+                    width={40}
+                    height={40}
+                    className="rounded-full object-cover opacity-90"
+                  />
+                </div>
+                <span className="mt-1 text-xs text-white/90 text-center leading-tight">
+                  Last Drop to <strong>{lastDestination}</strong><br />
+                  by Driver: <strong>{driverName}</strong><br />
+                  and Helper/s: <strong>{helpers}</strong>
+                </span>
               </div>
-              <span className="mt-2 text-sm text-white/90">
-                {trip.employee?.user?.username || "No Employee"}
-              </span>
-            </div>
-          ))
+            );
+          })
         ) : (
-          <p className="text-black text-center text-lg">No Current Trip/s.</p>
+          <p className="text-black text-center text-lg w-full">No Current Trip/s.</p>
         )}
       </div>
     </div>

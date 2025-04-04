@@ -3,6 +3,9 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import User, Administrator, Employee, Salary, Trip, Vehicle, SalaryConfiguration
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth import get_user_model
+from django.db.models import Q
+from datetime import datetime, timedelta
+from django.utils.timezone import now
 
 User = get_user_model()
 
@@ -33,7 +36,8 @@ class SalaryConfigurationSerializer(serializers.ModelSerializer):
             'id': instance.id,
             'sss': instance.sss,
             'philhealth': instance.philhealth,
-            'pag_ibig': instance.pag_ibig
+            'pag_ibig': instance.pag_ibig,
+            'pagibig_contribution': instance.pagibig_contribution
         }
     
 class SalarySerializer(serializers.ModelSerializer):
@@ -73,10 +77,19 @@ class VehicleSerializer(serializers.ModelSerializer):
         representation = super().to_representation(instance)
         representation['is_company_owned'] = instance.is_company_owned
         return representation
+    
+class SimpleEmployeeUsernameSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source='user.username')
+
+    class Meta:
+        model = Employee
+        fields = ['username']
 
 class TripSerializer(serializers.ModelSerializer):
     employee = NestedEmployeeSerializer()
     vehicle = VehicleSerializer()
+    helper = SimpleEmployeeUsernameSerializer()
+    helper2 = SimpleEmployeeUsernameSerializer() 
     
     class Meta:
         model = Trip
@@ -84,7 +97,7 @@ class TripSerializer(serializers.ModelSerializer):
             'trip_id', 'vehicle', 'employee', 'helper', 'helper2', 
             'addresses', 'clients', 'distances', 'user_lat', 'user_lng', 
             'dest_lat', 'dest_lng', 'completed', 'multiplier', 'base_salary',
-            'additionals', 'num_of_drops', 'start_date', 'end_date', 'is_in_progress',
+            'additionals', 'num_of_drops', 'start_date', 'end_date', 'is_completed',
         ]
 
 class LoginSerializer(TokenObtainPairSerializer):
@@ -150,6 +163,18 @@ class EmployeeSerializer(serializers.ModelSerializer):
     def get_name(self, obj):
         full_name = f"{obj.user.first_name} {obj.user.last_name}".strip()
         return full_name if full_name else obj.user.username
+    
+    def get_completed_trip_count(self, obj):
+        # Get start (Sunday) and end (Saturday) of current week
+        today = now().date()
+        start_of_week = today - timedelta(days=today.weekday() + 1 if today.weekday() < 6 else 6)
+        end_of_week = start_of_week + timedelta(days=6)
+        
+        return Trip.objects.filter(
+            Q(employee=obj) | Q(helper=obj) | Q(helper2=obj),
+            is_completed=True,
+            end_date__date__range=(start_of_week, end_of_week)
+            ).count()       
 
     def create(self, validated_data):
         user_data = validated_data.pop('user')

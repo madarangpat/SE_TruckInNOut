@@ -20,7 +20,7 @@ async function getSalaryConfigurations(): Promise<SalConfig[]> {
 }
 
 async function updateSalaryConfiguration(body: BodyInit, id: number) {
-  const url = `${process.env.DOMAIN}/salary-configurations/${id}/`; // Using configId in the URL
+  const url = `${process.env.DOMAIN}/salary-configurations/${id}/`;
   const requestOptions: RequestInit = {
     method: "PATCH",
     headers: {
@@ -32,15 +32,16 @@ async function updateSalaryConfiguration(body: BodyInit, id: number) {
 
   try {
     const response = await fetch(url, requestOptions);
-    console.log(response);
+    const data = await response.json();
+
     if (response.ok) {
-      alert("Salary Configuration updated successfully!");
+      return { success: true, data };
     } else {
-      alert("Failed to update Salary Configuration.");
+      return { success: false, message: data.detail || "Update failed" };
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error updating Salary Configuration:", error);
-    alert("An error occurred while saving changes.");
+    return { success: false, message: error.message };
   }
 }
 

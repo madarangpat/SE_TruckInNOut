@@ -4,8 +4,6 @@ from django.core.validators import FileExtensionValidator
 from .validators import validate_image
 from .utils import remove_file_from_s3
 from storages.backends.s3boto3 import S3Boto3Storage
-from django.contrib.auth import get_user_model
-from django.core.validators import RegexValidator
 
 # SALARY CONFIGURATION MODEL
 class SalaryConfiguration(models.Model):
@@ -187,16 +185,20 @@ class Trip(models.Model):
     end_date = models.DateTimeField(null=True, blank=True)  
     
     is_in_progress = models.BooleanField(default=False) 
+    is_completed = models.BooleanField(default=False)
     
     def __str__(self):
         return f"Trip {self.trip_id}"
     
     def save(self, *args, **kwargs):
         is_new = self.pk is None
-        was_in_progress = None
+        was_completed = None
 
         if not is_new:
-            was_in_progress = Trip.objects.get(pk=self.pk).is_in_progress
+            previous = Trip.objects.get(pk=self.pk)
+            was_completed = previous.is_completed
+        else:
+            was_completed = False
 
         super().save(*args, **kwargs)
 
@@ -204,8 +206,7 @@ class Trip(models.Model):
             from api.models import Salary
             Salary.objects.create(trip=self)
 
-        # ✅ Update completed trip count if trip has moved from in-progress to completed
-        if was_in_progress and not self.is_in_progress:
+        if not was_completed and self.is_completed:
             for emp in [self.employee, self.helper, self.helper2]:
                 if emp and emp.user.employee_type in ["Driver", "Helper"]:
                     emp.completed_trip_count += 1
@@ -236,5 +237,3 @@ class SalaryReport(models.Model):
     
     def __str__(self):
         return f"SalaryReport {self.salary_report_id}"
-    
-User = get_user_model()

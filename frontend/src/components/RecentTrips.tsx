@@ -6,12 +6,8 @@ import axios from "axios";
 interface Trip {
   trip_id: number;
   is_completed: boolean;
-  start_date: string;
-  end_date: string;
   client_info: string;
   distance_traveled: string;
-  user_latitude: string;
-  user_longitude: string;
   street_number: string;
   street_name: string;
   barangay: string;
@@ -29,6 +25,12 @@ interface Trip {
       profile_image: string | null;
     };
   };
+  helper: {
+    username: string;
+  } | null;
+  helper2: {
+    username: string;
+  } | null;
 }
 
 const RecentTrips = () => {
@@ -39,7 +41,6 @@ const RecentTrips = () => {
     const fetchTrips = async () => {
       try {
         const res = await axios.get("http://localhost:8000/api/trips/");
-        const now = new Date();
         const completedTrips = res.data.filter((trip: Trip) => trip.is_completed === true);
         setTrips(completedTrips);
       } catch (err) {
@@ -53,7 +54,7 @@ const RecentTrips = () => {
   }, []);
 
   const getDestination = (trip: Trip) => {
-    const parts = [
+    return [
       trip.street_number,
       trip.street_name,
       trip.barangay,
@@ -61,8 +62,9 @@ const RecentTrips = () => {
       trip.province,
       trip.region,
       trip.country,
-    ];
-    return parts.filter(Boolean).join(", ");
+    ]
+      .filter(Boolean)
+      .join(", ");
   };
 
   return (
@@ -80,51 +82,61 @@ const RecentTrips = () => {
         </h2>
       </div>
 
-      {/* Scrollable list of trips */}
       <div className="innerwrapper max-h-[250px] overflow-y-auto rounded-lg p-3 flex flex-col">
         {loading ? (
           <p className="text-white text-center text-lg">Loading trips...</p>
         ) : trips.length > 0 ? (
-          trips.map((trip) => (
-            <div
-              key={trip.trip_id}
-              className="wrappersmall2 flex flex-col sm:flex-row items-center justify-between p-4 bg-[#d9e0cc] text-black/80 rounded-lg mb-3 shadow-sm"
-            >
-              <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left w-full">
-                {/* Profile image */}
-                <div className="wrappersmall2 w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center border border-gray-500 overflow-hidden">
-                  <Image
-                    src={trip.employee?.user.profile_image || "/accountsblk.png"}
-                    alt="Profile"
-                    width={70}
-                    height={70}
-                    className="rounded-full object-cover opacity-90"
-                  />
-                </div>
+          trips.map((trip) => {
+            const driverName = trip.employee?.user.username || "None";
+            const helperUsernames = [
+              trip.helper?.username,
+              trip.helper2?.username,
+            ].filter(Boolean);
+            const helpers = helperUsernames.length > 0 ? helperUsernames.join(", ") : "None";
 
-                {/* Trip details */}
-                <div className="w-full">
-                  <p className="font-medium">
-                    {trip.employee?.user.username} (
-                    {trip.vehicle?.plate_number || "No Plate"})
-                  </p>
-                  <p className="text-sm bg-white/50 text-black px-3 py-1 rounded-md mt-1 w-full">
-                    <strong>CLIENT:</strong> {trip.client_info || "__________"}
-                  </p>
-                  <p className="text-sm bg-white/50 text-black px-3 py-1 rounded-md mt-1 w-full">
-                    <strong>DESTINATION:</strong> {getDestination(trip)} (
-                    {trip.distance_traveled || "___"} km)
-                  </p>
+            return (
+              <div
+                key={trip.trip_id}
+                className="wrappersmall2 flex flex-col sm:flex-row items-center justify-between p-4 bg-[#d9e0cc] text-black/80 rounded-lg mb-3 shadow-sm"
+              >
+                <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left w-full">
+                  <div className="wrappersmall2 w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center border border-gray-500 overflow-hidden">
+                    <Image
+                      src={trip.employee?.user.profile_image || "/accountsblk.png"}
+                      alt="Profile"
+                      width={70}
+                      height={70}
+                      className="rounded-full object-cover opacity-90"
+                    />
+                  </div>
+
+                  <div className="w-full">
+                    <p className="font-medium">
+                      {driverName} ({trip.vehicle?.plate_number || "No Plate"})
+                    </p>
+
+                    <p className="text-sm italic text-black/70 mt-1">
+                      <strong>Helpers:</strong> {helpers}
+                    </p>
+
+                    <p className="text-sm bg-white/50 text-black px-3 py-1 rounded-md mt-1 w-full">
+                      <strong>CLIENT:</strong> {trip.client_info || "__________"}
+                    </p>
+
+                    <p className="text-sm bg-white/50 text-black px-3 py-1 rounded-md mt-1 w-full">
+                      <strong>DESTINATION:</strong> {getDestination(trip)} (
+                      {trip.distance_traveled || "___"} km)
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))
+            );
+          })
         ) : (
           <p className="text-black text-center text-lg">No Recent Trips.</p>
         )}
       </div>
 
-      {/* Create New Trip Button */}
       <div className="mt-4 flex justify-center">
         <button
           onClick={() =>

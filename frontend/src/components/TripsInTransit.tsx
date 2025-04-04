@@ -6,13 +6,21 @@ import Image from "next/image";
 interface Trip {
   trip_id: number;
   is_completed: boolean;
-  assignment_status: string;
   employee: {
     employee_id: number;
     user: {
       username: string;
+      profile_image: string;
     };
+    employee_type: string;
+  };
+  helper: {
+    username: string;
   } | null;
+  helper2: {
+    username: string;
+  } | null;
+  addresses: string[];
 }
 
 const TripsInTransit = () => {
@@ -23,11 +31,8 @@ const TripsInTransit = () => {
     const fetchTrips = async () => {
       try {
         const res = await axios.get("http://localhost:8000/api/trips/");
-        // Filter trips where assignment_status is 'accepted' and is not completed
-        const activeTrips = res.data.filter(
-          (trip: Trip) => trip.assignment_status === "accepted" && trip.is_completed === false
-        );
-        setTrips(activeTrips);
+        const ongoingTrips = res.data.filter((trip: Trip) => trip.is_completed === false);
+        setTrips(ongoingTrips);
       } catch (err) {
         console.error("Failed to fetch trips:", err);
       } finally {
@@ -40,7 +45,6 @@ const TripsInTransit = () => {
 
   return (
     <div className="wrapper rounded-2xl p-4 flex-1 shadow-md h-full w-full flex flex-col">
-      {/* Retaining the header with truck icon and title */}
       <div className="flex justify-center items-center mx-3 gap-2">
         <h1 className="capitalize text-2xl font-medium text-black/40">
           Trips In Transit
@@ -58,27 +62,34 @@ const TripsInTransit = () => {
         {loading ? (
           <span className="text-white text-center text-sm">Loading trips...</span>
         ) : trips.length > 0 ? (
-          trips.map((trip, index) => (
-            <div
-              key={trip.trip_id}
-              className="flex justify-between items-center p-2 border-b border-gray-600 text-white w-full"
-            >
-              <span>
-                Employee {index + 1}: {trip.employee?.user.username || "No Employee"}
-              </span>
-              <div className="flex items-center gap-2">
-                <span
-                  className={`text-xs px-2 py-1 rounded-lg ${
-                    trip.is_completed ? "bg-green-500" : "bg-orange-500"
-                  } text-white`}
-                >
-                  {trip.is_completed ? "Completed" : "Ongoing"}
+          trips.map((trip) => {
+            const lastDestination = trip.addresses?.[trip.addresses.length - 1] || "Unknown";
+            const driverName = trip.employee?.user.username || "None";
+            const helperUsernames = [
+              trip.helper?.username,
+              trip.helper2?.username,
+            ].filter(Boolean);
+
+            const helpers =
+              helperUsernames.length > 0 ? helperUsernames.join(", ") : "None";
+
+            return (
+              <div
+                key={trip.trip_id}
+                className="flex justify-between items-center p-2 border-b border-gray-600 text-white w-full"
+              >
+                <span className="text-sm">
+                  Last Drop to <strong>{lastDestination}</strong> by Driver: <strong>{driverName}</strong>{" "}
+                  and Helper/s: <strong>{helpers}</strong>
+                </span>
+                <span className="text-xs px-2 py-1 rounded-lg bg-orange-500 text-white">
+                  Ongoing
                 </span>
               </div>
-            </div>
-          ))
+            );
+          })
         ) : (
-          <span className="text-white text-center text-sm">No trips in transit.</span>
+          <span className="text-white text-center text-sm">No ongoing trips.</span>
         )}
       </div>
     </div>

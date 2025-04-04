@@ -52,8 +52,20 @@ const AddAccountPage = () => {
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+      ...(name === "role" && ["admin", "super_admin"].includes(value) && { employee_type: "" }),
+    }));
+  };
+
+  const validatePassword = (password: string) => {
+    const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
+    return regex.test(password);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -61,23 +73,37 @@ const AddAccountPage = () => {
     setError(null);
     setSuccess(null);
 
-    if (formData.password !== formData.confirmPassword) {
+    const { password, confirmPassword, role, employee_type } = formData;
+
+    if (password !== confirmPassword) {
       setError("Passwords do not match.");
+      return;
+    }
+
+    if (!validatePassword(password)) {
+      setError(
+        "\u274C Password must be at least 8 characters long and include uppercase, lowercase, number, and special character."
+      );
+      return;
+    }
+
+    if (role === "admin" && employee_type) {
+      setError("Admin accounts should not have an employee type selected.");
+      return;
+    }
+
+    if (role === "employee" && !employee_type) {
+      setError("Employee role requires an employee type to be selected.");
       return;
     }
 
     try {
       const data = new FormData();
-
-      // Append form fields
       Object.entries(formData).forEach(([key, value]) => {
         if (value) data.append(key, value);
       });
 
-      // Append image if selected
-      const fileInput = document.getElementById(
-        "profile-upload"
-      ) as HTMLInputElement;
+      const fileInput = document.getElementById("profile-upload") as HTMLInputElement;
       if (fileInput?.files?.[0]) {
         data.append("profile_image", fileInput.files[0]);
       }
@@ -92,8 +118,7 @@ const AddAccountPage = () => {
         }
       );
 
-      console.log("API Response:", response);
-      setSuccess("Account successfully created!");
+      setSuccess("\u2705 Account successfully created!");
       setFormData({
         username: "",
         password: "",
@@ -117,7 +142,26 @@ const AddAccountPage = () => {
       }, 5000);
     } catch (error: any) {
       console.error("API Error:", error.response?.data);
-      setError(error.response?.data?.error || "Failed to create account.");
+      const rawError = error.response?.data?.error || "Failed to create account.";
+let friendlyMessage = rawError;
+
+if (rawError.includes("UNIQUE constraint failed: api_user.username")) {
+  friendlyMessage = "This username is already taken. Please choose another.";
+} else if (rawError.includes("UNIQUE constraint failed: api_user.email")) {
+  friendlyMessage = "An account with this email already exists.";
+} else if (rawError.includes("UNIQUE constraint failed: api_user.cellphone_no")) {
+  friendlyMessage = "This cellphone number is already in use.";
+} else if (rawError.includes("UNIQUE constraint failed: api_user.philhealth_no")) {
+  friendlyMessage = "This PhilHealth number already exists.";
+} else if (rawError.includes("UNIQUE constraint failed: api_user.pag_ibig_no")) {
+  friendlyMessage = "This Pag-IBIG number already exists.";
+} else if (rawError.includes("UNIQUE constraint failed: api_user.sss_no")) {
+  friendlyMessage = "This SSS number already exists.";
+} else if (rawError.includes("UNIQUE constraint failed: api_user.license_no")) {
+  friendlyMessage = "A user with this License Number already exists. Please use a different one.";
+}
+
+setError(friendlyMessage);
     }
   };
 
@@ -141,10 +185,9 @@ const AddAccountPage = () => {
           Add another member to the Big C Family!
         </p>
 
-        {error && <p className="text-red-500">{error}</p>}
-        {success && <p className="text-green-500">{success}</p>}
+        {error && <p className="text-red-500 mt-2 text-sm">{error}</p>}
+        {success && <p className="text-green-500 mt-2 text-sm">{success}</p>}
 
-        {/* ✅ Profile Picture Upload */}
         <div className="flex justify-center mt-4">
           <label htmlFor="profile-upload" className="cursor-pointer relative">
             <div className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 bg-white/20 hover:bg-black/10 rounded-full flex items-center justify-center border-4 border-white/10 relative overflow-hidden">
@@ -181,148 +224,86 @@ const AddAccountPage = () => {
           />
         </div>
 
-        {/* ✅ Account Information Form */}
         <form
           onSubmit={handleSubmit}
           className="custom-form mt-6 w-full mx-auto grid grid-cols-1 md:grid-cols-2 gap-4 text-black"
         >
-          {/* Clustered group with header */}
-          <div className="col-span-2">
-            <h3 className="text-lg font-bold mb-2">User Credentials</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {[
+            { id: "username", label: "Username", type: "text" },
+            { id: "email", label: "Email", type: "email" },
+            { id: "password", label: "Password", type: showPassword ? "text" : "password" },
+            { id: "confirmPassword", label: "Confirm Password", type: showPassword ? "text" : "password" },
+            { id: "firstName", label: "First Name" },
+            { id: "lastName", label: "Last Name" },
+            { id: "cellphone_no", label: "Cellphone Number" },
+            { id: "philhealth_no", label: "PhilHealth Number" },
+            { id: "pag_ibig_no", label: "Pag-IBIG Number" },
+            { id: "sss_no", label: "SSS Number" },
+            { id: "license_no", label: "License Number" },
+          ].map(({ id, label, type = "text" }) => (
+            <div key={id} className="flex flex-col">
+              <label htmlFor={id} className="text-sm font-medium text-gray-700">
+                {label}
+              </label>
               <input
-                type="text"
-                name="username"
-                placeholder="Username*"
+                id={id}
+                name={id}
+                type={type}
                 className="input-field"
-                value={formData.username}
+                placeholder={`Enter ${label}`}
+                value={formData[id as keyof typeof formData]}
                 onChange={handleChange}
               />
-              <input
-                type="email"
-                name="email"
-                placeholder="Email*"
-                className="input-field"
-                value={formData.email}
-                onChange={handleChange}
-              />
-              <input
-                type={showPassword ? "text" : "password"}
-                name="password"
-                placeholder="Password*"
-                className="input-field pr-12"
-                value={formData.password}
-                onChange={handleChange}
-              />
-              <input
-                type={showPassword ? "text" : "password"}
-                name="confirmPassword"
-                placeholder="Confirm Password*"
-                className="input-field"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-              />
+              {id === "password" && (
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="mt-1 text-xs text-gray-600 underline hover:text-gray-800 text-left"
+                >
+                  {showPassword ? "Hide Passwords" : "Show Passwords"}
+                </button>
+              )}
             </div>
-            {/* 👁 Single toggle under both password fields */}
-            <div className="mt-2">
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="text-xs text-gray-600 underline hover:text-gray-800"
-              >
-                {showPassword ? "Hide Passwords" : "Show Passwords"}
-              </button>
-            </div>
+          ))}
+
+          <div className="flex flex-col">
+            <label htmlFor="role" className="text-sm font-medium text-gray-700">Role</label>
+            <select
+              id="role"
+              name="role"
+              className="input-field text-gray-700"
+              value={formData.role}
+              onChange={handleChange}
+              required
+            >
+              <option value="">Select Role*</option>
+              <option value="super_admin">Super Admin</option>
+              <option value="admin">Admin</option>
+              <option value="employee">Employee</option>
+            </select>
           </div>
 
-          {/* Other fields remain as individual grid items */}
-          <div className="col-span-2">
-            <h3 className="text-lg font-bold mb-2">Personal Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <input
-                type="text"
-                name="firstName"
-                placeholder="First Name*"
-                className="input-field"
-                value={formData.firstName}
-                onChange={handleChange}
-              />
-              <input
-                type="text"
-                name="lastName"
-                placeholder="Last Name*"
-                className="input-field"
-                value={formData.lastName}
-                onChange={handleChange}
-              />
-              <input
-                type="text"
-                name="cellphone_no"
-                placeholder="Cellphone Number*"
-                className="input-field"
-                value={formData.cellphone_no}
-                onChange={handleChange}
-              />
-              <input
-                type="text"
-                name="philhealth_no"
-                placeholder="Philhealth Number*"
-                className="input-field"
-                value={formData.philhealth_no}
-                onChange={handleChange}
-              />
-              <input
-                type="text"
-                name="pag_ibig_no"
-                placeholder="Pag-IBIG Number*"
-                className="input-field"
-                value={formData.pag_ibig_no}
-                onChange={handleChange}
-              />
-              <input
-                type="text"
-                name="sss_no"
-                placeholder="Social Security Number (SSS)*"
-                className="input-field"
-                value={formData.sss_no}
-                onChange={handleChange}
-              />
-              <input
-                type="text"
-                name="license_no"
-                placeholder="License No.*"
-                className="input-field"
-                value={formData.license_no}
-                onChange={handleChange}
-              />
-              <select
-                name="role"
-                className="input-field text-gray-700"
-                value={formData.role}
-                onChange={handleChange}
-                required
-              >
-                <option value="">Select Role*</option>
-                <option value="super_admin">Super Admin</option>
-                <option value="admin">Admin</option>
-                <option value="employee">Employee</option>
-              </select>
-              <select
-                name="employee_type"
-                className="input-field text-gray-700"
-                value={formData.employee_type}
-                onChange={handleChange}
-                required
-              >
-                <option value="">Select Employee Type*</option>
-                <option value="Driver">Driver</option>
-                <option value="Helper">Helper</option>
-                <option value="Staff">Staff</option>
-              </select>
-            </div>
+          <div className="flex flex-col">
+            <label htmlFor="employee_type" className="text-sm font-medium text-gray-700">Employee Type</label>
+            <select
+              id="employee_type"
+              name="employee_type"
+              className="input-field text-gray-700"
+              value={formData.employee_type}
+              onChange={handleChange}
+              required={formData.role === "employee"}
+            >
+              <option value="">
+                {(formData.role === "admin" || formData.role === "super_admin")
+                  ? "Leave blank for Admin/Super Admin"
+                  : "Select Employee Type*"}
+              </option>
+              <option value="Driver">Driver</option>
+              <option value="Helper">Helper</option>
+              <option value="Staff">Staff</option>
+            </select>
           </div>
 
-          {/* Submit button spanning both columns */}
           <div className="col-span-2">
             <button
               type="submit"
@@ -332,8 +313,7 @@ const AddAccountPage = () => {
             </button>
           </div>
 
-          {/* Back Button */}
-          <div className="mt-6">
+          <div className="mt-6 col-span-2">
             <button
               onClick={() => setShowSettings(true)}
               className="px-4 py-2 text-black/80 border border-black/40 rounded-lg hover:bg-gray-200 transition"
@@ -342,11 +322,8 @@ const AddAccountPage = () => {
             </button>
           </div>
         </form>
-
-        {/* ✅ Back to Settings Button */}
       </div>
 
-      {/* Display Overlay if showSettings is true */}
       {showSettings && (
         <SettingsOverlayTwo onClose={() => setShowSettings(false)} />
       )}

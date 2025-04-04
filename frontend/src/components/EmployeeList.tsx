@@ -4,21 +4,18 @@ import Image from "next/image";
 import axios from "axios";
 
 const EmployeeList = () => {
-  const [employees, setEmployees] = useState<{ id: number; name: string; status: string }[]>([]);
+  const [employees, setEmployees] = useState<{ id: number; name: string; employee_type: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
-        const response = await axios.get("http://127.0.0.1:8000/api/employees/" /* , {
-          headers: { Authorization: `Bearer ${token}` }, // ❌ Commented out token in headers
-        } */);
+        const response = await axios.get("http://127.0.0.1:8000/api/employees/");
 
         const formattedEmployees = response.data.map((emp: any) => ({
           id: emp.employee_id,
-          name: `${emp.user.first_name} ${emp.user.last_name}`,
-          status: "Active",
+          name: `${emp.user.first_name} ${emp.user.last_name} (${emp.user.employee_type})`,
         }));
 
         setEmployees(formattedEmployees);
@@ -55,16 +52,9 @@ const EmployeeList = () => {
           employees.map((employee) => (
             <div
               key={employee.id}
-              className="flex justify-between items-center p-2 border-b border-gray-600 text-sm md:text-base w-full"
+              className="flex justify-start items-center p-2 border-b border-gray-600 text-sm md:text-base w-full"
             >
               <span className="text-sm md:text-lg">{employee.name}</span>
-              <span
-                className={`text-xs md:text-sm font-semibold px-1 py-1 rounded-full border-[1px] ${
-                  employee.status === "Active"
-                    ? "bg-green-500 text-white border-black"
-                    : "bg-gray-400 text-white border-black"
-                }`}
-              ></span>
             </div>
           ))
         ) : (

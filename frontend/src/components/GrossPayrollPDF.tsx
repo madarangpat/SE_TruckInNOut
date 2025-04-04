@@ -1,9 +1,25 @@
+"use client";
 import React from "react";
 import Image from "next/image";
 
-const GrossPayrollPDF: React.FC = () => {
+interface Props {
+  startDate: Date | null;
+  endDate: Date | null;
+}
+
+const GrossPayrollPDF: React.FC<Props> = ({ startDate, endDate }) => {
   const handleDownload = () => {
-    const pdfUrl = "http://localhost:8000/api/generate-pdf/gross-payroll/";
+    if (!startDate || !endDate) {
+      alert("Please select both start and end dates.");
+      return;
+    }
+
+    const params = new URLSearchParams({
+      start_date: startDate.toISOString(),
+      end_date: endDate.toISOString(),
+    });
+
+    const pdfUrl = `http://localhost:8000/api/generate-pdf/gross-payroll/?${params}`;
     window.open(pdfUrl, "_blank");
   };
 
