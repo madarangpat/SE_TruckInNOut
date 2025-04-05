@@ -1,9 +1,6 @@
 from datetime import datetime
 from django.utils.dateformat import DateFormat
-from django.utils.dateparse import parse_date
 from datetime import date
-from django.dispatch import receiver
-from django.forms import ValidationError
 from rest_framework import generics
 from django.conf import settings
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -27,8 +24,7 @@ from reportlab.pdfgen import canvas
 from io import BytesIO
 from rest_framework.views import APIView
 from django.http import JsonResponse
-from rest_framework.decorators import api_view, permission_classes, parser_classes
-from django.core.files.storage import default_storage
+from rest_framework.decorators import api_view, permission_classes
 from django.views.decorators.csrf import csrf_exempt
 from io import BytesIO
 from reportlab.lib.pagesizes import letter, landscape
@@ -41,10 +37,8 @@ from django.utils.dateparse import parse_datetime
 from reportlab.lib.enums import TA_LEFT
 from reportlab.lib.styles import ParagraphStyle
 from decimal import Decimal
-from calendar import monthcalendar, FRIDAY
 import json
 from datetime import datetime
-from django.db.models.functions import TruncDate
 from django.db.models import Sum
 from rest_framework.decorators import api_view
 
