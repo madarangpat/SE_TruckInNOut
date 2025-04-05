@@ -4,7 +4,7 @@ from .views import (
     LoginView, UserListView, EmployeeListView, EmployeeDetailView,
     AdministratorListView, AdministratorDetailView,
     SalaryListView, SalaryDetailView,
-    TripListView, TripDetailView,
+    TripListView, TripDetailView, TripDetailAPIView,
     VehicleListView, VehicleDetailView,
     RegisterUserView, RegisterVehicleView, RegisterTripView, get_recent_trips, employee_trip_salaries, update_salary_deductions, delete_vehicle_by_plate,
     SendPasswordLinkView, ResetPasswordView, get_vehicles, get_employees, get_users, update_salary_configuration, get_all_salary_configurations, calculate_totals,
@@ -41,6 +41,9 @@ urlpatterns = [
     path('trips/', TripListView.as_view(), name='trip-list'),
     path('trips/<int:pk>/', TripDetailView.as_view(), name='trip-detail'),
 
+    # Trip Checking
+    path('trips/by-trip-id/<int:trip_id>/', TripDetailAPIView.as_view(), name='trip-by-tripid'),
+    
     # JWT Authentication Routes
     path('login/', TokenObtainPairView.as_view(), name='get_token'),
     path('token/refresh/', TokenRefreshView.as_view(), name='refresh'),

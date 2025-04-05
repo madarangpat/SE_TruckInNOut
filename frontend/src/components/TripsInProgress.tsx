@@ -44,8 +44,8 @@ const TripsInProgress = () => {
     fetchTrips();
   }, []);
 
-  const handleEmployeeClick = (employeeId: number) => {
-    router.push(`/dashboard/admin/viewdeliveries/maps?employee=${employeeId}`);
+  const handleTripClick = (employeeId: number, tripId: number) => {
+    router.push(`/dashboard/admin/viewdeliveries/maps?trip=${tripId}`);
   };
 
   return (
@@ -81,7 +81,7 @@ const TripsInProgress = () => {
                 key={trip.trip_id}
                 className="flex flex-col items-center justify-center bg-[#668743] hover:bg-[#345216] transition rounded-lg p-2 py-1 cursor-pointer w-full sm:w-[48%] md:w-[32%] lg:w-[30%]"
                 onClick={() =>
-                  trip.employee && handleEmployeeClick(trip.employee.employee_id)
+                  trip.employee && handleTripClick(trip.employee.employee_id, trip.trip_id)
                 }
               >
                 <div className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center border-2 border-white">
