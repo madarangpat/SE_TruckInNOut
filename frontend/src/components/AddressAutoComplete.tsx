@@ -22,9 +22,9 @@ const AddressAutoComplete = ({ onSelect }: AddressAutoCompleteProps) => {
   } = usePlacesAutocomplete({
     callbackName: "initAddressAutocomplete",
     requestOptions: {
-      /* Define search scope here */
+      componentRestrictions: {country: "ph"}, // PHILIPPINES ONLY
     },
-    debounce: 100,
+    debounce: 800,
   });
 
   const ref = useOnclickOutside(() => {
@@ -32,7 +32,7 @@ const AddressAutoComplete = ({ onSelect }: AddressAutoCompleteProps) => {
   });
 
   const handleInput = (e: ChangeEvent<HTMLInputElement>) => {
-    setValue(e.target.value);
+    setValue(e.target.value)
   };
 
   const handleSelect =
