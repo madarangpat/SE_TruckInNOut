@@ -118,6 +118,8 @@ const validLocations = latArray
       };
     }
     return null;
+
+    console.log(locations)
   })
   .filter(Boolean) as { lat: number; lng: number; label: string; completed: boolean }[];
 
@@ -173,7 +175,7 @@ const validLocations = latArray
                 </p>
                 <p className="text-sm bg-black/45 text-white px-2 py-1 rounded-md mt-1 w-full">
                   <strong>NUMBER OF CLIENTS:</strong>{" "}
-                  {trip.clients?.[0]?.length || "__________"}
+                  {trip.clients?.length || "__________"}
                 </p>
                 <p className="text-sm bg-black/45 text-white px-2 py-1 rounded-md mt-1 w-full">
                   <strong>DESTINATION:</strong> {getDestination()} (redacted km`)

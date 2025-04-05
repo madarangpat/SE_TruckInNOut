@@ -961,7 +961,7 @@ class RegisterTripView(APIView):
                 start_date=request.data.get("start_date"),
                 end_date=request.data.get("end_date"),
                 
-                is_in_progress=True
+                is_completed=False
             )
 
             return Response({"message": "Trip created successfully."}, status=status.HTTP_201_CREATED)

@@ -165,10 +165,11 @@ const CreateNewTripPage = () => {
       additionals: tripFormData.additionals
         ? parseFloat(tripFormData.additionals)
         : null,
-      start_date: new Date(tripFormData.start_date).toISOString(),
-      end_date: toNullable(tripFormData.end_date)
-        ? new Date(tripFormData.end_date).toISOString()
-        : null,
+        start_date: new Date(tripFormData.start_date).toISOString().split("T")[0],
+        end_date: toNullable(tripFormData.end_date)
+          ? new Date(tripFormData.end_date).toISOString().split("T")[0]
+          : null,
+        
     };
 
     try {
