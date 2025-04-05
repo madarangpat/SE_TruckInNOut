@@ -39,7 +39,8 @@ interface Trip {
 
 const MapsPage = () => {
   const searchParams = useSearchParams();
-  const employeeId = searchParams.get("employee");
+  //const employeeId = searchParams.get("employee");
+  const tripId = searchParams.get("trip")
   const router = useRouter();
 
   const [trip, setTrip] = useState<Trip | null>(null);
@@ -47,28 +48,20 @@ const MapsPage = () => {
   useEffect(() => {
     const fetchTrip = async () => {
       try {
-        const res = await axios.get("http://localhost:8000/api/trips/");
-        const filtered = res.data.find(
-          (t: Trip) => t.employee?.employee_id === Number(employeeId)
-        );
-        setTrip(filtered || null);
-
-        if (filtered) {
-          console.log("📦 Trip keys:", Object.keys(filtered));
-        } else {
-          console.warn("⚠️ No trip found matching employee ID");
-        }
-
-        console.log("🚚 Trip from API:", filtered);
+const res = await axios.get(`http://localhost:8000/api/trips/by-trip-id/${tripId}/`);
+        setTrip(res.data);
+        console.log("✅ Trip fetched by ID:", res.data);
       } catch (err) {
-        console.error("Error fetching trip data:", err);
+        console.error("❌ Error fetching trip by ID:", err);
+        setTrip(null);
       }
     };
-
-    if (employeeId) {
+  
+    if (tripId) {
       fetchTrip();
     }
-  }, [employeeId]);
+  }, [tripId]);
+  
 
   const getDestination = () => {
     if (!trip) return "";
@@ -174,7 +167,7 @@ const validLocations = latArray
                   {trip.vehicle?.plate_number || "No Plate"})
                 </p>
                 <p className="text-sm bg-black/45 text-white px-2 py-1 rounded-md mt-1 w-full">
-                  <strong>NUMBER OF CLIENTS:</strong>{" "}
+                  <strong>NUMBER OF DROPS:</strong>{" "}
                   {trip.clients?.length || "__________"}
                 </p>
                 <p className="text-sm bg-black/45 text-white px-2 py-1 rounded-md mt-1 w-full">
@@ -204,7 +197,7 @@ const validLocations = latArray
           </div>
         ) : (
           <p className="text-white text-center">
-            Trip not found for this employee.
+            Trip not found
           </p>
         )}
       </div>

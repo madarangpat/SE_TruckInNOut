@@ -26,6 +26,7 @@ from django.http import HttpResponse
 from reportlab.pdfgen import canvas
 from io import BytesIO
 from rest_framework.views import APIView
+from rest_framework.generics import RetrieveAPIView 
 from django.http import JsonResponse
 from rest_framework.decorators import api_view, permission_classes, parser_classes
 from django.core.files.storage import default_storage
@@ -548,6 +549,12 @@ def get_ongoing_trips(request):
     except Employee.DoesNotExist:
         return Response({"error": "No employee profile found."}, status=400)
 
+# =====================================================================================================
+class TripDetailAPIView (RetrieveAPIView):
+    queryset = Trip.objects.all()
+    serializer_class =TripSerializer
+    lookup_field = "trip_id"
+    permission_classes = [AllowAny]
 # =====================================================================================================
 # GET trips that are accepted or completed
 @api_view(["GET"])
