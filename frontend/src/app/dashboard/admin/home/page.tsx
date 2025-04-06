@@ -15,12 +15,12 @@ const AdminPage = () => {
         </div>
 
         {/* PRIORITY QUEUE */}
-        <div className="flex gap-4 flex-col lg:flex-row w-full h-[250px]">
+        <div className="flex gap-4 flex-col lg:flex-row w-full h-[350px]">
           <PriorityQueue />
         </div>
 
         {/* EMPLOYEE STATUS */}
-        <div className="flex gap-4 flex-col lg:flex-row w-full h-[200px]">
+        <div className="flex gap-4 flex-col lg:flex-row w-full h-[350px]">
           <EmployeeStatus />
         </div>
       </div>

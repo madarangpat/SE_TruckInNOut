@@ -1,14 +1,14 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.utils.dateformat import DateFormat
 from datetime import date
 from rest_framework import generics
 from django.conf import settings
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from .models import User, Administrator, Employee, Salary, Trip, Vehicle, PasswordReset, SalaryConfiguration, Totals
+from .models import User, Administrator, Employee, Salary, Trip, Vehicle, PasswordReset, SalaryConfiguration, Total
 from .serializers import (
     UserSerializer, AdministratorSerializer, EmployeeSerializer,
-    SalarySerializer, TripSerializer, VehicleSerializer, TotalsSerializer,
+    SalarySerializer, TripSerializer, VehicleSerializer, TotalSerializer,
     LoginSerializer, ResetPasswordRequestSerializer, ResetPasswordSerializer, SalaryConfigurationSerializer, UserProfileSerializer
 )
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -42,6 +42,8 @@ import json
 from datetime import datetime
 from django.db.models import Sum
 from rest_framework.decorators import api_view
+from django.utils.timezone import make_aware
+from django.db.models import Q
 
 User = get_user_model()
 
@@ -149,28 +151,31 @@ class RegisterVehicleView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
+        is_company_owned = request.data.get("is_company_owned", False)
+        is_company_owned = str(is_company_owned).lower() in ["true", "1", "yes", "on"]
+
+        # Required fields for all vehicles
         required_fields = ["plate_number", "vehicle_type"]
 
-        # ✅ Check if required fields are present (excluding checkbox for now)
-        for field in required_fields:
-            if field not in request.data or not request.data[field]:
-                return Response({"error": f"{field} is required."}, status=status.HTTP_400_BAD_REQUEST)
+        # Only require subcon_name if NOT company-owned
+        if not is_company_owned:
+            required_fields.append("subcon_name")
 
-        # ✅ Handle the checkbox field safely
-        is_company_owned = request.data.get("is_company_owned", False)
-        # Convert to boolean in case it's a string like "true"/"false"
-        is_company_owned = str(is_company_owned).lower() in ["true", "1", "yes", "on"]
+        # Validation
+        for field in required_fields:
+            if field not in request.data or not request.data[field].strip():
+                return Response({"error": f"{field} is required."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             vehicle = Vehicle.objects.create(
                 plate_number=request.data["plate_number"],
                 vehicle_type=request.data["vehicle_type"],
                 is_company_owned=is_company_owned,
+                subcon_name=request.data.get("subcon_name", None)
             )
             return Response({"message": "Vehicle created successfully."}, status=status.HTTP_201_CREATED)
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)    
 #==================================================================================================================================================================================
 # CUSTOM LOGIN VIEW (USES JWT AUTHENTICATION)
 class LoginView(TokenObtainPairView):
@@ -850,8 +855,8 @@ def generate_gross_payroll_pdf(request):
         return HttpResponse("Missing totals_id", status=400)
 
     try:
-        totals = Totals.objects.get(totals_id=totals_id)
-    except Totals.DoesNotExist:
+        totals = Total.objects.get(totals_id=totals_id)
+    except Total.DoesNotExist:
         return HttpResponse("No totals record found for the provided ID", status=404)
 
     start_date = totals.start_date
@@ -979,13 +984,37 @@ class RegisterTripView(APIView):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def priority_queue_view(request):
-    employees = Employee.objects.filter(user__employee_type__in=["Driver", "Helper"])                               
-    serializer = EmployeeSerializer(employees, many=True)
-    
-    # Sort using the dynamically computed count
-    sorted_employees = sorted(serializer.data, key=lambda e: e["completed_trip_count"])
-    return Response(sorted_employees)
+    # Get start and end of current week (Monday to Sunday)
+    today = datetime.now().date()
+    start_of_week = today - timedelta(days=today.weekday())  # Monday
+    end_of_week = start_of_week + timedelta(days=6)  # Sunday
 
+    # Convert to datetime if your Trip.end_date is datetime-aware
+    start_of_week_dt = make_aware(datetime.combine(start_of_week, datetime.min.time()))
+    end_of_week_dt = make_aware(datetime.combine(end_of_week, datetime.max.time()))
+
+    employees = Employee.objects.filter(user__employee_type__in=["Driver", "Helper"])
+    employee_data = []
+
+    for employee in employees:
+        # Find trips where this employee is either the driver or helper and ended this week
+        weekly_trips = Trip.objects.filter(
+            end_date__range=(start_of_week_dt, end_of_week_dt),
+            is_completed=True
+        ).filter(
+            Q(employee=employee) | Q(helper=employee) | Q(helper2=employee)
+        )
+
+        # Calculate total base salary from trips this week
+        total_base_salary = sum([trip.base_salary or 0 for trip in weekly_trips])
+
+        serialized = EmployeeSerializer(employee).data
+        serialized["base_salary"] = total_base_salary
+        employee_data.append(serialized)
+
+    # Sort employees by total base salary (ascending, prioritize lower earners)
+    sorted_employees = sorted(employee_data, key=lambda e: e["base_salary"])
+    return Response(sorted_employees)
 #==================================================================================================================================================================================
 # DELETE VEHICLES
 @csrf_exempt
@@ -1000,9 +1029,9 @@ def delete_vehicle_by_plate(request, plate_number):
     return JsonResponse({"error": "Invalid request method"}, status=400)
 
 #=========================================================================================================================================================
-class TotalsViewSet(viewsets.ModelViewSet):
-    queryset = Totals.objects.all()
-    serializer_class = TotalsSerializer
+class TotalViewSet(viewsets.ModelViewSet):
+    queryset = Total.objects.all()
+    serializer_class = TotalSerializer
     
 #=========================================================================================================================================================
 @api_view(['POST'])
@@ -1045,7 +1074,7 @@ def calculate_totals(request):
 
     totals['overall_total'] = sum(totals.values())
 
-    totals_record = Totals.objects.create(
+    totals_record = Total.objects.create(
         start_date=start_date,
         end_date=end_date,
         **totals

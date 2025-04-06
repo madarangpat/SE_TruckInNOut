@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import User, Administrator, Employee, Salary, Trip, Vehicle, SalaryConfiguration, Totals
+from .models import User, Administrator, Employee, Salary, Trip, Vehicle, SalaryConfiguration, Total
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth import get_user_model
 from django.db.models import Q
@@ -66,7 +66,7 @@ class NestedEmployeeSerializer(serializers.ModelSerializer):
 class VehicleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Vehicle
-        fields = ['vehicle_id', 'plate_number', 'vehicle_type', "is_company_owned"]
+        fields = ['vehicle_id', 'plate_number', 'vehicle_type', "is_company_owned", 'subcon_name']
         read_only_fields = ['vehicle_id']  # Prevents user from modifying vehicle_id      
 
     def validate_plate_number(self, value):
@@ -159,7 +159,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Employee
-        fields = ['employee_id', 'user', 'completed_trip_count', 'name']
+        fields = ['employee_id', 'user', 'completed_trip_count', 'name', 'payment_status']
         
     def get_name(self, obj):
         full_name = f"{obj.user.first_name} {obj.user.last_name}".strip()
@@ -184,7 +184,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
         employee.save()
         return employee
     
-class TotalsSerializer(serializers.ModelSerializer):
+class TotalSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Totals
+        model = Total
         fields = '__all__'

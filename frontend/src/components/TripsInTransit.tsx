@@ -58,7 +58,7 @@ const TripsInTransit = () => {
         />
       </div>
 
-      <div className="flex-1 overflow-y-auto overflow-x-hidden max-h-[200px] bg-black/40 rounded-lg p-3">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden max-h-[400px] bg-black/40 rounded-lg p-3">
         {loading ? (
           <span className="text-white text-center text-sm">Loading trips...</span>
         ) : trips.length > 0 ? (

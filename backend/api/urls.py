@@ -5,11 +5,11 @@ from .views import (
     AdministratorListView, AdministratorDetailView,
     SalaryListView, SalaryDetailView,
     TripListView, TripDetailView, TripDetailAPIView,
-    VehicleListView, VehicleDetailView,
+    VehicleListView, 
     RegisterUserView, RegisterVehicleView, RegisterTripView, get_recent_trips, employee_trip_salaries, update_salary_deductions, delete_vehicle_by_plate,
-    SendPasswordLinkView, ResetPasswordView, get_vehicles, get_employees, get_users, update_salary_configuration, get_all_salary_configurations, calculate_totals,
-    EmployeeCreateView, delete_user_by_username, get_employee_profile, UserProfileView, update_employee_profile, UserUpdateView, priority_queue_view, get_completed_trips_salaries,
-    ValidateResetPasswordTokenView, get_ongoing_trips, generate_gross_payroll_pdf, generate_salary_breakdown_pdf, update_user_profile, TotalsViewSet, trips_by_date_range
+    SendPasswordLinkView, ResetPasswordView, get_employees, update_salary_configuration, get_all_salary_configurations, calculate_totals,
+    EmployeeCreateView, delete_user_by_username, UserProfileView, update_employee_profile, priority_queue_view, get_completed_trips_salaries,
+    ValidateResetPasswordTokenView, get_ongoing_trips, generate_gross_payroll_pdf, generate_salary_breakdown_pdf, update_user_profile, TotalViewSet, trips_by_date_range
 )
 from django.contrib.auth.views import (
     PasswordResetView,
@@ -86,15 +86,15 @@ urlpatterns = [
     path('delete-user-by-username/<str:username>/', delete_user_by_username, name='delete-user-by-username'),
     path('update-salary-deductions/', update_salary_deductions, name='update_salary_deductions'),
     
-    #Priority Queue
+    #PRIORITY QUEUE
     path('priority-queue/', priority_queue_view),
     
     # Delete Vehicles
     path("delete-vehicle-by-plate/<str:plate_number>/", delete_vehicle_by_plate, name="delete-vehicle-by-plate"),
 
     # Totals
-    path('totals/', TotalsViewSet.as_view({'get': 'list', 'post': 'create'})),
-    path('totals/<int:pk>/', TotalsViewSet.as_view({'get': 'retrieve', 'put': 'update'})),
+    path('totals/', TotalViewSet.as_view({'get': 'list', 'post': 'create'})),
+    path('totals/<int:pk>/', TotalViewSet.as_view({'get': 'retrieve', 'put': 'update'})),
     path('calculate_totals/', calculate_totals, name='calculate-totals'),
 
     path('completed-trips-salaries/', get_completed_trips_salaries),

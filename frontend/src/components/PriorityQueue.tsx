@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 interface Employee {
   id: number;
   name: string;
-  completed_trip_count: number;
+  base_salary: number;
 }
 
 const PriorityQueue = () => {
@@ -14,9 +14,15 @@ const PriorityQueue = () => {
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
-        const res = await fetch("http://localhost:8000/api/priority-queue/"); // 🔁 Update this path if needed
+        const res = await fetch("http://localhost:8000/api/priority-queue/"); // 🔁 Make sure the backend sends base_salary for current week
         const data = await res.json();
-        setEmployees(data);
+
+        // Sort employees by base salary (ascending); treat missing/zero as lowest priority
+        const sorted = data.sort(
+          (a: Employee, b: Employee) => (a.base_salary || 0) - (b.base_salary || 0)
+        );
+
+        setEmployees(sorted);
       } catch (error) {
         console.error("Error fetching priority queue:", error);
       }
@@ -47,7 +53,7 @@ const PriorityQueue = () => {
           >
             <span>{employee.name}</span>
             <span className="text-xs bg-black/25 text-white px-2 py-1 rounded-lg">
-              {employee.completed_trip_count} TRIP/S COMPLETED
+              ₱ {employee.base_salary?.toFixed(2) || "0.00"} BASE SALARY
             </span>
           </div>
         ))}

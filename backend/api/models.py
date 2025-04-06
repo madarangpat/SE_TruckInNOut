@@ -14,7 +14,8 @@ class SalaryConfiguration(models.Model):
 
     def __str__(self):
         return "Global Salary Configuration"
-######################################################################################################################################
+    
+#==============================================================================================================================================
 # USER MODEL
 class User(AbstractUser):
     SUPER_ADMIN = 'super_admin'
@@ -100,14 +101,14 @@ class User(AbstractUser):
     
     get_role.short_description = 'Role'
     
-######################################################################################################################################
+#==============================================================================================================================================
 # PASSWORD RESET MODEL
 class PasswordReset(models.Model):
     email = models.EmailField()
     token = models.CharField(max_length=100)
     created_at = models.DateTimeField(auto_now_add=True)
     
-######################################################################################################################################
+#==============================================================================================================================================
 # ADMIN MODEL
 class Administrator(models.Model):
     admin_id = models.AutoField(primary_key=True)
@@ -119,7 +120,7 @@ class Administrator(models.Model):
     def __str__(self):
         return f"Admin {self.admin_id}"
 
-######################################################################################################################################
+#==============================================================================================================================================
 # EMPLOYEE MODEL
 class Employee(models.Model):   
     employee_id = models.AutoField(primary_key=True)
@@ -130,12 +131,13 @@ class Employee(models.Model):
     )
     salary = models.ForeignKey('Salary', on_delete=models.CASCADE, null=True, blank=True)
     completed_trip_count = models.PositiveIntegerField(default=0)
+    payment_status = models.BooleanField(default=False)
 
     def __str__(self):
         employee_count = Employee.objects.filter(employee_id__lte=self.employee_id).count()
         return f"{self.user.username} ({employee_count})"
 
-######################################################################################################################################
+#==============================================================================================================================================
 # SALARY MODEL
 class Salary(models.Model):
     salary_id = models.AutoField(primary_key=True)
@@ -160,7 +162,7 @@ class Salary(models.Model):
     def __str__(self):
         return f"Salary {self.salary_id}"
 
-######################################################################################################################################
+#==============================================================================================================================================
 # TRIP MODEL
 class Trip(models.Model):   
     trip_id = models.AutoField(primary_key=True)
@@ -213,23 +215,30 @@ class Trip(models.Model):
                     emp.completed_trip_count += 1
                     emp.save()
             
-######################################################################################################################################
+#======================================================================================================================================
 # VEHICLE MODEL
 class Vehicle(models.Model):
+    VEHICLE_TYPE_CHOICES = [
+        ("2 Ton Truck", "2 Ton Truck"),
+        ("4 Ton Truck", "4 Ton Truck"),
+        ("6 Ton Truck", "6 Ton Truck"),
+    ]
+    
     vehicle_id = models.AutoField(primary_key=True)
     plate_number = models.CharField(
         max_length=10,
         unique=True,
-        null=True,  # ✅ Temporarily allow null values
-        blank=True  # ✅ Allow empty values in forms
+        null=True,
+        blank=True 
     )
-    vehicle_type = models.CharField(max_length=50)
+    vehicle_type = models.CharField(max_length=50, choices=VEHICLE_TYPE_CHOICES)
     is_company_owned = models.BooleanField(default=False)
+    subcon_name = models.CharField(max_length=50, null=True, blank=True)
     def __str__(self):
         ownership = "Company" if self.is_company_owned else "Subcon"
         return f"{self.vehicle_id} - {self.plate_number} - {self.vehicle_type} ({ownership})"
 
-######################################################################################################################################
+#======================================================================================================================================
 # SALARY REPORT MODEL
 class SalaryReport(models.Model):
     salary_report_id = models.AutoField(primary_key=True)
@@ -239,10 +248,11 @@ class SalaryReport(models.Model):
     def __str__(self):
         return f"SalaryReport {self.salary_report_id}"
     
-######################################################################################################################################
+#======================================================================================================================================
 # TOTALS MODEL
-class Totals(models.Model):
+class Total(models.Model):
     totals_id = models.AutoField(primary_key=True)
+    employee = models.ForeignKey('Employee', on_delete=models.CASCADE, null=True, blank=True)
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
 

@@ -7,10 +7,16 @@ import SettingsOverlayTwo from "@/components/SettingsOverlayTwo";
 import axios from "axios";
 
 const AddVehiclePage = () => {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    plate_number: string;
+    vehicle_type: string;
+    is_company_owned: boolean;
+    subcon_name?: string; // 👈 mark as optional
+  }>({
     plate_number: "",
-    vehicle_type: "Truck", // Always default to "Truck"
+    vehicle_type: "Truck",
     is_company_owned: false,
+    subcon_name: "",
   });
 
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +34,6 @@ const AddVehiclePage = () => {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value, type } = e.target;
-
     const newValue =
       type === "checkbox"
         ? (e.target as HTMLInputElement).checked
@@ -47,10 +52,21 @@ const AddVehiclePage = () => {
     setError(null);
     setSuccess(null);
 
+    // ✅ Validate subcon_name manually
+    if (!formData.is_company_owned && !formData.subcon_name?.trim()) {
+      setError("Subcon name is required when the vehicle is not company owned.");
+      return;
+    }
+
+    const payload = { ...formData };
+    if (formData.is_company_owned) {
+      delete payload.subcon_name;
+    }
+
     try {
       const response = await axios.post(
         "http://127.0.0.1:8000/api/register-vehicle/",
-        formData,
+        payload,
         {
           headers: {
             "Content-Type": "application/json",
@@ -62,17 +78,15 @@ const AddVehiclePage = () => {
       setSuccess("Vehicle successfully registered!");
       setFormData({
         plate_number: "",
-        vehicle_type: "Truck", // Reset back to "Truck"
+        vehicle_type: "Truck",
         is_company_owned: false,
+        subcon_name: "",
       });
 
-      // Auto-clear success message
       setTimeout(() => setSuccess(null), 6000);
     } catch (error: any) {
       console.error("API Error:", error.response?.data);
       setError(error.response?.data?.error || "Failed to register vehicle.");
-
-      // Auto-clear error message
       setTimeout(() => setError(null), 6000);
     }
   };
@@ -109,59 +123,87 @@ const AddVehiclePage = () => {
           </div>
         )}
 
-        {/* ✅ Vehicle Form */}
+        {/* ✅ FORM */}
         <form
           onSubmit={handleSubmit}
-          className="custom-form mt-6 w-full mx-auto grid grid-cols-1 md:grid-cols-1 gap-4 text-black"
+          className="custom-form mt-6 w-full mx-auto grid-cols-1 gap-4 text-black"
         >
-          <div className="col-span-1">
-            <h3 className="text-lg font-bold mb-2">Vehicle Details</h3>
-            <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
-              <input
-                type="text"
-                name="plate_number"
-                placeholder="Plate Number (e.g., AB 1234)*"
-                className="input-field"
-                value={formData.plate_number}
-                onChange={handleChange}
-               pattern="^[A-Z]{3} \d{4}$"
-                title="Plate Number must follow the format LL DDDD (e.g., AB 1234)"
-                required
-              />
-
-              {/* Vehicle type shown but disabled, fixed to "Truck" */}
-              <input
-                type="text"
-                name="vehicle_type"
-                className="input-field bg-gray-100 cursor-not-allowed"
-                value="Truck"
-                disabled
-              />
-
-              <div className="flex items-center">
-                <div className="ml-1">
-                  <input
-                    type="checkbox"
-                    id="is_company_owned"
-                    name="is_company_owned"
-                    checked={formData.is_company_owned}
-                    onChange={handleChange}
-                    className="accent-green-600"
-                    style={{ width: "20px", height: "20px" }}
-                  />
-                </div>
-
-                <label
-                  htmlFor="is_company_owned"
-                  className="text-sm font-medium ml-2"
-                >
-                  Company Owned
-                </label>
-              </div>
-            </div>
+          {/* ✅ Company Owned Checkbox */}
+          <div>
+            <label htmlFor="is_company_owned" className="text-sm font-bold block mb-1">
+              Company Owned
+            </label>
+            <input
+              type="checkbox"
+              id="is_company_owned"
+              name="is_company_owned"
+              checked={formData.is_company_owned}
+              onChange={handleChange}
+              className="accent-green-600"
+              style={{ width: "20px", height: "20px" }}
+            />
           </div>
 
-          <div className="col-span-2">
+          {/* ✅ Subcon Name (conditionally visible) */}
+          {!formData.is_company_owned && (
+            <div>
+              <label htmlFor="subcon_name" className="text-sm font-bold block mb-1">
+                Subcon Name
+              </label>
+              <input
+                type="text"
+                id="subcon_name"
+                name="subcon_name"
+                placeholder="Enter subcontractor name"
+                className="input-field"
+                value={formData.subcon_name}
+                onChange={handleChange}
+                required={!formData.is_company_owned}
+              />
+            </div>
+          )}
+
+          {/* ✅ Plate Number */}
+          <div>
+            <label htmlFor="plate_number" className="text-sm font-bold block mb-1">
+              Plate Number
+            </label>
+            <input
+              type="text"
+              name="plate_number"
+              id="plate_number"
+              placeholder="Plate Number (e.g., ABC 1234)*"
+              className="input-field"
+              value={formData.plate_number}
+              onChange={handleChange}
+              pattern="^[A-Z]{3} \d{4}$"
+              title="Plate Number must follow the format ABC 1234"
+              required
+            />
+          </div>
+
+          {/* ✅ Vehicle Type (select dropdown) */}
+          <div>
+            <label htmlFor="vehicle_type" className="text-sm font-bold block mb-1">
+              Vehicle Type
+            </label>
+            <select
+              name="vehicle_type"
+              id="vehicle_type"
+              className="input-field"
+              value={formData.vehicle_type}
+              onChange={handleChange}
+              required
+            >
+              <option value="">Select a vehicle type</option>
+              <option value="2 Ton Truck">2 Ton Truck</option>
+              <option value="4 Ton Truck">4 Ton Truck</option>
+              <option value="6 Ton Truck">6 Ton Truck</option>
+            </select>
+          </div>
+
+          {/* ✅ Submit Button */}
+          <div className="col-span-2 mt-4">
             <button
               type="submit"
               className="w-full bg-[#668743] text-white py-3 rounded-lg text-lg font-semibold hover:bg-[#345216]"
@@ -170,9 +212,11 @@ const AddVehiclePage = () => {
             </button>
           </div>
 
+          {/* ✅ Back Button */}
           <div className="mt-6">
             <button
               onClick={() => setShowSettings(true)}
+              type="button"
               className="px-4 py-2 text-black/80 border border-black/40 rounded-lg hover:bg-gray-200 transition"
             >
               ← Back to Settings
@@ -181,6 +225,7 @@ const AddVehiclePage = () => {
         </form>
       </div>
 
+      {/* ✅ Settings Overlay */}
       {showSettings && (
         <SettingsOverlayTwo onClose={() => setShowSettings(false)} />
       )}

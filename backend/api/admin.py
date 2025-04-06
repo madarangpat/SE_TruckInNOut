@@ -1,8 +1,8 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import User, Administrator, Employee, Salary, Trip, Vehicle, SalaryConfiguration, Totals
+from .models import User, Administrator, Employee, Salary, Trip, Vehicle, SalaryConfiguration, Total
 
-# ✅ Custom User Admin
+#=============================================================================================================================================================================================================
 class CustomUserAdmin(UserAdmin):
     list_display = ('username', 'email', 'display_role', 'employee_type', 'is_staff', 'is_superuser')
     list_filter = ('role', 'is_staff', 'is_superuser')
@@ -13,7 +13,7 @@ class CustomUserAdmin(UserAdmin):
 
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
-        ('Personal Info', {'fields': ('email', 'first_name', 'last_name', 'cellphone_no', 'philhealth_no', 'pag_ibig_no', 'sss_no', 'license_no', 'profile_image', 'employee_type')}),  # ✅ Added 'license_no'
+        ('Personal Info', {'fields': ('email', 'first_name', 'last_name', 'cellphone_no', 'philhealth_no', 'pag_ibig_no', 'sss_no', 'license_no', 'profile_image', 'employee_type')}),
         ('Permissions', {'fields': ('role', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
     )
 
@@ -26,35 +26,35 @@ class CustomUserAdmin(UserAdmin):
 
     search_fields = ('username', 'email')
     ordering = ('username',)
-
-# ✅ Salary Admin
+    
+#=============================================================================================================================================================================================================
 class SalaryAdmin(admin.ModelAdmin):
     list_display = ('salary_id', 'trip', 'base_salary', 'bonuses', 'additionals', 'vale', 'cash_advance', 'cash_bond', 'charges', 'others', 'sss_loan', 'pagibig_loan')
-    search_fields = ('salary_id', 'trip__vehicle__plate_number')  # Adjust this if needed
+    search_fields = ('salary_id', 'trip__vehicle__plate_number')
     list_filter = ('trip',)
 
-# ✅ Administrator Admin
+#=============================================================================================================================================================================================================
 class AdministratorAdmin(admin.ModelAdmin):
     list_display = ('admin_id', 'user')
     search_fields = ('user__username',)
 
-# ✅ Employee Admin
+#=============================================================================================================================================================================================================
 class EmployeeAdmin(admin.ModelAdmin):
-    list_display = ('employee_id', 'user', 'get_employee_type', 'salary')
+    list_display = ('employee_id', 'user', 'get_employee_type', 'salary', 'payment_status')
     search_fields = ('user__username', 'user__employee_type')
     list_filter = ('user__employee_type',)
     
     def get_employee_type(self, obj):
-        return obj.user.employee_type  # Fetch employee_type from the associated user
+        return obj.user.employee_type
     get_employee_type.short_description = 'Employee Type'
 
-# ✅ Vehicle Admin - Now Displays Plate Number
+#=============================================================================================================================================================================================================
 class VehicleAdmin(admin.ModelAdmin):
-    list_display = ('vehicle_id', 'plate_number', 'vehicle_type')
+    list_display = ('vehicle_id', 'plate_number', 'vehicle_type', 'subcon_name')
     search_fields = ('plate_number',)
     list_filter = ('vehicle_type',)
 
-# ✅ Trip Admin - Shows Important Trip Info
+#=============================================================================================================================================================================================================
 class TripAdmin(admin.ModelAdmin):
     list_display = (
         'trip_id', 'vehicle', 'employee', 'helper', 'helper2',  'base_salary', 'additionals',
@@ -66,7 +66,6 @@ class TripAdmin(admin.ModelAdmin):
         'helper2__user__username'
     )
 
-    # Optional: You can display the addresses and other lists if needed
     def get_addresses(self, obj):
         return ", ".join(obj.addresses)
     get_addresses.short_description = "Addresses"
@@ -95,7 +94,6 @@ class TripAdmin(admin.ModelAdmin):
         return ", ".join(map(str, obj.completed))
     get_completed.short_description = "Completion Status"
     
-    # Adding the new fields to the admin display
     def get_base_salary(self, obj):
         return obj.base_salary
     get_base_salary.short_description = "Base Salary"
@@ -103,15 +101,15 @@ class TripAdmin(admin.ModelAdmin):
     def get_additionals(self, obj):
         return obj.additionals
     get_additionals.short_description = "Additionals"
-      
-# ✅ SalaryConfiguration Admin
+  
+#=============================================================================================================================================================================================================    
 class SalaryConfigurationAdmin(admin.ModelAdmin):
-    list_display = ('id', 'sss', 'philhealth', 'pag_ibig')  # Assuming you have these fields
-    search_fields = ('sss', 'philhealth', 'pag_ibig')  # Allow searching by these fields
+    list_display = ('id', 'sss', 'philhealth', 'pag_ibig')
+    search_fields = ('sss', 'philhealth', 'pag_ibig')
     list_filter = ('sss', 'philhealth', 'pag_ibig')
     
-# ✅ Totals Admin
-class TotalsAdmin(admin.ModelAdmin):
+#=============================================================================================================================================================================================================  
+class TotalAdmin(admin.ModelAdmin):
     list_display = (
         'totals_id',
         'start_date',
@@ -134,12 +132,12 @@ class TotalsAdmin(admin.ModelAdmin):
     search_fields = ('totals_id', 'start_date', 'end_date')
     list_filter = ('start_date', 'end_date')
     
-# ✅ Register Models in Admin
+#=============================================================================================================================================================================================================
 admin.site.register(User, CustomUserAdmin)
-admin.site.register(Administrator, AdministratorAdmin)  # ✅ Added custom admin
-admin.site.register(Employee, EmployeeAdmin)  # ✅ Added custom admin
+admin.site.register(Administrator, AdministratorAdmin)
+admin.site.register(Employee, EmployeeAdmin)
 admin.site.register(Salary)
-admin.site.register(Trip, TripAdmin)  # ✅ Register with the custom TripAdmin
-admin.site.register(Vehicle, VehicleAdmin)  # ✅ Register with the custom VehicleAdmin
+admin.site.register(Trip, TripAdmin)
+admin.site.register(Vehicle, VehicleAdmin)
 admin.site.register(SalaryConfiguration)
-admin.site.register(Totals, TotalsAdmin)
+admin.site.register(Total, TotalAdmin)
