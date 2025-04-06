@@ -26,6 +26,26 @@ const EmployeeDataClient = ({ users }: { users: User[] }) => {
   return (
     <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-10">
       <div className="wrapper w-full max-w-md p-6 sm:p-8 rounded-xl shadow-lg bg-black/20">
+        {/* Header with Title and Logo */}
+        <div className="flex justify-between items-start mb-4">
+          {/* Left Title */}
+          <div>
+            <h2 className="uppercase text-xl sm:text-3xl md:text-4xl font-bold text-black/70">
+              Employee Data
+            </h2>
+          </div>
+          {/* Top-right Logo */}
+          <div className="w-10 h-10 relative">
+            <Image
+              src="/tinoicon.png"
+              alt="Tinoicon Logo"
+              layout="fill"
+              className="object-contain"
+              unoptimized
+            />
+          </div>
+        </div>
+        
         {/* Profile Image */}
         <div className="flex justify-center mb-3">
           <div className="w-24 sm:w-28 h-24 sm:h-28 bg-white rounded-full flex items-center justify-center border border-gray-300 shadow-lg relative overflow-hidden">

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Image from "next/image";
 import SettingsOverlayTwo from "@/components/SettingsOverlayTwo";
 
 const VehicleDataClient = ({ vehicles }: { vehicles: Vehicle[] }) => {
@@ -19,10 +20,28 @@ const VehicleDataClient = ({ vehicles }: { vehicles: Vehicle[] }) => {
   return (
     <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-10">
       <div className="wrapper w-full max-w-md p-6 sm:p-8 rounded-xl shadow-lg bg-black/20">
-        {/* Title */}
-        <h2 className="text-2xl font-bold text-black/70 text-center mb-4 uppercase">
-          Vehicle List
-        </h2>
+        {/* Header with Title and Logo */}
+        <div className="flex justify-between items-start mb-4">
+          {/* Left Title */}
+          <div>
+            <h2 className="uppercase text-xl sm:text-3xl md:text-4xl font-bold text-black/70">
+              Vehicle List
+            </h2>
+            <p className="text-black/70 text-sm sm:text-sm mt-1">
+              Browse through company and private vehicles.
+            </p>
+          </div>
+          {/* Top-right Logo */}
+          <div className="w-10 h-10 relative">
+            <Image
+              src="/tinoicon.png"
+              alt="Tinoicon Logo"
+              layout="fill"
+              className="object-contain"
+              unoptimized
+            />
+          </div>
+        </div>
 
         {/* Vehicle Information */}
         <div className="p-3 text-black/80 text-xs sm:text-sm space-y-4">

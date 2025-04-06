@@ -5,16 +5,21 @@ from .validators import validate_image
 from .utils import remove_file_from_s3
 from storages.backends.s3boto3 import S3Boto3Storage
 
-# SALARY CONFIGURATION MODEL
 class SalaryConfiguration(models.Model):
-    sss = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    philhealth = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    pag_ibig = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    salconfig_id = models.AutoField(primary_key=True)  # <- unique identifier
+    employee = models.ForeignKey(
+        'Employee',
+        on_delete=models.CASCADE,
+        related_name='salary_configurations'
+    )
+    sss_percentage = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    philhealth_percentage = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    pagibig_percentage = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     pagibig_contribution = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
 
     def __str__(self):
-        return "Global Salary Configuration"
-    
+        return f"SalConfig #{self.salconfig_id} - {self.employee.user.username} ({self.label or 'No Label'})"
+
 #==============================================================================================================================================
 # USER MODEL
 class User(AbstractUser):
@@ -237,22 +242,13 @@ class Vehicle(models.Model):
     def __str__(self):
         ownership = "Company" if self.is_company_owned else "Subcon"
         return f"{self.vehicle_id} - {self.plate_number} - {self.vehicle_type} ({ownership})"
-
-#======================================================================================================================================
-# SALARY REPORT MODEL
-class SalaryReport(models.Model):
-    salary_report_id = models.AutoField(primary_key=True)
-    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, null=True, blank=True)
-    salary = models.ForeignKey(Salary, on_delete=models.CASCADE, null=True, blank=True)
-    
-    def __str__(self):
-        return f"SalaryReport {self.salary_report_id}"
     
 #======================================================================================================================================
 # TOTALS MODEL
 class Total(models.Model):
     totals_id = models.AutoField(primary_key=True)
     employee = models.ForeignKey('Employee', on_delete=models.CASCADE, null=True, blank=True)
+    salary = models.ForeignKey('Salary', on_delete=models.CASCADE, null=True, blank=True)
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
 
