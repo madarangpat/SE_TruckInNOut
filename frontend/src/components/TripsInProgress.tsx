@@ -98,7 +98,8 @@ const TripsInProgress = () => {
                   />
                 </div>
                 <span className="mt-1 text-xs text-white/90 text-center leading-tight">
-                  Last Drop to <strong>{lastDestination}</strong><br />
+                  Last Drop to <strong>{lastDestination}</strong>
+                  <br />
                   by Driver: <strong>{driverName}</strong><br />
                   and Helper/s: <strong>{helpers}</strong>
                 </span>

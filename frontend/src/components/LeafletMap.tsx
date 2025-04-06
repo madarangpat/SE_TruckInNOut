@@ -48,6 +48,19 @@ function MapBounds({ bounds }: { bounds: L.LatLngBoundsExpression }) {
   return null;
 }
 
+function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371; // Radius of Earth in kilometers
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * (Math.PI / 180)) *
+      Math.cos(lat2 * (Math.PI / 180)) *
+      Math.sin(dLon / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c; // distance in kilometers
+}
+
 interface LocationPoint {
   lat: number;
   lng: number;
@@ -141,19 +154,23 @@ export default function LeafletMap({
         />
 
         {/* ✅ Destination Markers */}
-        {locations.map((loc, idx) => (
-          <Marker
-            key={idx}
-            position={[loc.lat, loc.lng]}
-            icon={loc.completed ? greenIcon : blueIcon}
-          >
-            <Popup>
-              <strong>{loc.label}</strong>
-              <br />
-              
-            </Popup>
-          </Marker>
-        ))}
+          {locations.map((loc, idx) => {
+          const distance = haversineDistance(userLat, userLng, loc.lat, loc.lng).toFixed(2);
+          return (
+            <Marker
+              key={idx}
+              position={[loc.lat, loc.lng]}
+              icon={loc.completed ? greenIcon : blueIcon}
+            >
+              <Popup>
+                <strong>{loc.label}</strong>
+                <br />
+                📍 Distance: {distance} km
+              </Popup>
+            </Marker>
+          );
+        })}
+
 
         {/* 🔴 User Marker */}
         <Marker position={userPos} icon={redIcon}>

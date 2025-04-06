@@ -9,6 +9,19 @@ const LeafletMap = dynamic(() => import("@/components/LeafletMap"), {
   ssr: false,
 });
 
+function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371; // Earth radius in kilometers
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * (Math.PI / 180)) *
+      Math.cos(lat2 * (Math.PI / 180)) *
+      Math.sin(dLon / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c; // distance in kilometers
+}
+
 interface Trip {
   trip_id: number;
   clients: string[][];
@@ -93,6 +106,7 @@ const rawLng = trip.dest_lng;
 const latArray = (Array.isArray(rawLat[0]) ? rawLat[0] : rawLat) as string[];
 const lngArray = (Array.isArray(rawLng[0]) ? rawLng[0] : rawLng) as string[];
 
+
 const validLocations = latArray
   .map((lat, idx) => {
     const latNum = parseFloat(lat);
@@ -124,6 +138,14 @@ const validLocations = latArray
     }
   }, [trip]);
 
+  const closestDistance = locations
+  .filter((loc) => !loc.completed) // Optional: Only unfinished destinations
+  .reduce((min, loc) => {
+    const dist = haversineDistance(14.65889, 121.10419, loc.lat, loc.lng);
+    return dist < min ? dist : min;
+  }, Infinity);
+
+  const formattedDistance = closestDistance.toFixed(2)
   return (
     <div className="min-h-screen flex flex-col items-center py-8 px-4 md:px-8">
       <div className="wrapper w-full max-w-5xl mx-auto p-6 rounded-2xl bg-black/40 shadow-lg">
@@ -171,7 +193,7 @@ const validLocations = latArray
                   {trip.clients?.length || "__________"}
                 </p>
                 <p className="text-sm bg-black/45 text-white px-2 py-1 rounded-md mt-1 w-full">
-                  <strong>DESTINATION:</strong> {getDestination()} (redacted km`)
+                  <strong>DESTINATION:</strong> {getDestination()} ({formattedDistance} km)
                 </p>
                 <p className="text-sm bg-black/45 text-white px-2 py-1 rounded-md mt-1 w-full">
                   <strong>LOCATION:</strong> {trip.user_latitude},{" "}
