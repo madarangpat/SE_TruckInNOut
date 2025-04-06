@@ -6,21 +6,22 @@ interface Vehicle {
   vehicle_id: number;
   plate_number: string;
   vehicle_type: string;
+  is_company_owned: boolean;
+  subcon_name?: string | null;
   trip: number | null;
 }
 
 interface VehicleDropdownProps {
   onSelect: (result: {
-    vehicle: Vehicle | null; // Selected vehicle or null if none selected
+    vehicle: Vehicle | null;
   }) => void;
 }
 
 const VehicleDropdown: React.FC<VehicleDropdownProps> = ({ onSelect }) => {
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]); // State to store vehicles
-  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null); // State to store selected vehicle
-  const [vehicleDropdownOpen, setVehicleDropdownOpen] = useState(false); // State to toggle dropdown visibility
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+  const [vehicleDropdownOpen, setVehicleDropdownOpen] = useState(false);
 
-  // Fetch vehicles from the API
   useEffect(() => {
     const fetchVehicles = async () => {
       try {
@@ -35,10 +36,17 @@ const VehicleDropdown: React.FC<VehicleDropdownProps> = ({ onSelect }) => {
     fetchVehicles();
   }, []);
 
-  // Notify parent component when selection changes
   useEffect(() => {
     onSelect({ vehicle: selectedVehicle });
   }, [selectedVehicle, onSelect]);
+
+  const getDisplayLabel = (vehicle: Vehicle) => {
+    const ownership = vehicle.is_company_owned
+      ? "Company Owned"
+      : `Private${vehicle.subcon_name ? ` (Subcon: ${vehicle.subcon_name})` : ""}`;
+
+    return `${vehicle.plate_number} - ${vehicle.vehicle_type} - ${ownership}`;
+  };
 
   return (
     <div className="relative">
@@ -47,20 +55,22 @@ const VehicleDropdown: React.FC<VehicleDropdownProps> = ({ onSelect }) => {
         onClick={() => setVehicleDropdownOpen(!vehicleDropdownOpen)}
         className="w-full px-4 py-3 bg-zinc-700/40 text-white rounded-lg flex justify-between items-center hover:bg-black/40 shadow-md uppercase tracking-widest text-sm"
       >
-        {selectedVehicle ? selectedVehicle.plate_number : "Select Vehicle"}
+        {selectedVehicle ? getDisplayLabel(selectedVehicle) : "Select Vehicle"}
         <span>▼</span>
       </button>
+
       {vehicleDropdownOpen && (
         <div className="absolute w-full bg-zinc-600 text-white mt-1 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
-           <button
+          <button
             onClick={() => {
-              setSelectedVehicle(null); // Reset selection (opt-out choice)
+              setSelectedVehicle(null);
               setVehicleDropdownOpen(false);
             }}
             className="w-full text-left px-4 py-2 hover:bg-black/40 uppercase tracking-widest text-sm"
           >
             Select Vehicle
-          </button> 
+          </button>
+
           {vehicles.length === 0 ? (
             <div className="w-full text-center px-4 py-2 text-sm">
               No available vehicles
@@ -75,7 +85,7 @@ const VehicleDropdown: React.FC<VehicleDropdownProps> = ({ onSelect }) => {
                 }}
                 className="w-full text-left px-4 py-2 hover:bg-black/40 uppercase tracking-widest text-sm"
               >
-                {vehicle.plate_number} ({vehicle.vehicle_type})
+                {getDisplayLabel(vehicle)}
               </button>
             ))
           )}

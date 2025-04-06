@@ -1,20 +1,19 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Image from "next/image";
 import SettingsOverlayTwo from "@/components/SettingsOverlayTwo";
 
 const VehicleDataClient = ({ vehicles }: { vehicles: Vehicle[] }) => {
   const [showSettings, setShowSettings] = useState(false);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  // const [searchQuery, setSearchQuery] = useState("");
 
   // Handle Vehicle Selection
   const [vehicleData, setVehicleData] = useState<Vehicle>({
     plate_number: undefined,
     vehicle_type: "",
     is_company_owned: true,
+    subcon_name: undefined
   });
 
   return (
@@ -38,9 +37,13 @@ const VehicleDataClient = ({ vehicles }: { vehicles: Vehicle[] }) => {
                     Type: {vehicle.vehicle_type || "Unknown"}
                   </p>
                   <p className="text-sm text-black/70">
-                    Ownership:{" "}
-                    {vehicle.is_company_owned ? "Company Owned" : "Private"}
+                    Ownership: {vehicle.is_company_owned ? "Company Owned" : "Private"}
                   </p>
+                  {!vehicle.is_company_owned && vehicle.subcon_name && (
+                    <p className="text-sm text-black/70">
+                      Subcon Name: {vehicle.subcon_name}
+                    </p>
+                  )}
                 </div>
               ))
             ) : (

@@ -19,6 +19,8 @@ interface Vehicle {
   vehicle_id: number;
   plate_number: string;
   vehicle_type: string;
+  is_company_owned: boolean;
+  subcon_name?: string;
 }
 
 interface Employee {

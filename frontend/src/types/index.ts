@@ -30,6 +30,7 @@ type Vehicle = {
   plate_number?: number;
   vehicle_type?: string;
   is_company_owned?: boolean;
+  subcon_name?: string;
 };
 
 type Trip = {
