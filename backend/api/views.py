@@ -5,7 +5,7 @@ from rest_framework import generics
 from django.conf import settings
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from .models import User, Administrator, Employee, Salary, Trip, Vehicle, PasswordReset, SalaryConfiguration, Total, EmployeeLocation
+from .models import User, Administrator, Employee, Salary, Trip, Vehicle, PasswordReset, SalaryConfiguration, Total
 from .serializers import (
     UserSerializer, AdministratorSerializer, EmployeeSerializer,
     SalarySerializer, TripSerializer, VehicleSerializer, TotalSerializer,
