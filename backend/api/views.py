@@ -5,7 +5,7 @@ from rest_framework import generics
 from django.conf import settings
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from .models import User, Administrator, Employee, Salary, Trip, Vehicle, PasswordReset, SalaryConfiguration, Total
+from .models import User, Administrator, Employee, Salary, Trip, Vehicle, PasswordReset, SalaryConfiguration, Total, EmployeeLocation
 from .serializers import (
     UserSerializer, AdministratorSerializer, EmployeeSerializer,
     SalarySerializer, TripSerializer, VehicleSerializer, TotalSerializer,
@@ -44,7 +44,7 @@ from django.db.models import Sum
 from rest_framework.decorators import api_view
 from django.utils.timezone import make_aware
 from django.db.models import Q
-
+from django.utils.decorators import method_decorator
 User = get_user_model()
 
 #==================================================================================================================================================================================
@@ -1033,6 +1033,50 @@ class TotalViewSet(viewsets.ModelViewSet):
     queryset = Total.objects.all()
     serializer_class = TotalSerializer
     
+#==================================================================================================================================================================================
+# EMPLOYEE LOCATION FETCHING
+@api_view(['POST'])
+@permission_classes([AllowAny])  # Optional, remove if not using auth
+def update_employee_location(request):
+    try:
+        employee_id = request.data.get("employee_id")
+        latitude = request.data.get("latitude")
+        longitude = request.data.get("longitude")
+
+        if not all([employee_id, latitude, longitude]):
+            return Response({"error": "Missing fields"}, status=status.HTTP_400_BAD_REQUEST)
+
+        employee = Employee.objects.get(pk=employee_id)
+
+        location, created = EmployeeLocation.objects.update_or_create(
+            employee=employee,
+            defaults={
+                "latitude": latitude,
+                "longitude": longitude,
+            }
+        )
+
+        return Response({
+            "message": "Location updated successfully",
+            "created": created,
+            "latitude": latitude,
+            "longitude": longitude
+        }, status=status.HTTP_200_OK)
+
+    except Employee.DoesNotExist:
+        return Response({"error": "Employee not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+#==================================================================================================================================================================================
+# EMPLOYEE LOCATION UPDATE
+@api_view(['GET'])
+def get_employee_location(request, employee_id):
+    try:
+        location = EmployeeLocation.objects.get(employee__id=employee_id)
+        return Response({'latitude': location.latitude, 'longitude': location.longitude})
+    except EmployeeLocation.DoesNotExist:
+        return Response({'detail': 'Location not available'}, status=status.HTTP_404_NOT_FOUND)
 #=========================================================================================================================================================
 @api_view(['POST'])
 @permission_classes([AllowAny])

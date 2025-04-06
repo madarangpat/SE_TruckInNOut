@@ -32,4 +32,7 @@ async function _getCurrentUser({
 
 // Cache the getCurrentUser function to only refetch the data
 // if changed
-export const getCurrentUser = cache(_getCurrentUser);
+export const getCurrentUser = cache(() =>
+  _getCurrentUser({ withEmployeeProfile: true })
+);
+

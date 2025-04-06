@@ -273,3 +273,14 @@ class Total(models.Model):
 
     def __str__(self):
         return f"Totals #{self.totals_id}"
+    
+#======================================================================================================================================
+# EMPLOYEE TRACKING MODEL
+class EmployeeLocation(models.Model):
+    employee = models.OneToOneField("api.Employee", on_delete=models.CASCADE)
+    latitude = models.FloatField()
+    longitude = models.FloatField()
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.employee.user.username}- {self.latitude}, {self.longitude}"  

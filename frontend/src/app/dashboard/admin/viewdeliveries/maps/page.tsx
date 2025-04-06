@@ -10,7 +10,7 @@ const LeafletMap = dynamic(() => import("@/components/LeafletMap"), {
 });
 
 function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
-  const R = 6371; // Earth radius in kilometers
+  const R = 6371;
   const dLat = (lat2 - lat1) * (Math.PI / 180);
   const dLon = (lon2 - lon1) * (Math.PI / 180);
   const a =
@@ -19,7 +19,7 @@ function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
       Math.cos(lat2 * (Math.PI / 180)) *
       Math.sin(dLon / 2) ** 2;
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c; // distance in kilometers
+  return R * c;
 }
 
 interface Trip {
@@ -52,16 +52,17 @@ interface Trip {
 
 const MapsPage = () => {
   const searchParams = useSearchParams();
-  //const employeeId = searchParams.get("employee");
-  const tripId = searchParams.get("trip")
+  const tripId = searchParams.get("trip");
   const router = useRouter();
 
   const [trip, setTrip] = useState<Trip | null>(null);
+  const [liveUserLat, setLiveUserLat] = useState<number>(14.659143275880561);
+  const [liveUserLng, setLiveUserLng] = useState<number>(121.10416933800876);
 
   useEffect(() => {
     const fetchTrip = async () => {
       try {
-const res = await axios.get(`http://localhost:8000/api/trips/by-trip-id/${tripId}/`);
+        const res = await axios.get(`http://localhost:8000/api/trips/by-trip-id/${tripId}/`);
         setTrip(res.data);
         console.log("✅ Trip fetched by ID:", res.data);
       } catch (err) {
@@ -69,11 +70,36 @@ const res = await axios.get(`http://localhost:8000/api/trips/by-trip-id/${tripId
         setTrip(null);
       }
     };
-  
+
     if (tripId) {
       fetchTrip();
     }
   }, [tripId]);
+
+  const employeeId = trip?.employee.employee_id;
+  console.log(employeeId)
+  useEffect(() => {
+    if (!trip) return;
+  
+    const fetchLiveLocation = async () => {
+      try {
+        const res = await axios.get(
+          `http://localhost:8000/api/employees/location/${employeeId}/`
+        );
+        const { latitude, longitude } = res.data;
+  
+        if (!isNaN(parseFloat(latitude)) && !isNaN(parseFloat(longitude))) {
+          setLiveUserLat(parseFloat(latitude));
+          setLiveUserLng(parseFloat(longitude));
+          console.log("📡 Live location updated:", latitude, longitude);
+        }
+      } catch (err) {
+        console.error("❌ Failed to fetch live employee location", err);
+      }
+    };
+  
+    fetchLiveLocation();
+  }, [trip]);
   
 
   const getDestination = () => {
@@ -91,47 +117,34 @@ const res = await axios.get(`http://localhost:8000/api/trips/by-trip-id/${tripId
   };
 
   const locations = useMemo(() => {
-    if (!trip?.dest_lat || !trip?.dest_lng) {
-      console.warn("⚠️ Destination lat/lng not found in trip object.");
-      return [];
-    }
+    if (!trip?.dest_lat || !trip?.dest_lng) return [];
 
     try {
-      console.log("📍 Raw latitude string:", trip.dest_lat);
-      console.log("📍 Raw longitude string:", trip.dest_lng);
-
       const rawLat = trip.dest_lat;
-const rawLng = trip.dest_lng;
+      const rawLng = trip.dest_lng;
 
-const latArray = (Array.isArray(rawLat[0]) ? rawLat[0] : rawLat) as string[];
-const lngArray = (Array.isArray(rawLng[0]) ? rawLng[0] : rawLng) as string[];
+      const latArray = (Array.isArray(rawLat[0]) ? rawLat[0] : rawLat) as string[];
+      const lngArray = (Array.isArray(rawLng[0]) ? rawLng[0] : rawLng) as string[];
 
+      return latArray
+        .map((lat, idx) => {
+          const latNum = parseFloat(lat);
+          const lngNum = parseFloat(lngArray[idx]);
+          const completed = Array.isArray(trip.completed?.[0])
+            ? trip.completed[0][idx]
+            : trip.completed?.[idx] ?? false;
 
-const validLocations = latArray
-  .map((lat, idx) => {
-    const latNum = parseFloat(lat);
-    const lngNum = parseFloat(lngArray[idx]);
-    const completed =
-      Array.isArray(trip.completed?.[0])
-        ? trip.completed[0][idx]
-        : trip.completed?.[idx] ?? false;
-
-    if (!isNaN(latNum) && !isNaN(lngNum)) {
-      return {
-        lat: latNum,
-        lng: lngNum,
-        label: `Client: ${trip.clients?.[idx] ?? `Destination ${idx + 1}`}`,
-        completed: completed,
-      };
-    }
-    return null;
-
-    console.log(locations)
-  })
-  .filter(Boolean) as { lat: number; lng: number; label: string; completed: boolean }[];
-
-      console.log("✅ Final locations:", validLocations);
-      return validLocations;
+          if (!isNaN(latNum) && !isNaN(lngNum)) {
+            return {
+              lat: latNum,
+              lng: lngNum,
+              label: `Client: ${trip.clients?.[idx] ?? `Destination ${idx + 1}`}`,
+              completed,
+            };
+          }
+          return null;
+        })
+        .filter(Boolean) as { lat: number; lng: number; label: string; completed: boolean }[];
     } catch (error) {
       console.error("❌ Failed to parse coordinates:", error);
       return [];
@@ -139,13 +152,14 @@ const validLocations = latArray
   }, [trip]);
 
   const closestDistance = locations
-  .filter((loc) => !loc.completed) // Optional: Only unfinished destinations
-  .reduce((min, loc) => {
-    const dist = haversineDistance(14.65889, 121.10419, loc.lat, loc.lng);
-    return dist < min ? dist : min;
-  }, Infinity);
+    .filter((loc) => !loc.completed)
+    .reduce((min, loc) => {
+      const dist = haversineDistance(liveUserLat, liveUserLng, loc.lat, loc.lng);
+      return dist < min ? dist : min;
+    }, Infinity);
 
-  const formattedDistance = closestDistance.toFixed(2)
+  const formattedDistance = closestDistance.toFixed(2);
+
   return (
     <div className="min-h-screen flex flex-col items-center py-8 px-4 md:px-8">
       <div className="wrapper w-full max-w-5xl mx-auto p-6 rounded-2xl bg-black/40 shadow-lg">
@@ -160,13 +174,7 @@ const validLocations = latArray
 
         <div className="flex justify-center items-center mx-3 gap-2">
           <h2 className="capitalize text-2xl font-semibold flex items-center gap-2 mb-4 text-black/40">
-            <Image
-              src="/truck.png"
-              alt="Truck"
-              width={40}
-              height={40}
-              className="opacity-40"
-            />
+            <Image src="/truck.png" alt="Truck" width={40} height={40} className="opacity-40" />
             Trips in Progress
           </h2>
         </div>
@@ -189,15 +197,13 @@ const validLocations = latArray
                   {trip.vehicle?.plate_number || "No Plate"})
                 </p>
                 <p className="text-sm bg-black/45 text-white px-2 py-1 rounded-md mt-1 w-full">
-                  <strong>NUMBER OF DROPS:</strong>{" "}
-                  {trip.clients?.length || "__________"}
+                  <strong>NUMBER OF DROPS:</strong> {trip.clients?.length || "__________"}
                 </p>
                 <p className="text-sm bg-black/45 text-white px-2 py-1 rounded-md mt-1 w-full">
                   <strong>DESTINATION:</strong> {getDestination()} ({formattedDistance} km)
                 </p>
                 <p className="text-sm bg-black/45 text-white px-2 py-1 rounded-md mt-1 w-full">
-                  <strong>LOCATION:</strong> {trip.user_latitude},{" "}
-                  {trip.user_longitude}
+                  <strong>LOCATION:</strong> {liveUserLat}, {liveUserLng}
                 </p>
               </div>
             </div>
@@ -206,21 +212,17 @@ const validLocations = latArray
               {locations.length > 0 ? (
                 <LeafletMap
                   locations={locations}
-                  userLat={14.65889} // or parseFloat(trip.user_latitude)
-                  userLng={121.10419} // or parseFloat(trip.user_longitude)
+                  userLat={liveUserLat}
+                  userLng={liveUserLng}
                   isAdmin={true}
                 />
               ) : (
-                <p className="text-red-400 p-4">
-                  ⚠️ No valid destination coordinates found.
-                </p>
+                <p className="text-red-400 p-4">⚠️ No valid destination coordinates found.</p>
               )}
             </div>
           </div>
         ) : (
-          <p className="text-white text-center">
-            Trip not found
-          </p>
+          <p className="text-white text-center">Trip not found</p>
         )}
       </div>
     </div>

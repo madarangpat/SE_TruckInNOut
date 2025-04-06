@@ -8,8 +8,9 @@ from .views import (
     VehicleListView, 
     RegisterUserView, RegisterVehicleView, RegisterTripView, get_recent_trips, employee_trip_salaries, update_salary_deductions, delete_vehicle_by_plate,
     SendPasswordLinkView, ResetPasswordView, get_employees, update_salary_configuration, get_all_salary_configurations, calculate_totals,
-    EmployeeCreateView, delete_user_by_username, UserProfileView, update_employee_profile, priority_queue_view, get_completed_trips_salaries,
-    ValidateResetPasswordTokenView, get_ongoing_trips, generate_gross_payroll_pdf, generate_salary_breakdown_pdf, update_user_profile, TotalViewSet, trips_by_date_range
+    EmployeeCreateView, delete_user_by_username, UserProfileView, get_employee_profile,update_employee_profile, priority_queue_view, get_completed_trips_salaries,
+    ValidateResetPasswordTokenView, get_ongoing_trips, generate_gross_payroll_pdf, generate_salary_breakdown_pdf, update_user_profile, TotalViewSet, trips_by_date_range,
+    update_employee_location, get_employee_location
 )
 from django.contrib.auth.views import (
     PasswordResetView,
@@ -28,6 +29,8 @@ urlpatterns = [
     path('employees/', EmployeeListView.as_view(), name='employee-list'),
     path('employees/<int:pk>/', EmployeeDetailView.as_view(), name='employee-detail'),
     path("employee/update-profile/", update_employee_profile, name="update-profile"),
+    path("employees/profile/", get_employee_profile, name="get-employee-profile"),
+
 
     path('admins/', AdministratorListView.as_view(), name='admin-list'),
     path('admins/<int:pk>/', AdministratorDetailView.as_view(), name='admin-detail'),
@@ -101,4 +104,8 @@ urlpatterns = [
     
     path('trips-by-date-range/', trips_by_date_range, name='trips_by_date_range'),
 
+    #Map tracking
+    path("employees/update-location/", update_employee_location, name="update-employee-location"),
+    path("api/employees/location/<int:employee_id>/", get_employee_location, name ="get_employee_location"),
+    
 ]
