@@ -50,6 +50,7 @@ from api.models import Employee, EmployeeLocation
 from django.db import OperationalError
 from decimal import Decimal
 from reportlab.platypus import KeepTogether, PageBreak
+from django.forms.models import model_to_dict
 
 User = get_user_model()
 
@@ -767,7 +768,7 @@ def generate_salary_breakdown_pdf(request):
         })
 
     trips = Trip.objects.filter(
-        employee=employee,
+        Q(employee=employee) | Q(helper=employee) | Q(helper2=employee),
         end_date__range=(start, end),
         is_completed=True
     )
@@ -1428,3 +1429,47 @@ def update_user_data(request, pk):
         return Response(serializer.data)
     return Response(serializer.errors, status=400)
 
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_user_trip_data(request):
+    user_id = request.GET.get('user_id')
+    start = request.GET.get('start_date')
+    end = request.GET.get('end_date')
+
+    if not all([user_id, start, end]):
+        return Response({'error': 'Missing parameters'}, status=400)
+
+    try:
+        employee = Employee.objects.select_related("user").get(user__id=user_id)
+    except Employee.DoesNotExist:
+        return Response({'error': 'Employee not found'}, status=404)
+
+    trips = Trip.objects.filter(
+        employee=employee,
+        is_completed=True,
+        end_date__range=[start, end]
+    )
+
+    results = []
+
+    for trip in trips:
+        salary = Salary.objects.filter(trip=trip).first()
+        total = Total.objects.filter(trip=trip).first()
+
+        results.append({
+            "trip": model_to_dict(trip),
+            "salary": model_to_dict(salary) if salary else None,
+            "total": model_to_dict(total) if total else None,
+        })
+
+    return Response(results)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def current_user_employee(request):
+    try:
+        employee = get_object_or_404(Employee, user=request.user)
+        serializer = EmployeeSerializer(employee)
+        return Response(serializer.data)
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)

@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 interface Employee {
   employee_id: number;
@@ -48,14 +49,14 @@ const SetPaymentStatus: React.FC = () => {
 
       if (!response.ok) throw new Error("Update failed");
 
-      alert("✅ Payment status updated.");
+      toast.success("Payment status updated.");
 
       // Reset dropdown and checkbox
       setSelectedEmployeeId(null);
       setStatus(false);
     } catch (err) {
       console.error("Error updating status:", err);
-      alert("❌ Failed to update status.");
+      toast.error("Failed to update status.");
     }
   };
 

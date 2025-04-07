@@ -5,6 +5,7 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import Image from "next/image";
 import PreviewReportG from "@/components/PreviewReportG";
+import { toast } from "sonner";
 
 
 const ViewGross = () => {
@@ -53,13 +54,13 @@ const ViewGross = () => {
       if (response.ok) {
         console.log("Calculated totals:", result);
         setTotalsId(result.id);
-        alert("Gross totals calculated and saved.");
+        toast.success("Gross totals calculated and saved.");
       } else {
-        alert(result.error || "Something went wrong during calculation.");
+        toast.error(result.error || "Something went wrong during calculation.");
       }
     } catch (err) {
       console.error("Error calculating totals:", err);
-      alert("Failed to calculate totals.");
+      toast.error("Failed to calculate totals.");
     }
   };
 

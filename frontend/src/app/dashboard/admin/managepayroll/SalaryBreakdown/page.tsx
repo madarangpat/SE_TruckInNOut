@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import Image from "next/image";
-import SalaryBreakdownPDF from "@/components/SalaryBreakdownPDF";
 import PreviewReportSB from "@/components/PreviewReportSB";
 
 

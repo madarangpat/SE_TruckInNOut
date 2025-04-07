@@ -128,9 +128,10 @@ class TotalAdmin(admin.ModelAdmin):
         'total_pagibig_loan',
         'total_others',
         'overall_total',
+        'created_date',
     )
     search_fields = ('totals_id', 'start_date', 'end_date')
-    list_filter = ('start_date', 'end_date')
+    list_filter = ('start_date', 'end_date','created_date')
     
 #=============================================================================================================================================================================================================
 class EmployeeLocationAdmin(admin.ModelAdmin):

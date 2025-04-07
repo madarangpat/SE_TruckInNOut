@@ -267,6 +267,8 @@ class Total(models.Model):
     total_base_salary = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     total_additionals = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     overall_total = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    created_date = models.DateField(auto_now_add=True, null=True)
+
 
     def __str__(self):
         return f"Totals #{self.totals_id}"

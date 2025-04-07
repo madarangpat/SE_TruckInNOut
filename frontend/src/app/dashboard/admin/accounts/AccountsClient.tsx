@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { updateUserData } from "@/lib/actions/user.actions";
 import { PencilIcon } from "lucide-react";
+import { toast } from "sonner";
 
 const AccountsPage = ({ users }: { users: User[] }) => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -31,6 +32,12 @@ const AccountsPage = ({ users }: { users: User[] }) => {
     "license_no", 
     "profile_image", 
   ];
+
+  const hasChanges =
+  tempData &&
+  selectedUser &&
+  (tempData.email !== selectedUser.email ||
+    tempData.cellphone_no !== selectedUser.cellphone_no);
 
   const handleUserSelect = (user: User) => {
     console.log("Selected user:", user); // 🔍 Add this
@@ -82,10 +89,10 @@ const AccountsPage = ({ users }: { users: User[] }) => {
         cellPhoneNo: tempData.cellphone_no,
       });
   
-      alert("Profile updated successfully!");
+      toast.success("Profile updated successfully!");
     } catch (error) {
       console.error("Error updating profile:", error);
-      alert("There was an error updating the profile.");
+      toast.error("There was an error updating the profile.");
     }
   };
 
@@ -218,7 +225,12 @@ const AccountsPage = ({ users }: { users: User[] }) => {
               <div className="flex justify-center space-x-4 mt-4">
                 <button
                   type="submit"
-                  className="bg-green-600 text-white py-1 px-3 text-sm rounded-lg"
+                  disabled={!hasChanges}
+                  className={`py-1 px-3 text-sm rounded-lg ${
+                    hasChanges
+                      ? "bg-green-600 text-white hover:bg-green-700"
+                      : "bg-gray-400 text-white cursor-not-allowed"
+                  }`}
                 >
                   ✓ Save Changes
                 </button>

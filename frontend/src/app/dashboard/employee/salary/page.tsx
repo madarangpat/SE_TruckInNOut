@@ -1,138 +1,201 @@
-"use client";
+// "use client";
+// import { toast } from "sonner";
+// import axios from "axios";
+// import React, { useEffect, useState } from "react";
+// import { useRouter } from "next/navigation";
+// import DatePicker from "react-datepicker";
+// import "react-datepicker/dist/react-datepicker.css";
+// import Image from "next/image";
+// import PreviewReportSB from "@/components/PreviewReportSB";
 
-import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
-import Image from "next/image";
-import PDFButton from "@/components/PDFButton";
+// interface User {
+//   username: string;
+//   employee_type: string;
+// }
 
-const SalaryPage = () => {
-  const router = useRouter();
-  const [selectedDateRange, setSelectedDateRange] = useState("");
-  const [dateDropdownOpen, setDateDropdownOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const reportRef = useRef<HTMLDivElement>(null);
+// interface Employee {
+//   employee_id: number;
+//   user: User;
+//   profile_image: string;
+// }
 
-  // Fetch salary details when a date is selected (Simulated API Call)
-  useEffect(() => {
-    if (!selectedDateRange) return;
+// const SalaryBreakdown = () => {
+//   const router = useRouter();
 
-    setLoading(true);
+//   const [loggedInEmployee, setLoggedInEmployee] = useState<Employee | null>(null);
+//   const [startDate, setStartDate] = useState<Date | null>(null);
+//   const [endDate, setEndDate] = useState<Date | null>(null);
+//   const [tripSalaries, setTripSalaries] = useState<any[]>([]);
+//   const [completedTripsSet, setCompletedTripsSet] = useState(false);
+//   const [showPreviewModal, setShowPreviewModal] = useState(false);
 
-    setTimeout(() => {
-      setLoading(false); // Simulated API delay before showing placeholder
-    }, 1000);
-  }, [selectedDateRange]);
+//   useEffect(() => {
+//     // ✅ Fetch the logged-in user's employee info
+//     fetch("http://localhost:8000/api/user/")
+//       .then((res) => res.json())
+//       .then((data) => setLoggedInEmployee(data))
+//       .catch((err) => {
+//         console.error("Failed to fetch logged in user:", err);
+//         toast.error("Unable to retrieve logged-in user info.");
+//       });
+//   }, []);
 
-  // Generate Date Ranges Dynamically
-  const generateDateRanges = () => {
-    const currentYear = new Date().getFullYear();
-    const months = [
-      "January",
-      "February",
-      "March",
-      "April",
-      "May",
-      "June",
-      "July",
-      "August",
-      "September",
-      "October",
-      "November",
-      "December",
-    ];
-    let dateRanges: string[] = [];
+//   useEffect(() => {
+//     if (loggedInEmployee && startDate && endDate) {
+//       const query = new URLSearchParams({
+//         employee: loggedInEmployee.user.username,
+//         start_date: startDate.toISOString(),
+//         end_date: endDate.toISOString(),
+//       });
 
-    months.forEach((month) => {
-      for (let week = 1; week <= 4; week++) {
-        dateRanges.push(`${month} (${currentYear}), Week ${week}`);
-      }
-    });
+//       fetch(`http://localhost:8000/api/employee-trip-salaries/?${query}`)
+//         .then((res) => res.json())
+//         .then((data) => {
+//           setTripSalaries(data);
+//         })
+//         .catch((err) => console.error("Failed to fetch trip-salary data:", err));
+//     }
+//   }, [loggedInEmployee, startDate, endDate]);
 
-    return dateRanges;
-  };
+//   return (
+//     <div className="min-h-screen flex flex-col items-center justify-center gap-10 px-4 sm:px-6 lg:px-10 py-8">
+//       <div className="wrapper w-full max-w-6xl p-6 sm:p-8 rounded-2xl shadow-lg bg-black/20">
+//         <h1 className="text-center text-2xl sm:text-3xl font-semibold text-black/50 mb-4 tracking-[0.1em]">
+//           MY PAYROLL
+//         </h1>
 
-  // Handle Date Selection
-  const handleDateSelect = (dateRange: string) => {
-    setSelectedDateRange(dateRange);
-    setDateDropdownOpen(false);
-  };
+//         {/* Date Pickers */}
+//         <div className="flex flex-col gap-4">
+//           <div className="flex gap-4 mb-4 items-end">
+//             <div className="w-1/2">
+//               <label className="block text-sm text-black mb-1 font-bold">Start Date</label>
+//               <DatePicker
+//                 selected={startDate}
+//                 onChange={(date) => setStartDate(date)}
+//                 dateFormat="MMMM d, yyyy"
+//                 placeholderText="Select start date"
+//                 className="w-full px-4 py-2 rounded-md shadow-md text-black cursor-pointer bg-white"
+//               />
+//             </div>
 
-  // Navigate to Salary Breakdown Page
-  const handleViewSalaryBreakdown = () => {
-    if (!selectedDateRange) {
-      alert("Please select a date range before viewing salary breakdown.");
-      return;
-    }
-    router.push(
-      `/dashboard/employee/salary/empsalarydb?date=${selectedDateRange}`
-    );
-  };
+//             <div className="w-1/2">
+//               <label className="block text-sm text-black mb-1 font-bold">End Date</label>
+//               <DatePicker
+//                 selected={endDate}
+//                 onChange={(date) => setEndDate(date)}
+//                 dateFormat="MMMM d, yyyy"
+//                 placeholderText="Select end date"
+//                 minDate={startDate || undefined}
+//                 className="w-full px-4 py-2 rounded-md shadow-md text-black cursor-pointer bg-white"
+//               />
+//             </div>
 
-  return (
-    <div className="min-h-vh flex flex-col items-center justify-center px-4 sm:px-6 lg:px-10 pt-60">
-      {/* Title */}
-      <h1 className="text-center text-2xl sm:text-3xl font-semibold text-black/50 mb-4 tracking-[0.1em]">
-        UPDATED SALARY
-      </h1>
+//             <button onClick={() => { setStartDate(null); setEndDate(null); }}>
+//               <Image src="/Trash.png" alt="Clear Dates" width={30} height={30} />
+//             </button>
+//           </div>
 
-      {/* Select Date Range Dropdown */}
-      <div className="relative mb-6">
-        <button
-          onClick={() => setDateDropdownOpen(!dateDropdownOpen)}
-          className="innerwrapper w-full max-w-sm px-4 sm:px-6 py-2 sm:py-3 bg-gray-800 text-white rounded-lg flex justify-between items-center hover:bg-black/40 shadow-md uppercase tracking-widest text-xs sm:text-sm"
-        >
-          {selectedDateRange || "Select Date Range"}
-          <span>▼</span>
-        </button>
-        {dateDropdownOpen && (
-          <div className="dropwrapper absolute w-full max-w-sm bg-black/40 text-white mt-1 rounded-lg shadow-lg z-10 max-h-48 sm:max-h-60 overflow-y-auto backdrop-blur-[10px]">
-            {generateDateRanges().map((range, index) => (
-              <button
-                key={index}
-                onClick={() => handleDateSelect(range)}
-                className="w-full text-left px-4 py-2 hover:bg-black/20 uppercase tracking-widest text-xs sm:text-sm"
-              >
-                {range}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+//           <button
+//             onClick={async () => {
+//               if (!loggedInEmployee || !startDate || !endDate) {
+//                 toast.warning("Please select a date range.");
+//                 return;
+//               }
 
-      {/* Salary Details Panel */}
-      <div
-        ref={reportRef}
-        className="wrapper w-full max-w-3xl rounded-xl shadow-lg p-6 bg-white text-black/80"
-      >
-        {selectedDateRange && (
-          <h2 className="text-center text-lg text-black font-semibold mb-4">
-            {selectedDateRange}
-          </h2>
-        )}
+//               try {
+//                 const query = new URLSearchParams({
+//                   employee: loggedInEmployee.user.username,
+//                   start_date: startDate.toISOString(),
+//                   end_date: endDate.toISOString(),
+//                 });
 
-        {/* Placeholder for Payroll Data */}
-        <p className="text-center text-black/50 italic">
-          {loading
-            ? "Fetching Payroll Data..."
-            : "Select a date range to view salary details."}
-        </p>
-      </div>
+//                 const res = await fetch(`http://localhost:8000/api/completed-trips/?${query}`);
+//                 if (!res.ok) throw new Error("Failed to fetch completed trips.");
 
-      {/* Buttons */}
-      <div className="mt-6 flex flex-col gap-0">
-        <button
-          onClick={handleViewSalaryBreakdown}
-          className="px-6 py-2 bg-[#668743] text-white text-sm rounded-lg hover:bg-[#345216] tracking-wide"
-        >
-          View Salary Breakdown
-        </button>
-        {/* Generate Report Button with Print Icon */}
-        <div className="mt-6 flex justify-center">
-          <PDFButton />
-        </div>
-      </div>
-    </div>
-  );
-};
+//                 const data = await res.json();
+//                 console.log("Completed Trips:", data);
 
-export default SalaryPage;
+//                 if (data.length === 0) {
+//                   toast.warning("No completed trips found.");
+//                   setCompletedTripsSet(false);
+//                 } else {
+//                   toast.success(`Found ${data.length} completed trip(s).`);
+//                   setCompletedTripsSet(true);
+//                 }
+
+//               } catch (err) {
+//                 console.error(err);
+//                 toast.error("Error while fetching completed trips.");
+//               }
+//             }}
+//             disabled={!loggedInEmployee || !startDate || !endDate}
+//             className={`py-2 px-4 rounded-lg shadow text-white ${
+//               !loggedInEmployee || !startDate || !endDate
+//                 ? "bg-gray-400 cursor-not-allowed"
+//                 : "bg-[#668743] hover:bg-[#345216]"
+//             }`}
+//           >
+//             Set Completed Trips
+//           </button>
+//         </div>
+
+//         {/* PDF Export Section */}
+//         <div className="mt-2 flex w-auto items-center justify-center flex-col gap-2">
+//           <button
+//             onClick={() => {
+//               if (!loggedInEmployee || !startDate || !endDate || !completedTripsSet) {
+//                 alert("Please complete the fields first.");
+//                 return;
+//               }
+//               setShowPreviewModal(true);
+//             }}
+//             disabled={!loggedInEmployee || !startDate || !endDate || !completedTripsSet}
+//             className={`mt-1 py-2 px-4 rounded-lg shadow ${
+//               !loggedInEmployee || !startDate || !endDate || !completedTripsSet
+//                 ? "bg-gray-400 cursor-not-allowed text-white"
+//                 : "bg-[#668743] hover:bg-[#345216] text-white"
+//             }`}
+//           >
+//             Preview Salary Breakdown
+//           </button>
+
+//           {showPreviewModal && (
+//             <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center">
+//               <div className="bg-white rounded-lg shadow-lg w-full max-w-4xl p-6 relative">
+//                 <button
+//                   onClick={() => setShowPreviewModal(false)}
+//                   className="absolute top-2 right-2 text-gray-700 hover:text-red-500 text-xl"
+//                 >
+//                   &times;
+//                 </button>
+//                 <h2 className="text-lg font-semibold mb-4">Salary Breakdown Preview</h2>
+//                 <PreviewReportSB
+//                   employee={loggedInEmployee?.user.username || ""}
+//                   start={startDate?.toLocaleDateString('en-CA') || ""}
+//                   end={endDate?.toLocaleDateString('en-CA') || ""}
+//                   onClose={() => setShowPreviewModal(false)}
+//                 />
+//               </div>
+//             </div>
+//           )}
+//         </div>
+//       </div>
+//     </div>
+//   );
+// };
+
+// export default SalaryBreakdown;
+
+
+
+import React from "react";
+import SalaryPageClient from "./SalaryPageClient";
+import { getUserProfile } from "@/lib/actions/user.actions";
+
+export default async function SalaryPage() {
+  const user = await getUserProfile()
+
+  console.log(user);
+
+  return <SalaryPageClient user={user} />;
+}
