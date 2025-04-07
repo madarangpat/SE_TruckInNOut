@@ -1,3 +1,5 @@
+import time
+from collections import defaultdict
 from datetime import datetime, timedelta
 from django.utils.dateformat import DateFormat
 from datetime import date
@@ -44,7 +46,11 @@ from django.db.models import Sum
 from rest_framework.decorators import api_view
 from django.utils.timezone import make_aware
 from django.db.models import Q
-from django.utils.decorators import method_decorator
+from api.models import Employee, EmployeeLocation
+from django.db import OperationalError
+from decimal import Decimal
+from reportlab.platypus import KeepTogether, PageBreak
+
 User = get_user_model()
 
 #==================================================================================================================================================================================
@@ -58,20 +64,69 @@ def get_all_salary_configurations(request):
     return Response(serializer.data)
 
 #==================================================================================================================================================================================
-@api_view(['PATCH'])
-@permission_classes([IsAuthenticated])
-def update_salary_configuration(request, configId):
+@csrf_exempt
+def update_salary_configurations(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+
     try:
-        salary_config = SalaryConfiguration.objects.get(id=configId)  # Use the passed configId
-    except SalaryConfiguration.DoesNotExist:
-        return Response({"error": "Salary configuration not found"}, status=404)
-    
-    # Proceed to update the salary config
-    serializer = SalaryConfigurationSerializer(salary_config, data=request.data, partial=True)
-    if serializer.is_valid():
-        serializer.save()
-        return Response({"message": "Salary configuration updated successfully", "data": serializer.data}, status=200)
-    return Response({"error": serializer.errors}, status=400)
+        data = json.loads(request.body)
+
+        username = data.get("username")
+        start_date = parse_datetime(data.get("start_date"))
+        end_date = parse_datetime(data.get("end_date"))
+
+        sss_percentage = Decimal(data.get("sss_percentage", 0))
+        philhealth_percentage = Decimal(data.get("philhealth_percentage", 0))
+        pagibig_percentage = Decimal(data.get("pagibig_percentage", 0))
+        pagibig_contribution = Decimal(data.get("pagibig_contribution", 0))
+        bonuses = Decimal(data.get("bonuses", 0))
+
+        if not username or not start_date or not end_date:
+            return JsonResponse({"error": "Missing required data"}, status=400)
+
+        trips = Trip.objects.filter(
+            employee__user__username=username,
+            is_completed=True,
+            end_date__range=[start_date, end_date]
+        )
+
+        updated_configs = 0
+        updated_salaries = 0
+
+        for trip in trips:
+            adjusted_salary = trip.base_salary * trip.multiplier
+            
+            # Update SalaryConfig
+            config = SalaryConfiguration.objects.filter(trip=trip).first()
+            if config:
+                config.sss_percentage = sss_percentage
+                config.philhealth_percentage = philhealth_percentage
+                config.pagibig_percentage = pagibig_percentage
+                config.pagibig_contribution = pagibig_contribution
+                config.save()
+                updated_configs += 1
+
+            # Update Salary
+            salary = Salary.objects.filter(trip=trip).first()
+            if salary:
+                salary.bonuses = bonuses
+                salary.adjusted_salary = adjusted_salary
+                salary.sss_contribution = adjusted_salary * sss_percentage
+                salary.philhealth_contribution = adjusted_salary * philhealth_percentage
+                salary.pagibig_contribution = pagibig_contribution
+                salary.sss_loan = 0  # or use a string like "Pending"
+                salary.pagibig_loan = 0  # or use "Pending"
+                salary.save()
+                updated_salaries += 1
+
+        return JsonResponse({
+            "message": f"✅ Updated {updated_configs} SalaryConfigs and {updated_salaries} Salary bonuses."
+        }, status=200)
+
+    except Exception as e:
+        print(f"[ERROR] {e}")
+        return JsonResponse({"error": "Server error while updating salary configurations."}, status=500)
     
 #==================================================================================================================================================================================
 @api_view(["PATCH"])
@@ -80,15 +135,25 @@ def update_salary_configuration(request, configId):
 def update_user_profile(request, user_id):
     if request.method == "PATCH":
         try:
-            # Get the user by the ID from the URL, not request.user
             user = User.objects.get(id=user_id)
 
             data = json.loads(request.body)
             user.email = data.get("email", user.email)
-            user.cellphone_no = data.get("cellPhoneNo", user.cellphone_no)
+            user.cellphone_no = data.get("cellphone_no", user.cellphone_no)
             user.save()
 
-            return JsonResponse({"message": "User updated successfully"})
+            return JsonResponse({
+                "message": "User updated successfully",
+                "user": {
+                    "id": user.id,
+                    "email": user.email,
+                    "cellphone_no": user.cellphone_no,
+                    "username": user.username,
+                    "first_name": user.first_name,
+                    "last_name": user.last_name,
+                    "profile_image": user.profile_image.url if user.profile_image else None,
+                }
+            })
         except User.DoesNotExist:
             return JsonResponse({"error": "User not found"}, status=404)
 
@@ -453,10 +518,12 @@ def delete_user_by_username(request, username):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def get_employee_profile(request):
-    """Return the logged-in user's profile details"""
-    user = request.user  # Gets the currently authenticated user
-    serializer = UserProfileSerializer(user)
-    return Response(serializer.data)
+    try:
+        employee = Employee.objects.get(user=request.user)
+        serializer = EmployeeSerializer(employee)
+        return Response(serializer.data)
+    except Employee.DoesNotExist:
+        return Response({"detail": "Employee not found"}, status=404)
 
 #==================================================================================================================================================================================
 class UserProfileView(generics.RetrieveAPIView):
@@ -736,7 +803,16 @@ def generate_salary_breakdown_pdf(request):
 
         final_drop = "N/A"
         if hasattr(trip, "addresses") and trip.addresses and hasattr(trip, "clients") and trip.clients:
-            final_drop = f"{trip.addresses[-1]} (Client: {trip.clients[-1]})"
+            last_address = trip.addresses[-1]
+            city = "Unknown"
+
+            if isinstance(last_address, str):
+                parts = [p.strip() for p in last_address.split(",")]
+                if len(parts) >= 4:
+                    city = parts[2]  # Adjust index depending on your format
+
+            final_drop = f"{city} (Client: {trip.clients[-1]})"
+
 
         trip_table_data.append([
             str(trip.trip_id),
@@ -845,83 +921,95 @@ def generate_salary_breakdown_pdf(request):
     })
     
 #==================================================================================================================================================================================
-#GROSS PAYROLL PDF GENERATION [ADMIN]
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def generate_gross_payroll_pdf(request):
-    totals_id = request.GET.get("totals_id")
-
-    if not totals_id:
-        return HttpResponse("Missing totals_id", status=400)
-
-    try:
-        totals = Total.objects.get(totals_id=totals_id)
-    except Total.DoesNotExist:
-        return HttpResponse("No totals record found for the provided ID", status=404)
-
-    start_date = totals.start_date
-    end_date = totals.end_date
+    start_date = request.GET.get("start_date")
+    end_date = request.GET.get("end_date")
 
     if not start_date or not end_date:
-        return HttpResponse("Start date or end date is missing in the Totals record.", status=400)
+        return HttpResponse("Missing start or end date", status=400)
+
+    try:
+        start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
+        end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
+    except ValueError:
+        return HttpResponse("Invalid date format", status=400)
+
+    totals_records = Total.objects.filter(start_date=start_date, end_date=end_date)
+    if not totals_records.exists():
+        return HttpResponse("No totals records found within this date range.", status=404)
 
     formatted_start = DateFormat(start_date).format('F d, Y')
     formatted_end = DateFormat(end_date).format('F d, Y')
-    trips_count = Trip.objects.filter(end_date__range=(start_date, end_date), is_completed=True).count()
 
     buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=landscape(letter), topMargin=30, leftMargin=30, rightMargin=30, bottomMargin=30)
+    doc = SimpleDocTemplate(
+        buffer, pagesize=landscape(letter),
+        topMargin=30, leftMargin=30, rightMargin=30, bottomMargin=30
+    )
 
     styles = getSampleStyleSheet()
-    left_align = ParagraphStyle(name='LeftAlign', parent=styles['Normal'], alignment=TA_LEFT)
-    left_heading = ParagraphStyle(name='LeftHeading', parent=styles['Heading4'], alignment=TA_LEFT)
+    normal = styles['Normal']
+    normal.fontSize = 8
+    left_align = ParagraphStyle(name='LeftAlign', parent=normal, alignment=TA_LEFT, fontSize=9)
+    left_heading = ParagraphStyle(name='LeftHeading', parent=styles['Heading4'], alignment=TA_LEFT, fontSize=10)
 
-    elements = []
-    elements.append(Paragraph("<b>BIG C TRUCKING SERVICES GROSS PAYROLL</b>", styles['Title']))
-    elements.append(Spacer(1, 12))
-    elements.append(Paragraph(f"<b>PAYROLL PERIOD:</b> {formatted_start} to {formatted_end}", left_align))
-    elements.append(Paragraph(f"<b>TOTAL COMPLETED TRIPS:</b> {trips_count}", left_align))
-    elements.append(Spacer(1, 20))
-
-    combined_data = [
-        ["DESCRIPTION", "AMOUNT"],
-
-        ["--- WEEKLY & OTHER DEDUCTIONS ---", ""],
-        ["WEEKLY INSTALLMENT (Bale)", f"{totals.total_bale:.2f}"],
-        ["CASH ADVANCE", f"{totals.total_cash_advance:.2f}"],
-        ["CASH BOND", f"{totals.total_bond:.2f}"],
-        ["CHARGES", f"{totals.total_charges:.2f}"],
-        ["OTHERS", f"{totals.total_others:.2f}"],
-
-        ["--- MANDATORY CONTRIBUTIONS ---", ""],
-        ["SSS (including loan)", f"{(totals.total_sss + totals.total_sss_loan):.2f}"],
-        ["PHILHEALTH", f"{totals.total_philhealth:.2f}"],
-        ["PAG-IBIG (including loan)", f"{(totals.total_pagibig + totals.total_pagibig_loan):.2f}"],
-
-        ["--- EARNINGS ---", ""],
-        ["BONUSES", f"{totals.total_bonuses:.2f}"],
-        ["BASE SALARY", f"{totals.total_base_salary:.2f}"],
-        ["ADDITIONALS", f"{totals.total_additionals:.2f}"],
-
-        ["--- OVERALL TOTAL ---", ""],
-        ["OVERALL TOTAL", f"{totals.overall_total:.2f}"],
+    elements = [
+        Paragraph("<b>BIG C TRUCKING SERVICES GROSS PAYROLL</b>", styles['Title']),
+        Spacer(1, 10),
+        Paragraph(f"<b>PAYROLL PERIOD:</b> {formatted_start} to {formatted_end}", left_align),
+        Paragraph(f"<b>TOTAL EMPLOYEES WITH TRIPS:</b> {totals_records.count()}", left_align),
+        Spacer(1, 20)
     ]
 
-    table = Table(combined_data, hAlign='LEFT', repeatRows=1)
-    table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('ALIGN', (1, 1), (-1, -1), 'RIGHT'),
-        ('SPAN', (0, 1), (-1, 1)),
-        ('SPAN', (0, 7), (-1, 7)),
-        ('SPAN', (0, 11), (-1, 11)),
-        ('SPAN', (0, 15), (-1, 15)),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER')
-    ]))
+    def create_employee_table(totals):
+        table_data = [
+            ["DESCRIPTION", "AMOUNT"],
+            ["Bale", f"{totals.total_bale:.2f}"],
+            ["CASH ADVANCE", f"{totals.total_cash_advance:.2f}"],
+            ["CASH BOND", f"{totals.total_bond:.2f}"],
+            ["CHARGES", f"{totals.total_charges:.2f}"],
+            ["OTHERS", f"{totals.total_others:.2f}"],
+            ["SSS (including loan)", f"{(totals.total_sss + totals.total_sss_loan):.2f}"],
+            ["PHILHEALTH", f"{totals.total_philhealth:.2f}"],
+            ["PAG-IBIG (including loan)", f"{(totals.total_pagibig + totals.total_pagibig_loan):.2f}"],
+            ["BONUSES", f"{totals.total_bonuses:.2f}"],
+            ["BASE SALARY", f"{totals.total_base_salary:.2f}"],
+            ["ADDITIONALS", f"{totals.total_additionals:.2f}"],
+            ["OVERALL TOTAL", f"{totals.overall_total:.2f}"],
+        ]
+        table = Table(table_data, colWidths=[130, 90])
+        table.setStyle(TableStyle([
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ]))
+        return table
 
-    elements.append(Paragraph("<b>GROSS PAYROLL SUMMARY</b>", left_heading))
-    elements.append(table)
+    row_buffer = []
+    for idx, totals in enumerate(totals_records, 1):
+        content = [
+            Paragraph(f"<b>EMPLOYEE:</b> {totals.employee.user.username.upper()}", left_align),
+            Spacer(1, 4),
+            create_employee_table(totals)
+        ]
+        row_buffer.append(content)
+
+        if len(row_buffer) == 3 or idx == len(totals_records):
+            while len(row_buffer) < 3:
+                row_buffer.append([])
+
+            row_table = Table([row_buffer], colWidths=[doc.width / 3] * 3)
+            row_table.setStyle(TableStyle([
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('LEFTPADDING', (0, 0), (-1, -1), 10),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+            ]))
+            elements.append(row_table)
+            elements.append(Spacer(1, 25))
+            row_buffer = []
 
     doc.build(elements)
     buffer.seek(0)
@@ -1035,48 +1123,58 @@ class TotalViewSet(viewsets.ModelViewSet):
     
 #==================================================================================================================================================================================
 # EMPLOYEE LOCATION FETCHING
+MAX_RETRIES = 3
+
 @api_view(['POST'])
 @permission_classes([AllowAny])  # Optional, remove if not using auth
 def update_employee_location(request):
-    try:
-        employee_id = request.data.get("employee_id")
-        latitude = request.data.get("latitude")
-        longitude = request.data.get("longitude")
+    employee_id = request.data.get("employee_id")
+    latitude = request.data.get("latitude")
+    longitude = request.data.get("longitude")
 
-        if not all([employee_id, latitude, longitude]):
-            return Response({"error": "Missing fields"}, status=status.HTTP_400_BAD_REQUEST)
+    if not all([employee_id, latitude, longitude]):
+        return Response({"message": "Missing fields"}, status=400)
 
-        employee = Employee.objects.get(pk=employee_id)
+    for attempt in range(MAX_RETRIES):
+        try:
+            employee = Employee.objects.get(pk=employee_id)
+            location, created = EmployeeLocation.objects.update_or_create(
+                employee=employee,
+                defaults={"latitude": latitude, "longitude": longitude}
+            )
 
-        location, created = EmployeeLocation.objects.update_or_create(
-            employee=employee,
-            defaults={
-                "latitude": latitude,
-                "longitude": longitude,
-            }
-        )
+            return Response({
+                "message": "Location updated successfully",
+                "created": created,
+                "latitude": location.latitude,
+                "longitude": location.longitude,
+            })
+        except OperationalError as e:
+            if "database is locked" in str(e) and attempt < MAX_RETRIES - 1:
+                print("🔁 DB is locked, retrying in 0.5s...")
+                time.sleep(0.5)
+                continue
+            print("❌ Final DB error:", e)
+            return Response({"message": str(e)}, status=500)
+        except Employee.DoesNotExist:
+            return Response({"message": "Employee not found"}, status=404)
+        except Exception as e:
+            print("❌ Error in update-location view:", str(e))
+            return Response({"message": str(e)}, status=500)
 
-        return Response({
-            "message": "Location updated successfully",
-            "created": created,
-            "latitude": latitude,
-            "longitude": longitude
-        }, status=status.HTTP_200_OK)
-
-    except Employee.DoesNotExist:
-        return Response({"error": "Employee not found"}, status=status.HTTP_404_NOT_FOUND)
-
-    except Exception as e:
-        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 #==================================================================================================================================================================================
 # EMPLOYEE LOCATION UPDATE
 @api_view(['GET'])
+@permission_classes([AllowAny])  # You can adjust this if needed
 def get_employee_location(request, employee_id):
     try:
-        location = EmployeeLocation.objects.get(employee__id=employee_id)
-        return Response({'latitude': location.latitude, 'longitude': location.longitude})
+        location = EmployeeLocation.objects.get(employee__employee_id=employee_id)
+        return Response({
+            "latitude": location.latitude,
+            "longitude": location.longitude
+        })
     except EmployeeLocation.DoesNotExist:
-        return Response({'detail': 'Location not available'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"message": "Location not available"}, status=404)
 #=========================================================================================================================================================
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -1096,63 +1194,58 @@ def calculate_totals(request):
     trips = Trip.objects.filter(
         is_completed=True,
         end_date__range=(start_date, end_date)
-    )
+    ).select_related('employee', 'helper', 'helper2')
 
-    salaries = Salary.objects.filter(trip__in=trips)
+    user_to_trips = defaultdict(list)
 
-    totals = {
-        'total_bale': salaries.aggregate(total=Sum('bale'))['total'] or 0,
-        'total_cash_advance': salaries.aggregate(total=Sum('cash_advance'))['total'] or 0,
-        'total_bond': salaries.aggregate(total=Sum('cash_bond'))['total'] or 0,
-        'total_sss': salaries.aggregate(total=Sum('sss_contribution'))['total'] or 0,
-        'total_sss_loan': salaries.aggregate(total=Sum('sss_loan'))['total'] or 0,
-        'total_philhealth': salaries.aggregate(total=Sum('philhealth_contribution'))['total'] or 0,
-        'total_pagibig': salaries.aggregate(total=Sum('pagibig_contribution'))['total'] or 0,
-        'total_pagibig_loan': salaries.aggregate(total=Sum('pagibig_loan'))['total'] or 0,
-        'total_others': salaries.aggregate(total=Sum('others'))['total'] or 0,
-        'total_bonuses': salaries.aggregate(total=Sum('bonuses'))['total'] or 0,
-        'total_charges': salaries.aggregate(total=Sum('charges'))['total'] or 0,
-        'total_base_salary': trips.aggregate(total=Sum('base_salary'))['total'] or 0,
-        'total_additionals': trips.aggregate(total=Sum('additionals'))['total'] or 0,
-    }
+    for trip in trips:
+        if trip.employee:
+            user_to_trips[trip.employee_id].append(trip)
+        if trip.helper:
+            user_to_trips[trip.helper_id].append(trip)
+        if trip.helper2:
+            user_to_trips[trip.helper2_id].append(trip)
 
-    totals['overall_total'] = sum(totals.values())
+    created_records = []
 
-    totals_record = Total.objects.create(
-        start_date=start_date,
-        end_date=end_date,
-        **totals
-    )
+    for user_id, trips_for_user in user_to_trips.items():
+        salaries = Salary.objects.filter(trip__in=trips_for_user)
+
+        totals = {
+            'total_bale': salaries.aggregate(total=Sum('bale'))['total'] or 0,
+            'total_cash_advance': salaries.aggregate(total=Sum('cash_advance'))['total'] or 0,
+            'total_bond': salaries.aggregate(total=Sum('cash_bond'))['total'] or 0,
+            'total_sss': salaries.aggregate(total=Sum('sss_contribution'))['total'] or 0,
+            'total_sss_loan': salaries.aggregate(total=Sum('sss_loan'))['total'] or 0,
+            'total_philhealth': salaries.aggregate(total=Sum('philhealth_contribution'))['total'] or 0,
+            'total_pagibig': salaries.aggregate(total=Sum('pagibig_contribution'))['total'] or 0,
+            'total_pagibig_loan': salaries.aggregate(total=Sum('pagibig_loan'))['total'] or 0,
+            'total_others': salaries.aggregate(total=Sum('others'))['total'] or 0,
+            'total_bonuses': salaries.aggregate(total=Sum('bonuses'))['total'] or 0,
+            'total_charges': salaries.aggregate(total=Sum('charges'))['total'] or 0,
+            'total_base_salary': sum([t.base_salary for t in trips_for_user if t.base_salary]) or 0,
+            'total_additionals': sum([t.additionals for t in trips_for_user if t.additionals]) or 0,
+        }
+
+        totals['overall_total'] = sum(totals.values())
+
+        record = Total.objects.create(
+            start_date=start_date,
+            end_date=end_date,
+            employee_id=user_id,  # Whether employee or helper, this works
+            **totals
+        )
+
+        created_records.append({
+            'user_id': user_id,
+            'totals_id': record.totals_id,
+            'overall_total': totals['overall_total']
+        })
 
     return Response({
-        'id': totals_record.totals_id,
-        **totals
+        'message': f"✅ Created totals for {len(created_records)} user(s) (including helpers).",
+        'records': created_records
     }, status=status.HTTP_201_CREATED)
-    
-    
-class CompletedTripsSalariesView(APIView):
-    permission_classes = [IsAuthenticated]  # Optional
-
-    def get(self, request):
-        start_date_str = request.query_params.get('start_date')
-        end_date_str = request.query_params.get('end_date')
-
-        if not start_date_str or not end_date_str:
-            return Response({"error": "Start and end date are required"}, status=400)
-
-        try:
-            start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
-            end_date = datetime.strptime(end_date_str, "%Y-%m-%d")
-        except ValueError:
-            return Response({"error": "Invalid date format. Use YYYY-MM-DD."}, status=400)
-
-        trips = Trip.objects.filter(
-            is_completed=True,
-            end_date__range=(start_date, end_date)
-        ).order_by("end_date")
-
-        serializer = TripSerializer(trips, many=True)
-        return Response(serializer.data)
     
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -1217,3 +1310,121 @@ def trips_by_date_range(request):
         })
 
     return Response(data, status=200)
+
+def completed_trips_view(request):
+    employee_username = request.GET.get("employee")
+    start_date = request.GET.get("start_date")
+    end_date = request.GET.get("end_date")
+
+    if not employee_username or not start_date or not end_date:
+        return JsonResponse({"error": "Missing query parameters"}, status=400)
+
+    try:
+        start_date = parse_datetime(start_date)
+        end_date = parse_datetime(end_date)
+    except Exception:
+        return JsonResponse({"error": "Invalid date format"}, status=400)
+
+    trips = Trip.objects.filter(
+        employee__user__username=employee_username,
+        is_completed=True,
+        end_date__range=[start_date, end_date]
+    )
+
+    trip_data = []
+    for trip in trips:
+        salary = Salary.objects.filter(trip=trip).first()
+        trip_data.append({
+            "trip_id": trip.pk,
+            "end_date": trip.end_date,
+            "bale": salary.bale if salary else 0,
+            "cash_advance": salary.cash_advance if salary else 0,
+            "cash_bond": salary.cash_bond if salary else 0,
+            "charges": salary.charges if salary else 0,
+            "others": salary.others if salary else 0,
+            "bonuses": salary.bonuses if salary else 0,
+        })
+
+    return JsonResponse(trip_data, safe=False)
+
+@csrf_exempt
+def distribute_deductions(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+
+    def parse_float(value):
+        try:
+            return float(value)
+        except (ValueError, TypeError):
+            return 0.0
+
+    try:
+        data = json.loads(request.body)
+        username = data.get("username")
+        start_date = parse_datetime(data.get("start_date"))
+        end_date = parse_datetime(data.get("end_date"))
+
+        bale = parse_float(data.get("bale"))
+        cash_advance = parse_float(data.get("cash_advance"))
+        cash_bond = parse_float(data.get("cash_bond"))
+        charges = parse_float(data.get("charges"))
+        others = parse_float(data.get("others"))
+
+        trips = Trip.objects.filter(
+            employee__user__username=username,
+            is_completed=True,
+            end_date__range=[start_date, end_date]
+        )
+
+        print(f"Updating Salary records for {trips.count()} trip(s)")
+
+        updated = 0
+        for trip in trips:
+            salary = Salary.objects.filter(trip=trip).first()
+            if salary:
+                salary.bale = bale
+                salary.cash_advance = cash_advance
+                salary.cash_bond = cash_bond
+                salary.charges = charges
+                salary.others = others
+                salary.save()
+                updated += 1
+            else:
+                print(f"⚠️ No salary found for Trip {trip.id}")
+
+        return JsonResponse({"message": f"✅ Updated {updated} salary record(s)."})
+
+    except Exception as e:
+        print(f"❌ ERROR: {e}")
+        return JsonResponse({"error": "Unexpected error occurred."}, status=500)
+    
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def set_payment_status(request):
+    employee_id = request.data.get("employee_id")
+    status = request.data.get("status")
+
+    if employee_id is None:
+        return Response({"error": "Employee ID is required."}, status=400)
+
+    try:
+        employee = Employee.objects.get(pk=employee_id)
+        employee.payment_status = status
+        employee.save()
+        return Response({"message": "Payment status updated successfully."})
+    except Employee.DoesNotExist:
+        return Response({"error": "Employee not found."}, status=404)
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def update_user_data(request, pk):
+    user = request.user
+    if user.id != pk:
+        return Response({"error": "Unauthorized"}, status=403)
+
+    serializer = UserSerializer(user, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data)
+    return Response(serializer.errors, status=400)
+

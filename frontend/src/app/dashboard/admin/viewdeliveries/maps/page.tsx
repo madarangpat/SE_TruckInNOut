@@ -31,13 +31,6 @@ interface Trip {
   user_latitude: string;
   user_longitude: string;
   distance_traveled: string;
-  street_number: string;
-  street_name: string;
-  barangay: string;
-  city: string;
-  province: string;
-  region: string;
-  country: string;
   vehicle: {
     plate_number: string;
   };
@@ -58,6 +51,7 @@ const MapsPage = () => {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [liveUserLat, setLiveUserLat] = useState<number>(14.659143275880561);
   const [liveUserLng, setLiveUserLng] = useState<number>(121.10416933800876);
+  const [currentCity, setcurrentCity] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchTrip = async () => {
@@ -101,20 +95,6 @@ const MapsPage = () => {
     fetchLiveLocation();
   }, [trip]);
   
-
-  const getDestination = () => {
-    if (!trip) return "";
-    const parts = [
-      trip.street_number,
-      trip.street_name,
-      trip.barangay,
-      trip.city,
-      trip.province,
-      trip.region,
-      trip.country,
-    ];
-    return parts.filter(Boolean).join(", ");
-  };
 
   const locations = useMemo(() => {
     if (!trip?.dest_lat || !trip?.dest_lng) return [];
@@ -200,10 +180,11 @@ const MapsPage = () => {
                   <strong>NUMBER OF DROPS:</strong> {trip.clients?.length || "__________"}
                 </p>
                 <p className="text-sm bg-black/45 text-white px-2 py-1 rounded-md mt-1 w-full">
-                  <strong>DESTINATION:</strong> {getDestination()} ({formattedDistance} km)
+                  <strong>DESTINATION:</strong> ({formattedDistance} km)
                 </p>
                 <p className="text-sm bg-black/45 text-white px-2 py-1 rounded-md mt-1 w-full">
-                  <strong>LOCATION:</strong> {liveUserLat}, {liveUserLng}
+                <strong>LOCATION:</strong>{" "}
+                {currentCity ? `${currentCity}` : `${liveUserLat}, ${liveUserLng}`}
                 </p>
               </div>
             </div>
@@ -215,6 +196,7 @@ const MapsPage = () => {
                   userLat={liveUserLat}
                   userLng={liveUserLng}
                   isAdmin={true}
+                  onCityFetched={(city) => setcurrentCity(city)}
                 />
               ) : (
                 <p className="text-red-400 p-4">⚠️ No valid destination coordinates found.</p>

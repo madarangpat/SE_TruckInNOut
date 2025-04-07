@@ -1,6 +1,6 @@
 import React from "react";
 import Client from "./Client";
-import { validateResetPasswordLink } from "@/lib/actions";
+import { validateResetPasswordLink } from "@/auth/auth.actions";
 
 export default async function ForgotPasswordToken({
   params,

@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import User, Administrator, Employee, Salary, Trip, Vehicle, SalaryConfiguration, Total
+from .models import User, Administrator, Employee, Salary, Trip, Vehicle, SalaryConfiguration, Total, EmployeeLocation
 
 #=============================================================================================================================================================================================================
 class CustomUserAdmin(UserAdmin):
@@ -133,6 +133,13 @@ class TotalAdmin(admin.ModelAdmin):
     list_filter = ('start_date', 'end_date')
     
 #=============================================================================================================================================================================================================
+class EmployeeLocationAdmin(admin.ModelAdmin):
+    list_display = ('employee', 'latitude', 'longitude', 'updated_at')
+    search_fields = ('employee__user__username',)
+    list_filter = ('updated_at',)
+#=============================================================================================================================================================================================================
+
+
 admin.site.register(User, CustomUserAdmin)
 admin.site.register(Administrator, AdministratorAdmin)
 admin.site.register(Employee, EmployeeAdmin)
@@ -141,3 +148,4 @@ admin.site.register(Trip, TripAdmin)
 admin.site.register(Vehicle, VehicleAdmin)
 admin.site.register(SalaryConfiguration)
 admin.site.register(Total, TotalAdmin)
+admin.site.register(EmployeeLocation)

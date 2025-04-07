@@ -73,6 +73,7 @@ interface Props {
   userLat: number;
   userLng: number;
   isAdmin: boolean;
+  onCityFetched? : (city:string) => void;
 }
 
 export default function LeafletMap({
@@ -80,11 +81,13 @@ export default function LeafletMap({
   userLat,
   userLng,
   isAdmin,
+  onCityFetched,
 }: Props) {
   const userPos: [number, number] = [userLat, userLng];
   const [debugEnabled, setDebugEnabled] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [watchId, setWatchId] = useState<number | null>(null);
+  const [nearbyLocation, setNearbyLocation] = useState<string | null>(null);
 
   let boundsArray: [number, number][] = [
     ...locations.map((loc) => [loc.lat, loc.lng] as [number, number]),
@@ -119,6 +122,36 @@ export default function LeafletMap({
     }
   };
 
+  const fetchNearbyLocation = async (lat: number, lng: number) => {
+    try {
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${process.env.NEXT_PUBLIC_GOOGLE_API_KEY}`
+      );
+      const data = await response.json();
+  
+      const result = data.results?.[0];
+      const formatted = result?.formatted_address ?? "Unknown Location";
+      const city = result?.address_components?.find((comp: any) =>
+        comp.types.includes("locality")
+      )?.long_name;
+  
+      console.log("📍 Full address:", formatted);
+      console.log("🏙️ City:", city);
+  
+      setNearbyLocation(formatted);
+  
+      if (city && typeof onCityFetched === "function") {
+        onCityFetched(city);
+      }
+  
+    } catch (error) {
+      console.error("❌ Failed to fetch location:", error);
+      setNearbyLocation("Failed to fetch location");
+    }
+  };
+  
+  
+
   useEffect(() => {
     return () => {
       if (watchId !== null) {
@@ -126,6 +159,13 @@ export default function LeafletMap({
       }
     };
   }, [watchId]);
+
+  useEffect(() => {
+    if (userLat && userLng) {
+      fetchNearbyLocation(userLat,userLng);
+    }
+  }, [userLat, userLng]);
+  
 
   return (
     <div className="relative h-full">
@@ -175,7 +215,12 @@ export default function LeafletMap({
         {/* 🔴 User Marker */}
         <Marker position={userPos} icon={redIcon}>
           <Popup>
-            <strong>Your Location</strong>
+            <strong>Your Location</strong> <br/>
+            {nearbyLocation? (
+              <>
+              <span>{nearbyLocation}</span>
+              </>
+            ): (<span>Loading address...</span>)}
           </Popup>
         </Marker>
 

@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { resetPassword } from "@/lib/actions";
+import { resetPassword } from "@/auth/auth.actions";
 
 const Client = ({ token }: { token: string }) => {
   const router = useRouter();
@@ -70,7 +70,7 @@ const Client = ({ token }: { token: string }) => {
 
         {/* Title */}
         <h2 className="text-sm sm:text-lg font-semibold text-black text-center mb-1">
-          Reset your password
+          Change your password
         </h2>
         <p className="text-xs sm:text-sm text-black/60 text-center mb-5 px-4 sm:px-10">
           Enter your new password below.
@@ -103,7 +103,7 @@ const Client = ({ token }: { token: string }) => {
               type="submit"
               className="h-10 w-4/5 sm:w-3/4 bg-[#668743] text-white rounded-lg text-xs sm:text-lg font-semibold hover:bg-[#345216]"
             >
-              Reset Password
+              Change Password
             </button>
           </div>
         </form>

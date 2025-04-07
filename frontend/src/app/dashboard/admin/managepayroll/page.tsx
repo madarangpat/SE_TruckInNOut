@@ -2,6 +2,7 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import SetPaymentStatus from "@/components/SetPaymentStatus";
 
 const ManagePayroll = () => {
   const router = useRouter();
@@ -46,6 +47,10 @@ const ManagePayroll = () => {
             OVERALL
           </span>
         </button>
+      </div>
+      {/* Payment Status Section */}
+      <div className="w-auto max-w-2xl bg-transparent/15 backdrop-blur-lg rounded-xl shadow-lg p-6">
+        <SetPaymentStatus />
       </div>
     </div>
   );

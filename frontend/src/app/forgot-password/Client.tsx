@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { sendResetPasswordLink } from "@/lib/actions";
+import { sendResetPasswordLink } from "@/auth/auth.actions";
 
 const ForgotPasswordClient: React.FC = () => {
   const [message, setMessage] = useState<string>("");

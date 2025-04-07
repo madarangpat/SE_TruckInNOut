@@ -11,19 +11,32 @@ const TrackEmployeeLocation = dynamic(() => import("@/components/TrackEmployeeLo
 });
 
 interface Props {
-  user: {
-    id: number;
-    username?: string;
-    profile_image?: string | null;
-    role?: string;
-    // add other props if needed
+  employee: {
+    employee_id: number;
+    completed_trip_count?: number;
+    payment_status?: string;
+    name?: string;
+    user: {
+      id: number;
+      username: string;
+      profile_image: string | null;
+      role: string;
+    };
   } | null;
 }
 
-const ClientHome = ({ user }: Props) => {
+const ClientHome = ({ employee }: Props) => {
   useEffect(() => {
-    console.log("🧭 ClientHome loaded with user:", user);
-  }, [user]);
+    console.log("🧭 ClientHome loaded with employee:", employee);
+  }, [employee]);
+
+  if (!employee || !employee.user) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <p className="text-lg text-gray-600">Loading employee info...</p>
+      </div>
+    );
+  }
 
   const navButtons = [
     { route: "/dashboard/employee/deliveries", image: "/truck.png", label: "Deliveries" },
@@ -33,24 +46,26 @@ const ClientHome = ({ user }: Props) => {
 
   return (
     <div className="h-90vh flex flex-col justify-start px-6 md:px-12 py-10">
-      {/* ✅ Track only if user is employee */}
-      {user?.role === "employee" && user?.id && (
-        <TrackEmployeeLocation employeeId={user.id} />
+      {/* ✅ Track location if employee has valid role and ID */}
+      {employee.user.role === "employee" && employee.employee_id && (
+        <TrackEmployeeLocation employeeId={employee.employee_id} />
       )}
 
       <div className="self-start mb-36 md:mb-44">
-        <h2 className="text-lg md:text-2xl text-black/50 font-semibold">Welcome Back,</h2>
+        <h2 className="text-lg md:text-2xl text-black/50 font-semibold">
+          Welcome Back, {employee.user.username}
+        </h2>
         <div className="flex items-center gap-4">
           <div className="relative size-20 bg-green-100 rounded-full overflow-hidden">
             <Image
-              src={user?.profile_image ?? "/userplaceholder.png"}
+              src={employee.user.profile_image ?? "/userplaceholder.png"}
               alt="Profile"
               fill
               className="object-cover"
             />
           </div>
           <h1 className="text-2xl md:text-5xl font-bold text-black/50">
-            {user?.username || "Loading..."}
+            {employee.user.username || "Loading..."}
           </h1>
         </div>
       </div>

@@ -1,8 +1,9 @@
+import { getCurrentEmployee } from "@/auth/currentEmployee";
 import ClientHome from "@/components/ClientHome";
-import { getCurrentUser } from "@/auth/currentUser";
+
 const HomePage = async () => {
-  const user = await getCurrentUser();
-  return <ClientHome user={user as any} />;
+  const employee = await getCurrentEmployee(); // 👈 returns employee object
+  return <ClientHome employee={employee} />;
 };
 
 export default HomePage;

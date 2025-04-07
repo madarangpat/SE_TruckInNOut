@@ -3,19 +3,31 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { logout } from "@/lib/auth";
+import { logout } from "@/auth/auth.actions";
 import { PencilIcon } from "lucide-react";
 import {
   updateUserData,
   uploadProfilePicture,
 } from "@/lib/actions/user.actions";
+import { toast } from "sonner";
 
 const MyProfileClient = ({ user }: { user: User }) => {
   const router = useRouter();
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [editableField, setEditableField] = useState<string | null>(null);
-  const [employeeData, setEmployeeData] = useState<User>({ ...user });
-  const [tempData, setTempData] = useState<User>({ ...user });
+  const [employeeData, setEmployeeData] = useState<User>({ 
+    ...user,
+    user_id: user.user_id || user.id,
+  });
+  const [tempData, setTempData] = useState<User>({ 
+    ...user,
+    user_id: user.user_id || user.id, 
+  });
+
+  const hasChanges =
+  employeeData.email !== user.email ||
+  employeeData.cellphone_no !== user.cellphone_no;
+
 
   const formFields = [
     "username",
@@ -49,7 +61,9 @@ const MyProfileClient = ({ user }: { user: User }) => {
   };
 
   const handleEdit = (field: string) => {
-    setEditableField(field);
+    if (field === "email" || field === "cellphone_no") {
+      setEditableField(field);
+    }
   };
 
   const handleInputChange = (
@@ -72,13 +86,18 @@ const MyProfileClient = ({ user }: { user: User }) => {
   const handleSaveChanges = async (event: React.FormEvent) => {
     event.preventDefault();
     try {
-      await updateUserData(employeeData);
-      alert("Profile updated successfully!");
+      await updateUserData({
+        userId: employeeData.user_id.toString(),
+        email: employeeData.email,
+        cellPhoneNo: employeeData.cellphone_no,
+      });
+      toast.success("Profile updated successfully!");
       setEditableField(null);
     } catch (error) {
-      console.error("Error updating profile:", error);
+      toast.error("Error updating profile:");
     }
   };
+  
 
   return (
     <div className="min-h-100vh flex flex-col items-center justify-center px-4 pt-28">
@@ -118,8 +137,8 @@ const MyProfileClient = ({ user }: { user: User }) => {
               </label>
 
               <div className="flex items-center space-x-2">
-                {/* Make 'role' read-only */}
-                {field === "role" ? (
+                {/* Make 'role' and other fields read-only */}
+                {field === "role" || !(field === "email" || field === "cellphone_no") ? (
                   <span className="text-sm text-stone-950">
                     {employeeData[field]}
                   </span>
@@ -137,30 +156,38 @@ const MyProfileClient = ({ user }: { user: User }) => {
                   </span>
                 )}
 
-                {editableField !== field && field !== "role" && (
-                  <button
-                    className="text-gray-500 text-xs"
-                    onClick={() => handleEdit(field)}
-                  >
-                    <PencilIcon size={16} />
-                  </button>
-                )}
-                {editableField === field && field !== "role" && (
-                  <>
+                {/* Edit button only for email and cellphone_no */}
+                {editableField !== field &&
+                  (field === "email" || field === "cellphone_no") && (
                     <button
-                      className="text-green-500 text-xs"
-                      onClick={() => handleConfirmEdit(field)}
+                      type="button"
+                      className="text-gray-500 text-xs"
+                      onClick={() => handleEdit(field)}
                     >
-                      ✓
+                      <PencilIcon size={16} />
                     </button>
-                    <button
-                      className="text-red-500 text-xs"
-                      onClick={handleCancelEdit}
-                    >
-                      ✗
-                    </button>
-                  </>
-                )}
+                  )}
+
+                {/* Confirm/Cancel buttons */}
+                {editableField === field &&
+                  (field === "email" || field === "cellphone_no") && (
+                    <>
+                      <button
+                        type="button"
+                        className="text-green-500 text-xs"
+                        onClick={() => handleConfirmEdit(field)}
+                      >
+                        ✓
+                      </button>
+                      <button
+                        type="button"
+                        className="text-red-500 text-xs"
+                        onClick={handleCancelEdit}
+                      >
+                        ✗
+                      </button>
+                    </>
+                  )}
               </div>
             </div>
           ))}
@@ -168,7 +195,12 @@ const MyProfileClient = ({ user }: { user: User }) => {
           <div className="flex justify-center space-x-4 mt-4">
             <button
               type="submit"
-              className="bg-[#668743] text-white py-1 px-3 text-s rounded-lg hover:bg-[#345216]"
+              disabled={!hasChanges}
+              className={`py-1 px-3 text-s rounded-lg ${
+                hasChanges
+                  ? "bg-[#668743] text-white hover:bg-[#345216]"
+                  : "bg-gray-400 text-white cursor-not-allowed"
+              }`}
             >
               ✓ Save Changes
             </button>

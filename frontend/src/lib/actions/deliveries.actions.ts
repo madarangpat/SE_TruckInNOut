@@ -1,6 +1,6 @@
 "use server";
 
-import { getSession } from "../auth";
+import { getSession } from "@/auth/session";
 
 async function getAssignedTrip() {
   const url = `${process.env.DOMAIN}/trips/assigned/`;

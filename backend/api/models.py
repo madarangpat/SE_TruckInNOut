@@ -7,18 +7,14 @@ from storages.backends.s3boto3 import S3Boto3Storage
 
 class SalaryConfiguration(models.Model):
     salconfig_id = models.AutoField(primary_key=True)  # <- unique identifier
-    employee = models.ForeignKey(
-        'Employee',
-        on_delete=models.CASCADE,
-        related_name='salary_configurations'
-    )
+    trip = models.ForeignKey('Trip', on_delete=models.CASCADE, null=True)
     sss_percentage = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     philhealth_percentage = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     pagibig_percentage = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     pagibig_contribution = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
 
     def __str__(self):
-        return f"SalConfig #{self.salconfig_id} - {self.employee.user.username} ({self.label or 'No Label'})"
+        return f"SalConfig #{self.salconfig_id} "
 
 #==============================================================================================================================================
 # USER MODEL
@@ -210,9 +206,14 @@ class Trip(models.Model):
 
         super().save(*args, **kwargs)
 
-        if is_new and self.employee:
-            from api.models import Salary
-            Salary.objects.create(trip=self)
+        if is_new:
+            if self.employee:
+                from api.models import Salary, SalaryConfiguration
+                
+                Salary.objects.create(trip=self)
+                
+                # Auto-create SalaryConfiguration if not exists for employee
+                SalaryConfiguration.objects.create(trip=self)
 
         if not was_completed and self.is_completed:
             for emp in [self.employee, self.helper, self.helper2]:

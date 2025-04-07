@@ -7,10 +7,10 @@ from .views import (
     TripListView, TripDetailView, TripDetailAPIView,
     VehicleListView, 
     RegisterUserView, RegisterVehicleView, RegisterTripView, get_recent_trips, employee_trip_salaries, update_salary_deductions, delete_vehicle_by_plate,
-    SendPasswordLinkView, ResetPasswordView, get_employees, update_salary_configuration, get_all_salary_configurations, calculate_totals,
+    SendPasswordLinkView, ResetPasswordView, get_employees, get_all_salary_configurations, calculate_totals, update_user_data, 
     EmployeeCreateView, delete_user_by_username, UserProfileView, get_employee_profile,update_employee_profile, priority_queue_view, get_completed_trips_salaries,
     ValidateResetPasswordTokenView, get_ongoing_trips, generate_gross_payroll_pdf, generate_salary_breakdown_pdf, update_user_profile, TotalViewSet, trips_by_date_range,
-    update_employee_location, get_employee_location
+    update_employee_location, get_employee_location, completed_trips_view, distribute_deductions, update_salary_configurations, generate_gross_payroll_pdf, set_payment_status
 )
 from django.contrib.auth.views import (
     PasswordResetView,
@@ -81,9 +81,9 @@ urlpatterns = [
     #CREATE NEW TRIP GET EMPLOYEES
     path('employees/', get_employees, name='get_employees'),
     
-    # SalaryConfiguration API Routes
-    path('salary-configurations/<int:configId>/', update_salary_configuration, name='salary-configuration-update'),
-    path('salary-configurations/', get_all_salary_configurations, name='salary-configuration-list'),  # For listing all salary configs
+    # # SalaryConfiguration API Routes
+    # path('salary-configurations/<int:configId>/', update_salary_configuration, name='salary-configuration-update'),
+    # path('salary-configurations/', get_all_salary_configurations, name='salary-configuration-list'),  # For listing all salary configs
     
     #Delete User
     path('delete-user-by-username/<str:username>/', delete_user_by_username, name='delete-user-by-username'),
@@ -106,6 +106,18 @@ urlpatterns = [
 
     #Map tracking
     path("employees/update-location/", update_employee_location, name="update-employee-location"),
-    path("api/employees/location/<int:employee_id>/", get_employee_location, name ="get_employee_location"),
+    path("employees/location/<int:employee_id>/", get_employee_location, name="get_employee_location"),
+    
+    path("completed-trips/", completed_trips_view, name="completed-trips"),
+    
+    path("distribute-deductions/", distribute_deductions),
+    
+    path("update-salary-configs/", update_salary_configurations),
+    
+    path("generate-pdf/gross-preview/", generate_gross_payroll_pdf, name="generate_gross_payroll_pdf"),
+    
+    path('set-payment-status/', set_payment_status, name='set-payment-status'),
+    
+    path('user/<int:pk>/update/', update_user_data, name='update_user'),
     
 ]

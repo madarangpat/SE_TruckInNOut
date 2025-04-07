@@ -1,26 +1,30 @@
-// auth/currentEmployee.ts
+import { redirect } from "next/navigation";
 import { cache } from "react";
 import { getSession } from "./session";
+import { getEmployeeProfile } from "@/lib/actions/employee.actions";
 
-export const getCurrentEmployee = cache(async () => {
-  const session = getSession();
+function _getCurrentEmployee(options: { withEmployeeProfile: true }): Promise<Employee>;
+function _getCurrentEmployee(options?: { withEmployeeProfile?: false }): Promise<User | null>;
 
-  if (!session?.access) {
-    return null;
+async function _getCurrentEmployee({
+  withEmployeeProfile = false,
+}: { withEmployeeProfile?: boolean } = {}): Promise<User | Employee | null> {
+  const session = await getSession();
+  if (!session) redirect("/login");
+
+  if (withEmployeeProfile) {
+    try {
+      const employeeData = await getEmployeeProfile(); // ✅ fetches employee with nested user
+      return employeeData;
+    } catch (error) {
+      console.error("❌ Error fetching employee profile:", error);
+      return session.user; // fallback to user if employee fetch fails
+    }
+  } else {
+    return session.user;
   }
+}
 
-  const res = await fetch(`${process.env.DOMAIN}/employees/me/`, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${session.access}`,
-    },
-    cache: "no-store",
-  });
-
-  if (!res.ok) {
-    console.error("❌ Failed to fetch employee:", await res.text());
-    return null;
-  }
-
-  return await res.json(); // 👈 this will be your full employee object
-});
+export const getCurrentEmployee = cache(() =>
+  _getCurrentEmployee({ withEmployeeProfile: true }) as Promise<Employee>
+);

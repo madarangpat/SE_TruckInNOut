@@ -53,3 +53,16 @@ type Trip = {
     };
   } | null;
 };
+
+type Employee = {
+  employee_id: number;
+  completed_trip_count?: number;
+  payment_status?: string;
+  name?: string;
+  user: {
+    id: number;
+    username: string;
+    profile_image: string | null;
+    role: string;
+  }
+}
