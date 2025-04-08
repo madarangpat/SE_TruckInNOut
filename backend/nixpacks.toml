@@ -2,7 +2,7 @@
 nixPkgs = ['python311']
 
 [phases.install]
-cmds = ['pip install -r requirements.txt']
+cmds = ['pip install --upgrade pip', 'pip install -r requirements.txt']
 
 [phases.start]
-cmds = ['gunicorn SE_TruckInNOut.wsgi:application --bind 0.0.0.0:8000']
+cmds = ['gunicorn backend.wsgi:application --bind 0.0.0.0:8000']
