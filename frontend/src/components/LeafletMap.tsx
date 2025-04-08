@@ -4,6 +4,8 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useEffect, useState } from "react";
+import { useCallback } from "react";
+
 
 // Fix Leaflet icon paths
 delete (L.Icon.Default.prototype as any).getIconUrl;
@@ -122,7 +124,7 @@ export default function LeafletMap({
     }
   };
 
-  const fetchNearbyLocation = async (lat: number, lng: number) => {
+  const fetchNearbyLocation = useCallback(async (lat: number, lng: number) => {
     try {
       const response = await fetch(
         `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${process.env.NEXT_PUBLIC_GOOGLE_API_KEY}`
@@ -148,10 +150,9 @@ export default function LeafletMap({
       console.error("❌ Failed to fetch location:", error);
       setNearbyLocation("Failed to fetch location");
     }
-  };
+  }, [onCityFetched]);
   
   
-
   useEffect(() => {
     return () => {
       if (watchId !== null) {
@@ -164,7 +165,7 @@ export default function LeafletMap({
     if (userLat && userLng) {
       fetchNearbyLocation(userLat,userLng);
     }
-  }, [userLat, userLng]);
+  }, [userLat, userLng, fetchNearbyLocation]);
   
 
   return (

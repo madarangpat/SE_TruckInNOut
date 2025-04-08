@@ -32,7 +32,7 @@ const SetPaymentStatus: React.FC = () => {
       const emp = employees.find(e => e.employee_id === selectedEmployeeId);
       if (emp) setStatus(emp.payment_status);
     }
-  }, [selectedEmployeeId]);
+  }, [selectedEmployeeId, employees]);
 
   const handleStatusUpdate = async () => {
     if (selectedEmployeeId === null) return;

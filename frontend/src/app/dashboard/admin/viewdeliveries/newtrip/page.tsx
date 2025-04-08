@@ -21,7 +21,7 @@ interface Vehicle {
   plate_number: string;
   vehicle_type: string;
   is_company_owned: boolean;
-  subcon_name?: string;
+  subcon_name?: string | null;
 }
 
 interface Employee {
@@ -277,7 +277,7 @@ const CreateNewTripPage = () => {
      }, 1500);
 
      return () => clearTimeout(delay);
-   }, [tripFormData]);
+   }, [tripFormData, tripDestinations]);
 
   return (
     <div className="min-h-screen flex flex-col items-center py-8 px-4 md:px-8">

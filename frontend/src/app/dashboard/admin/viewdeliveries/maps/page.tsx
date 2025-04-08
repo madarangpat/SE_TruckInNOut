@@ -93,7 +93,7 @@ const MapsPage = () => {
     };
   
     fetchLiveLocation();
-  }, [trip]);
+  }, [trip, employeeId]);
   
 
   const locations = useMemo(() => {

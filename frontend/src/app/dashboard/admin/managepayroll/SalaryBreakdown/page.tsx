@@ -383,7 +383,7 @@ const SalaryBreakdown = () => {
                     <input
                       type="text"
                       step="0.01"
-                      value={value}
+                      value={value as number}
                       onChange={(e) =>
                         setSalaryConfig((prev: any) => ({
                           ...prev,
