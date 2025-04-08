@@ -30,7 +30,7 @@ SECRET_KEY = 'django-insecure-s38_6_+onh1oz-7=k4h$)j!m2=5jjmt7ogablbsnshex4dqc%-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1","api.bigtruckingservices.org"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1","api.bigctruckingservices.org"]
 
 # settings.py
 SECURE_SSL_REDIRECT = False
