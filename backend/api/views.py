@@ -1473,3 +1473,22 @@ def current_user_employee(request):
         return Response(serializer.data)
     except Exception as e:
         return Response({"error": str(e)}, status=500)
+    
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def update_completed_status(request):
+    trip_id = request.data.get("trip_id")
+    completed = request.data.get("completed")
+
+    if not trip_id or completed is None:
+        return Response({"error": "trip_id and completed are required"}, status=400)
+
+    try:
+        trip = Trip.objects.get(pk=trip_id)
+        trip.completed = completed
+        trip.save()
+        return Response({"success": "Trip completion updated"})
+    except Trip.DoesNotExist:
+        return Response({"error": "Trip not found"}, status=404)
+
+
