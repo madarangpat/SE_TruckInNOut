@@ -53,7 +53,7 @@ const ClientHome = ({ employee }: Props) => {
 
       <div className="self-start mb-36 md:mb-44">
         <h2 className="text-lg md:text-2xl text-black/50 font-semibold">
-          Welcome Back, {employee.user.username}
+          Welcome back,
         </h2>
         <div className="flex items-center gap-4">
           <div className="relative size-20 bg-green-100 rounded-full overflow-hidden">

@@ -40,7 +40,7 @@ type Trip = {
   num_of_drops: number;
   start_date: string;
   end_date?: string;
-  assignment_status: string;
+  // assignment_status: string;
   is_completed: boolean;
   vehicle: {
     plate_number: string;

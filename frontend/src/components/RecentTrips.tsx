@@ -6,15 +6,8 @@ import axios from "axios";
 interface Trip {
   trip_id: number;
   is_completed: boolean;
-  client_info: string;
-  distance_traveled: string;
-  street_number: string;
-  street_name: string;
-  barangay: string;
-  city: string;
-  province: string;
-  region: string;
-  country: string;
+  num_of_drops: number;
+  base_salary: number;
   vehicle: {
     plate_number: string;
   };
@@ -31,6 +24,8 @@ interface Trip {
   helper2: {
     username: string;
   } | null;
+  addresses: string[];
+  clients: string[];
 }
 
 const RecentTrips = () => {
@@ -52,20 +47,6 @@ const RecentTrips = () => {
 
     fetchTrips();
   }, []);
-
-  const getDestination = (trip: Trip) => {
-    return [
-      trip.street_number,
-      trip.street_name,
-      trip.barangay,
-      trip.city,
-      trip.province,
-      trip.region,
-      trip.country,
-    ]
-      .filter(Boolean)
-      .join(", ");
-  };
 
   return (
     <div className="wrapper w-full max-w-5xl rounded-2xl shadow-lg p-6 bg-black/40">
@@ -120,12 +101,17 @@ const RecentTrips = () => {
                     </p>
 
                     <p className="text-sm bg-white/50 text-black px-3 py-1 rounded-md mt-1 w-full">
-                      <strong>CLIENT:</strong> {trip.client_info || "__________"}
+                      <strong>Number of Drops:</strong> {trip.num_of_drops || "__________"}
                     </p>
 
                     <p className="text-sm bg-white/50 text-black px-3 py-1 rounded-md mt-1 w-full">
-                      <strong>DESTINATION:</strong> {getDestination(trip)} (
-                      {trip.distance_traveled || "___"} km)
+                      <strong>Salary:</strong> {trip.base_salary || "___"}
+                    </p>
+                    <p className="text-sm bg-white/50 text-black px-3 py-1 rounded-md mt-1 w-full">
+                      <strong>Final Drop: </strong> 
+                      {trip.addresses && trip.addresses.length > 0 && trip.clients && trip.clients.length > 0
+                        ? `${trip.addresses[trip.addresses.length - 1]} (Client: ${trip.clients[trip.clients.length -1]})`
+                        : "No address available"}
                     </p>
                   </div>
                 </div>

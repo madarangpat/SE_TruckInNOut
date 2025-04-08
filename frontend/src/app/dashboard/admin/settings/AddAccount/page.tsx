@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "sonner";
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -24,8 +25,8 @@ const AddAccountPage = () => {
     employee_type: "",
   });
 
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  // const [error, setError] = useState<string | null>(null);
+  // const [success, setSuccess] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -100,60 +101,58 @@ const AddAccountPage = () => {
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setSuccess(null);
 
     const { password, confirmPassword, role, employee_type, cellphone_no } = formData;
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match.");
+      toast.error("Passwords do not match.");
       return;
     }
 
     if (!validatePassword(password)) {
-      setError(
+      toast.error(
         "\u274C Password must be at least 8 characters long and include uppercase, lowercase, number, and special character."
       );
       return;
     }
 
     if (!validateCellphoneNumber(cellphone_no)) {
-      setError("❌ Invalid cellphone number. It must follow the local format: 0917XXXXXXX (11 digits starting with 09).");
+      toast.error("Invalid cellphone number. It must follow the local format: 0917XXXXXXX (11 digits starting with 09).");
       return;
     }
 
     if (!validatePhilhealthNumber(formData.philhealth_no)) {
-      setError("❌ Invalid PhilHealth number. Format must be: XX-XXXXXXXXX-X (e.g., 12-123456789-0).");
+      toast.error("Invalid PhilHealth number. Format must be: XX-XXXXXXXXX-X (e.g., 12-123456789-0).");
       return;
     }
 
     if (!validatePagIbigNumber(formData.pag_ibig_no)) {
-      setError("❌ Invalid Pag-IBIG number. It must be exactly 12 digits with no dashes (e.g., 123456789012).");
+      toast.error("Invalid Pag-IBIG number. It must be exactly 12 digits with no dashes (e.g., 123456789012).");
       return;
     }
 
     if (!validateLicenseNumber(formData.license_no)) {
-      setError("❌ Invalid Driver's License number. Format must be: CXX-XX-XXXXXX (e.g., D12-34-567890).");
+      toast.error("❌ Invalid Driver's License number. Format must be: CXX-XX-XXXXXX (e.g., D12-34-567890).");
       return;
     }
 
     if (!validateSSSNumber(formData.sss_no)) {
-      setError("❌ Invalid SSS number. Format must be: XX-XXXXXXX-X (e.g., 34-1234567-8).");
+      toast.error("Invalid SSS number. Format must be: XX-XXXXXXX-X (e.g., 34-1234567-8).");
       return;
     }
     
     if (!validateEmail(formData.email)) {
-      setError("❌ Invalid email format. Please enter a valid email address (e.g., name@example.com).");
+      toast.error("Invalid email format. Please enter a valid email address (e.g., name@example.com).");
       return;
     }
 
     if (role === "admin" && employee_type) {
-      setError("Admin accounts should not have an employee type selected.");
+      toast.error("Admin accounts should not have an employee type selected.");
       return;
     }
 
     if (role === "employee" && !employee_type) {
-      setError("Employee role requires an employee type to be selected.");
+      toast.error("Employee role requires an employee type to be selected.");
       return;
     }
 
@@ -178,7 +177,7 @@ const AddAccountPage = () => {
         }
       );
 
-      setSuccess("\u2705 Account successfully created!");
+      toast.success("\u2705 Account successfully created!");
       setFormData({
         username: "",
         password: "",
@@ -198,7 +197,7 @@ const AddAccountPage = () => {
       fileInput.value = "";
 
       setTimeout(() => {
-        setSuccess(null);
+        toast.success(null);
       }, 5000);
     } catch (error: any) {
       console.error("API Error:", error.response?.data);
@@ -221,7 +220,7 @@ const AddAccountPage = () => {
         friendlyMessage = "A user with this License Number already exists. Please use a different one.";
       }
 
-      setError(friendlyMessage);
+      toast.error(friendlyMessage);
     }
   };
 
@@ -244,10 +243,7 @@ const AddAccountPage = () => {
         <p className="px-3 text-start text-[8px] sm:text-base md:text-lg font-medium text-black/50 mt-1">
           Add another member to the Big C Family!
         </p>
-
-        {error && <p className="text-red-500 mt-2 text-sm">{error}</p>}
-        {success && <p className="text-green-500 mt-2 text-sm">{success}</p>}
-
+       
         <div className="flex justify-center mt-4">
           <label htmlFor="profile-upload" className="cursor-pointer relative">
             <div className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 bg-white/20 hover:bg-black/10 rounded-full flex items-center justify-center border-4 border-white/10 relative overflow-hidden">
