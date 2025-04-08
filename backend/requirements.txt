@@ -1,0 +1,16 @@
+asgiref
+Django
+django-cors-headers
+djangorestframework
+djangorestframework-simplejwt
+gunicorn
+PyJWT
+pytz
+sqlparse
+psycopg2-binary
+python-dotenv
+reportlab
+django-storages
+boto3
+python-decouple
+pillow
