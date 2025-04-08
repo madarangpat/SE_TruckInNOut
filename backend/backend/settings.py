@@ -33,9 +33,6 @@ DEBUG = True
 ALLOWED_HOSTS = ["localhost", "127.0.0.1","api.bigtruckingservices.org"]
 
 # settings.py
-
-ALLOWED_HOSTS = ['api.bigtruckingservices.org']
-
 SECURE_SSL_REDIRECT = True 
 USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
