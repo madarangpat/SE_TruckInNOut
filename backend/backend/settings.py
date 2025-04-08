@@ -30,7 +30,15 @@ SECRET_KEY = 'django-insecure-s38_6_+onh1oz-7=k4h$)j!m2=5jjmt7ogablbsnshex4dqc%-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1","api.bigtruckingservices.org"]
+
+# settings.py
+
+ALLOWED_HOSTS = ['api.bigtruckingservices.org']
+
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
