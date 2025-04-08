@@ -1,6 +1,7 @@
 "use client";
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 interface Employee {
   id: number;
@@ -10,14 +11,17 @@ interface Employee {
 
 const PriorityQueue = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
-        const res = await fetch("http://localhost:8000/api/priority-queue/"); // 🔁 Make sure the backend sends base_salary for current week
-        const data = await res.json();
+        const res = await fetch(`${process.env.NEXT_PUBLIC_DOMAIN}/priority-queue/`);
+        if (!res.ok) throw new Error("Failed to fetch priority queue");
 
-        // Sort employees by base salary (ascending); treat missing/zero as lowest priority
+        const data = await res.json();
+        
+        // Sort by base salary ascending
         const sorted = data.sort(
           (a: Employee, b: Employee) => (a.base_salary || 0) - (b.base_salary || 0)
         );
@@ -25,6 +29,7 @@ const PriorityQueue = () => {
         setEmployees(sorted);
       } catch (error) {
         console.error("Error fetching priority queue:", error);
+        toast.error("Failed to load priority queue.");
       }
     };
 

@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import Image from "next/image";
+import { toast } from "sonner";
 
 interface Trip {
   trip_id: number;
@@ -30,11 +31,12 @@ const TripsInTransit = () => {
   useEffect(() => {
     const fetchTrips = async () => {
       try {
-        const res = await axios.get("http://localhost:8000/api/trips/");
+        const res = await axios.get(`${process.env.NEXT_PUBLIC_DOMAIN}/trips/`);
         const ongoingTrips = res.data.filter((trip: Trip) => trip.is_completed === false);
         setTrips(ongoingTrips);
       } catch (err) {
         console.error("Failed to fetch trips:", err);
+        toast.error("Failed to load trips.");
       } finally {
         setLoading(false);
       }
@@ -63,7 +65,14 @@ const TripsInTransit = () => {
           <span className="text-white text-center text-sm">Loading trips...</span>
         ) : trips.length > 0 ? (
           trips.map((trip) => {
-            const lastDestination = trip.addresses?.[trip.addresses.length - 1] || "Unknown";
+            const numDrops = trip.addresses?.length || 0;
+            const lastDestination = numDrops > 0
+              ? trip.addresses[numDrops - 1]
+                  ?.split(",")
+                  .slice(0, 2)
+                  .map((part) => part.trim())
+                  .join(", ")
+              : "Unknown";
             const driverName = trip.employee?.user.username || "None";
             const helperUsernames = [
               trip.helper?.username,
@@ -79,8 +88,9 @@ const TripsInTransit = () => {
                 className="flex justify-between items-center p-2 border-b border-gray-600 text-white w-full"
               >
                 <span className="text-sm">
-                  Last Drop to <strong>{lastDestination}</strong> by Driver: <strong>{driverName}</strong>{" "}
-                  and Helper/s: <strong>{helpers}</strong>
+                  <strong>{numDrops}</strong> drop{numDrops !== 1 ? "s" : ""} — Last Drop to{" "}
+                  <strong>{lastDestination}</strong> by Driver:{" "}
+                  <strong>{driverName}</strong> and Helper/s: <strong>{helpers}</strong>
                 </span>
                 <span className="text-xs px-2 py-1 rounded-lg bg-orange-500 text-white">
                   Ongoing

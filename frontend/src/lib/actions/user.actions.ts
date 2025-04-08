@@ -4,7 +4,7 @@ import { getSession } from "@/auth/session";
 
 
 async function getUsers(): Promise<User[]> {
-  const url = `${process.env.DOMAIN}/users/`;
+  const url = `${process.env.NEXT_PUBLIC_DOMAIN}/users/`;
   const session = getSession();
 
   const requestOptions: RequestInit = {
@@ -35,7 +35,7 @@ async function updateUserData({
   email: string;
   cellPhoneNo: string | undefined;
 }) {
-  const url = `${process.env.DOMAIN}/users/profile/update/${userId}/`;
+  const url = `${process.env.NEXT_PUBLIC_DOMAIN}/users/profile/update/${userId}/`;
   const session = getSession();
 
   const requestOptions: RequestInit = {
@@ -64,7 +64,7 @@ async function updateUserData({
 }
 
 async function getUserProfile(): Promise<User> {
-  const url = `${process.env.DOMAIN}/users/profile/`;
+  const url = `${process.env.NEXT_PUBLIC_DOMAIN}/users/profile/`;
   const session = getSession();
 
   const requestOptions: RequestInit = {
@@ -87,7 +87,7 @@ async function getUserProfile(): Promise<User> {
 }
 
 async function uploadProfilePicture(formData: FormData) {
-  const url = `${process.env.DOMAIN}/employee/upload-profile/`;
+  const url = `${process.env.NEXT_PUBLIC_DOMAIN}/employee/upload-profile/`;
   const session = getSession();
 
   const requestOptions: RequestInit = {

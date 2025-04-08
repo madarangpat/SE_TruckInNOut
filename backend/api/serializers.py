@@ -99,6 +99,11 @@ class TripSerializer(serializers.ModelSerializer):
             'dest_lat', 'dest_lng', 'completed', 'multiplier', 'base_salary',
             'additionals', 'num_of_drops', 'start_date', 'end_date', 'is_completed',
         ]
+        
+class OngoingTripSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Trip
+        fields = ['vehicle_id', 'employee_id', 'helper_id', 'helper2_id', 'is_completed']
 
 class LoginSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):

@@ -1,8 +1,10 @@
 "use client";
+
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+import { toast } from "sonner";
 
 interface Trip {
   trip_id: number;
@@ -14,12 +16,8 @@ interface Trip {
       profile_image: string | null;
     };
   } | null;
-  helper: {
-    username: string;
-  } | null;
-  helper2: {
-    username: string;
-  } | null;
+  helper: { username: string } | null;
+  helper2: { username: string } | null;
   addresses: string[];
 }
 
@@ -31,11 +29,12 @@ const TripsInProgress = () => {
   useEffect(() => {
     const fetchTrips = async () => {
       try {
-        const res = await axios.get("http://localhost:8000/api/trips/");
+        const res = await axios.get(`${process.env.NEXT_PUBLIC_DOMAIN}/trips/`);
         const ongoingTrips = res.data.filter((trip: Trip) => trip.is_completed === false);
         setTrips(ongoingTrips);
       } catch (err) {
         console.error("Failed to fetch trips:", err);
+        toast.error("Failed to load trips.");
       } finally {
         setLoading(false);
       }
@@ -50,8 +49,8 @@ const TripsInProgress = () => {
 
   return (
     <div className="wrapper w-full max-w-5xl rounded-2xl shadow-lg p-6 mb-8 bg-black/40">
-      <div className="flex justify-center items-center mx-3 gap-2">
-        <h2 className="capitalize text-2xl font-semibold flex items-center gap-2 mb-4 text-black/40">
+      <div className="flex justify-center items-center mx-3 gap-2 mb-4">
+        <h2 className="capitalize text-2xl font-semibold text-black/40 flex items-center gap-2">
           <Image
             src="/truck.png"
             alt="Truck"
@@ -68,18 +67,22 @@ const TripsInProgress = () => {
           <p className="text-white text-center text-lg w-full">Loading trips...</p>
         ) : trips.length > 0 ? (
           trips.map((trip) => {
-            const lastDestination = trip.addresses?.[trip.addresses.length - 1] || "Unknown";
+            const totalDrops = trip.addresses?.length || 0;
+            const lastAddress = trip.addresses?.[totalDrops - 1] || "Unknown";
+            const shortAddress = lastAddress
+              .split(",")
+              .slice(0, 2)
+              .map((s) => s.trim())
+              .join(", ");
             const driverName = trip.employee?.user?.username || "None";
-            const helperUsernames = [
-              trip.helper?.username,
-              trip.helper2?.username,
-            ].filter(Boolean);
-            const helpers = helperUsernames.length > 0 ? helperUsernames.join(", ") : "None";
+            const helpers = [trip.helper?.username, trip.helper2?.username]
+              .filter(Boolean)
+              .join(", ") || "None";
 
             return (
               <div
                 key={trip.trip_id}
-                className="flex flex-col items-center justify-center bg-[#668743] hover:bg-[#345216] transition rounded-lg p-2 py-1 cursor-pointer w-full sm:w-[48%] md:w-[32%] lg:w-[30%]"
+                className="flex flex-col items-start justify-start bg-[#668743] hover:bg-[#345216] transition rounded-lg p-2 py-1 cursor-pointer w-full sm:w-[48%] md:w-[32%] lg:w-[30%]"
                 onClick={() =>
                   trip.employee && handleTripClick(trip.employee.employee_id, trip.trip_id)
                 }
@@ -87,9 +90,7 @@ const TripsInProgress = () => {
                 <div className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center border-2 border-white">
                   <Image
                     src={
-                      trip.employee?.user?.profile_image
-                        ? trip.employee.user.profile_image
-                        : "/accounts.png"
+                      trip.employee?.user?.profile_image || "/accounts.png"
                     }
                     alt="Profile"
                     width={40}
@@ -97,17 +98,17 @@ const TripsInProgress = () => {
                     className="rounded-full object-cover opacity-90"
                   />
                 </div>
-                <span className="mt-1 text-xs text-white/90 text-center leading-tight">
-                  Last Drop to <strong>{lastDestination}</strong>
-                  <br />
-                  by Driver: <strong>{driverName}</strong><br />
+                <span className="mt-1 text-xs text-white/90 text-left leading-tight w-full">
+                  <strong>{totalDrops}</strong> Drop{totalDrops !== 1 ? "s" : ""} <br />
+                  Final Drop to <strong>{shortAddress}</strong> <br />
+                  by Driver: <strong>{driverName}</strong> <br />
                   and Helper/s: <strong>{helpers}</strong>
                 </span>
               </div>
             );
           })
         ) : (
-          <p className="text-black text-center text-lg w-full">No Current Trip/s.</p>
+          <p className="text-white text-center text-lg w-full">No Current Trip/s.</p>
         )}
       </div>
     </div>

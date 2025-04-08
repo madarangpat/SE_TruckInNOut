@@ -3,7 +3,7 @@ import { getSession } from "@/auth/session";
 export async function getEmployeeProfile(): Promise<Employee> {
   const session = await getSession();
 
-  const res = await fetch(`${process.env.DOMAIN}/employees/profile/`, {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_DOMAIN}/employees/profile/`, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${session?.access}`,

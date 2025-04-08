@@ -9,7 +9,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from .models import User, Administrator, Employee, Salary, Trip, Vehicle, PasswordReset, SalaryConfiguration, Total
 from .serializers import (
-    UserSerializer, AdministratorSerializer, EmployeeSerializer,
+    UserSerializer, AdministratorSerializer, EmployeeSerializer, OngoingTripSerializer,
     SalarySerializer, TripSerializer, VehicleSerializer, TotalSerializer,
     LoginSerializer, ResetPasswordRequestSerializer, ResetPasswordSerializer, SalaryConfigurationSerializer, UserProfileSerializer
 )
@@ -1490,5 +1490,24 @@ def update_completed_status(request):
         return Response({"success": "Trip completion updated"})
     except Trip.DoesNotExist:
         return Response({"error": "Trip not found"}, status=404)
+    
+@api_view(['POST'])
+@permission_classes([AllowAny])  # Change this to IsAdminUser if you want to restrict access
+def reset_completed_trip_counts(request):
+    today = datetime.now().date()
+
+    if today.weekday() != 5:  # 5 = Saturday
+        return Response({"message": "This operation is only allowed on Saturdays."}, status=400)
+
+    Employee.objects.update(completed_trip_count=0)
+    return Response({"message": "✅ Completed trip counts have been reset for all employees."})
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def ongoing_trips(request):
+    ongoing = Trip.objects.filter(is_completed=False)
+    serializer = OngoingTripSerializer(ongoing, many=True)
+    return Response(serializer.data)
 
 

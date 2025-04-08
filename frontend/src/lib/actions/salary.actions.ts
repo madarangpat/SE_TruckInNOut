@@ -3,7 +3,7 @@
 import { getSession } from "@/auth/session";
 
 async function getSalaryConfigurations(): Promise<SalConfig[]> {
-  const url = `${process.env.DOMAIN}/salary-configurations/`;
+  const url = `${process.env.NEXT_PUBLIC_DOMAIN}/salary-configurations/`;
   const res = await fetch(url, {
     cache: "no-store",
     method: "GET",
@@ -20,7 +20,7 @@ async function getSalaryConfigurations(): Promise<SalConfig[]> {
 }
 
 async function updateSalaryConfiguration(body: BodyInit, id: number) {
-  const url = `${process.env.DOMAIN}/salary-configurations/${id}/`;
+  const url = `${process.env.NEXT_PUBLIC_DOMAIN}/salary-configurations/${id}/`;
   const requestOptions: RequestInit = {
     method: "PATCH",
     headers: {

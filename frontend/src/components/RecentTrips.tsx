@@ -1,7 +1,9 @@
 "use client";
+
 import React, { useEffect, useState } from "react";
-import Image from "next/image";
 import axios from "axios";
+import Image from "next/image";
+import { toast } from "sonner";
 
 interface Trip {
   trip_id: number;
@@ -18,12 +20,8 @@ interface Trip {
       profile_image: string | null;
     };
   };
-  helper: {
-    username: string;
-  } | null;
-  helper2: {
-    username: string;
-  } | null;
+  helper: { username: string } | null;
+  helper2: { username: string } | null;
   addresses: string[];
   clients: string[];
 }
@@ -35,11 +33,12 @@ const RecentTrips = () => {
   useEffect(() => {
     const fetchTrips = async () => {
       try {
-        const res = await axios.get("http://localhost:8000/api/trips/");
+        const res = await axios.get(`${process.env.NEXT_PUBLIC_DOMAIN}/trips/`);
         const completedTrips = res.data.filter((trip: Trip) => trip.is_completed === true);
         setTrips(completedTrips);
       } catch (err) {
         console.error("Failed to fetch recent trips:", err);
+        toast.error("Failed to load recent trips.");
       } finally {
         setLoading(false);
       }
@@ -69,11 +68,17 @@ const RecentTrips = () => {
         ) : trips.length > 0 ? (
           trips.map((trip) => {
             const driverName = trip.employee?.user.username || "None";
-            const helperUsernames = [
-              trip.helper?.username,
-              trip.helper2?.username,
-            ].filter(Boolean);
+            const helperUsernames = [trip.helper?.username, trip.helper2?.username].filter(Boolean);
             const helpers = helperUsernames.length > 0 ? helperUsernames.join(", ") : "None";
+
+            const lastAddress =
+              trip.addresses?.[trip.addresses.length - 1]
+                ?.split(",")
+                .slice(0, 2)
+                .map((part) => part.trim())
+                .join(", ") || "N/A";
+
+            const lastClient = trip.clients?.[trip.clients.length - 1] || "Unknown";
 
             return (
               <div
@@ -81,7 +86,7 @@ const RecentTrips = () => {
                 className="wrappersmall2 flex flex-col sm:flex-row items-center justify-between p-4 bg-[#d9e0cc] text-black/80 rounded-lg mb-3 shadow-sm"
               >
                 <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left w-full">
-                  <div className="wrappersmall2 w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center border border-gray-500 overflow-hidden">
+                  <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center border border-gray-500 overflow-hidden">
                     <Image
                       src={trip.employee?.user.profile_image || "/accountsblk.png"}
                       alt="Profile"
@@ -101,16 +106,17 @@ const RecentTrips = () => {
                     </p>
 
                     <p className="text-sm bg-white/50 text-black px-3 py-1 rounded-md mt-1 w-full">
-                      <strong>Number of Drops:</strong> {trip.num_of_drops || "__________"}
+                      <strong>Number of Drops:</strong> {trip.num_of_drops || "—"}
                     </p>
 
                     <p className="text-sm bg-white/50 text-black px-3 py-1 rounded-md mt-1 w-full">
-                      <strong>Salary:</strong> {trip.base_salary || "___"}
+                      <strong>Salary:</strong> ₱{trip.base_salary || "—"}
                     </p>
+
                     <p className="text-sm bg-white/50 text-black px-3 py-1 rounded-md mt-1 w-full">
-                      <strong>Final Drop: </strong> 
-                      {trip.addresses && trip.addresses.length > 0 && trip.clients && trip.clients.length > 0
-                        ? `${trip.addresses[trip.addresses.length - 1]} (Client: ${trip.clients[trip.clients.length -1]})`
+                      <strong>Final Drop:</strong>{" "}
+                      {trip.addresses?.length > 0 && trip.clients?.length > 0
+                        ? `${lastAddress} (Client: ${lastClient})`
                         : "No address available"}
                     </p>
                   </div>

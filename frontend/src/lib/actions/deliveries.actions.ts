@@ -3,7 +3,7 @@
 import { getSession } from "@/auth/session";
 
 async function getRecentTrips() {
-  const url = `${process.env.DOMAIN}/trips/recent/`;
+  const url = `${process.env.NEXT_PUBLIC_DOMAIN}/trips/recent/`;
   const res = await fetch(url, {
     cache: "no-store",
     method: "GET",
@@ -21,7 +21,7 @@ async function getRecentTrips() {
 
 
 async function getOngoingTrips() {
-  const url = `${process.env.DOMAIN}/trips/ongoing/`; 
+  const url = `${process.env.NEXT_PUBLIC_DOMAIN}/trips/ongoing/`; 
   const res = await fetch(url, {
     cache: "no-store",
     method: "GET",
@@ -45,7 +45,7 @@ async function updateCompletedStatus(tripId: number, completed: boolean[]) {
     throw new Error("Unauthorized: No access token found");
   }
 
-  const url = `${process.env.DOMAIN}/trips/update-completed/`;
+  const url = `${process.env.NEXT_PUBLIC_DOMAIN}/trips/update-completed/`;
 
   const res = await fetch(url, {
     method: "POST",

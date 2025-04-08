@@ -9,6 +9,7 @@ import AddressAutoComplete from "@/components/AddressAutoComplete";
 import DriverDropdown from "@/components/DriverDropdown";
 import VehicleDropdown from "@/components/VehicleDropdown";
 import HelperDropdown from "@/components/HelperDropdown";
+import { toast } from "sonner";
 
 interface User {
   username: string;
@@ -47,6 +48,36 @@ const CreateNewTripPage = () => {
   const [startDate, setStartDate] = useState<Date | null>(new Date());
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [tripDestinations, setTripDestinations] = useState<GoogelAddress[]>([]);
+
+  const [busyEmployeeIds, setBusyEmployeeIds] = useState<number[]>([]);
+  const [busyVehicleIds, setBusyVehicleIds] = useState<number[]>([]);
+
+  useEffect(() => {
+    const fetchBusyAssignments = async () => {
+      try {
+        const res = await axios.get(`${process.env.NEXT_PUBLIC_DOMAIN}/ongoing-trips/`);
+        const trips = res.data;
+
+        const busyEmployees = new Set<number>();
+        const busyVehicles = new Set<number>();
+
+        trips.forEach((trip: any) => {
+          busyVehicles.add(trip.vehicle_id);
+          busyEmployees.add(trip.employee_id);
+          if (trip.helper_id) busyEmployees.add(trip.helper_id);
+          if (trip.helper2_id) busyEmployees.add(trip.helper2_id);
+        });
+
+        setBusyEmployeeIds(Array.from(busyEmployees));
+        setBusyVehicleIds(Array.from(busyVehicles));
+      } catch (err) {
+        console.error("Failed to fetch ongoing trip data", err);
+      }
+    };
+
+    fetchBusyAssignments();
+  }, []);
+
 
   // Update tripFormData whenever the dates change
   const handleStartDateChange = (date: Date | null) => {
@@ -97,47 +128,53 @@ const CreateNewTripPage = () => {
     end_date: endDate ? endDate.toISOString() : "",
   });
 
-  // Then immediately calculate and update the distances
-  // if (tripDestinations.length > 0) {
-  //   (async () => {
-  //     try {
-  //       const distances = [""];
-  //       let origin = { lat: 14.65889, lng: 121.10419 }; // Starting point
-
-  //       for (const destination of tripDestinations) {
-  //         const distance = await calculateDistance(origin, {
-  //           lat: destination.lat,
-  //           lng: destination.lng,
-  //         });
-  //         distances.push(distance.toString());
-  //         origin = { lat: destination.lat, lng: destination.lng }; // Previous destination becomes new origin
-  //       }
-
-  //       setTripFormData((prev) => ({ ...prev, distances }));
-  //     } catch (error) {
-  //       console.error("Error calculating distances:", error);
-  //     }
-  //   })();
-  // }
-
   const numOfDrops = tripFormData.addresses.length;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    console.log("Form submitted", { selectedVehicle, selectedEmployee, setSelectedHelper, selectedHelper2 });
-
     if (!selectedVehicle || !selectedEmployee) {
-      setError("Please select both a vehicle and an employee.");
+      toast.error("Please select both a vehicle and an employee.");
+      return;
+    }
+  
+    // Prevent duplicate helper selection
+    if (selectedHelper && selectedHelper2 && selectedHelper.employee_id === selectedHelper2.employee_id) {
+      toast.error("Helper 1 and Helper 2 cannot be the same person.");
+      return;
+    }
+  
+    // 👇 Check if employee/helper are already in an ongoing trip
+    try {
+      const ongoingRes = await axios.get(`${process.env.NEXT_PUBLIC_DOMAIN}/ongoing-trips/`);
+      const ongoingTrips = ongoingRes.data;
+  
+      const isDriverBusy = ongoingTrips.some(
+        (trip: any) => trip.employee_id === selectedEmployee.employee_id
+      );
+  
+      const isHelperBusy = selectedHelper &&
+        ongoingTrips.some((trip: any) => trip.helper_id === selectedHelper.employee_id || trip.helper2_id === selectedHelper.employee_id);
+  
+      const isHelper2Busy = selectedHelper2 &&
+        ongoingTrips.some((trip: any) => trip.helper_id === selectedHelper2.employee_id || trip.helper2_id === selectedHelper2.employee_id);
+  
+      if (isDriverBusy) {
+        toast.error("Selected driver is already part of an ongoing trip.");
+        return;
+      }
+  
+      if (isHelperBusy || isHelper2Busy) {
+        toast.error("One or both of the selected helpers are already part of an ongoing trip.");
+        return;
+      }
+    } catch (err) {
+      console.error("Error checking ongoing trips:", err);
+      toast.error("Failed to check ongoing trips. Try again.");
       return;
     }
 
-    // Ensure Helper 1 and Helper 2 are not the same
-    if (selectedHelper && selectedHelper2 && selectedHelper.employee_id === selectedHelper2.employee_id) {
-      setError("Helper 1 and Helper 2 cannot be the same person.");
-      return;
-    }
 
     const toNullable = (value: string) => (value === "" ? null : value);
 
@@ -177,15 +214,11 @@ const CreateNewTripPage = () => {
     try {
       console.log("payload before POST:", payload);
       const response = await axios.post(
-        "http://127.0.0.1:8000/api/register-trip/",
+        `${process.env.NEXT_PUBLIC_DOMAIN}/register-trip/`,
         payload
       );
       console.log("API Response:", response);
-      setSuccess("Trip successfully created!");
-
-      setTimeout(() => {
-        setSuccess(null);
-      }, 4000);
+      toast.success("Trip successfully created!", { duration: 4000 });
 
       setSelectedVehicle(null);
       setSelectedEmployee(null);
@@ -206,7 +239,7 @@ const CreateNewTripPage = () => {
       });
     } catch (error: any) {
       console.error("API Error:", error.response?.data);
-      setError(error.response?.data?.error || "Failed to create trip.");
+      toast.error(error.response?.data?.error || "Failed to create trip.");
     }
   };
 
@@ -397,27 +430,6 @@ const CreateNewTripPage = () => {
             </div>
           ))}
         </div>
-        {/*
-        /* DISTANCES ARRAY 
-        <div>
-          <h3 className="text-lg font-bold text-black/70">Distances</h3>
-          {tripFormData.distances.map((distance, index) => (
-            <div key={index} className="flex gap-2">
-              <input
-                type="number"
-                placeholder="Distance"
-                className="input-field text-black rounded placeholder:text-sm"
-                value={distance}
-                onChange={(e) => {
-                  const newDistances = [...tripFormData.distances];
-                  newDistances[index] = e.target.value;
-                  setTripFormData({ ...tripFormData, distances: newDistances });
-                }}
-              />
-            </div>
-          ))}
-        </div>
-          */}
         {/* USER LAT ARRAY */}
         <div>
           <h3 className="text-lg font-bold text-black/70">User Latitudes</h3>
@@ -432,42 +444,11 @@ const CreateNewTripPage = () => {
               }
             />
           </div>
-
-          {/* {tripFormData.user_lat.map((lat, index) => (
-            <div key={index} className="flex gap-2">
-              <input
-                type="number"
-                placeholder="User Latitude"
-                className="input-field text-black rounded"
-                value={lat}
-                onChange={(e) => {
-                  const newLatitudes = [...tripFormData.user_lat];
-                  newLatitudes[index] = e.target.value;
-                  setTripFormData({ ...tripFormData, user_lat: newLatitudes });
-                }}
-              />
-            </div>
-          ))} */}
         </div>
 
         {/* USER LNG ARRAY */}
         <div>
           <h3 className="text-lg font-bold text-black/70">User Longitudes</h3>
-          {/* {tripFormData.user_lng.map((lng, index) => (
-            <div key={index} className="flex gap-2">
-              <input
-                type="number"
-                placeholder="User Longitude"
-                className="input-field text-black rounded"
-                value={lng}
-                onChange={(e) => {
-                  const newLongitudes = [...tripFormData.user_lng];
-                  newLongitudes[index] = e.target.value;
-                  setTripFormData({ ...tripFormData, user_lng: newLongitudes });
-                }}
-              />
-            </div>
-          ))} */}
 
           <div className="flex gap-2">
             <input
@@ -611,16 +592,6 @@ const CreateNewTripPage = () => {
           </div>
         </div>
 
-        {/* Confirm and Clear Address Buttons */}
-        {/* <div className="flex justify-start space-x-4">
-          <button
-            type="button"
-            className="bg-[#668743] text-white px-6 py-2 rounded-lg hover:bg-[#345216] transition-all min-w-[160px] text-center"
-          >
-            Calculate Distance
-          </button>
-        </div> */}
-
         <button
           type="submit"
           className="w-full bg-[#668743] text-white py-3 rounded-lg text-lg font-semibold hover:bg-[#345216]"
@@ -634,9 +605,6 @@ const CreateNewTripPage = () => {
         >
           ← Back to Deliveries
         </button>
-
-        {error && <p className="text-red-500 mt-4">{error}</p>}
-        {success && <p className="text-green-600 mt-4">{success}</p>}
       </form>
     </div>
   );

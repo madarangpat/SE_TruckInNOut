@@ -3,7 +3,7 @@
 import { getSession } from "@/auth/session";
 
 async function getVehicles(): Promise<Vehicle[]> {
-  const url = `${process.env.DOMAIN}/vehicles/`;
+  const url = `${process.env.NEXT_PUBLIC_DOMAIN}/vehicles/`;
   const res = await fetch(url, {
     cache: "no-store",
     method: "GET",
@@ -20,7 +20,7 @@ async function getVehicles(): Promise<Vehicle[]> {
 }
 
 async function deleteVehicleByPlate(plateNumber: string): Promise<boolean> {
-  const url = `${process.env.DOMAIN}/delete-vehicle-by-plate/${plateNumber}/`;
+  const url = `${process.env.NEXT_PUBLIC_DOMAIN}/delete-vehicle-by-plate/${plateNumber}/`;
 
   const res = await fetch(url, {
     method: "DELETE",

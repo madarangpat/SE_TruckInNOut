@@ -12,7 +12,7 @@ async function login(
   username: string,
   password: string
 ): Promise<SessionPayload> {
-  const url = `${process.env.DOMAIN}/login/`;
+  const url = `${process.env.NEXT_PUBLIC_DOMAIN}/login/`;
   const requestOptions: RequestInit = {
     cache: "no-store",
     body: JSON.stringify({ username, password }),
@@ -34,7 +34,7 @@ async function login(
 }
 
 async function logout() {
-  const url = `${process.env.DOMAIN}/logout/`;
+  const url = `${process.env.NEXT_PUBLIC_DOMAIN}/logout/`;
 
   // Blacklists the tokens in the backend
 
@@ -57,7 +57,7 @@ async function logout() {
 }
 
 async function sendResetPasswordLink(email: string) {
-  const url = `${process.env.DOMAIN}/password-reset/`;
+  const url = `${process.env.NEXT_PUBLIC_DOMAIN}/password-reset/`;
 
   const requestOptions: RequestInit = {
     cache: "no-store",
@@ -80,7 +80,7 @@ async function resetPassword(
   confirmPassword: string,
   token: string
 ) {
-  const url = `${process.env.DOMAIN}/password-reset-confirm/${token}/`;
+  const url = `${process.env.NEXT_PUBLIC_DOMAIN}/password-reset-confirm/${token}/`;
 
   const requestOptions: RequestInit = {
     cache: "no-store",
@@ -102,7 +102,7 @@ async function resetPassword(
 }
 
 async function validateResetPasswordLink(token: string) {
-  const url = `${process.env.DOMAIN}/password-reset/validate/`;
+  const url = `${process.env.NEXT_PUBLIC_DOMAIN}/password-reset/validate/`;
 
   const requestOptions: RequestInit = {
     cache: "no-store",
