@@ -30,7 +30,7 @@ SECRET_KEY = 'django-insecure-s38_6_+onh1oz-7=k4h$)j!m2=5jjmt7ogablbsnshex4dqc%-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1","api.bigctruckingservices.org"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1","api.bigctruckingservices.org", "bigctruckingservices.org"]
 
 # settings.py
 SECURE_SSL_REDIRECT = False
@@ -43,12 +43,15 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3001",
     "http://localhost:8000",
     "http://127.0.0.1:3000",
-    "https://suited-severely-boa.ngrok-free.app"
+    "https://suited-severely-boa.ngrok-free.app",
+    "https://bigctruckingservices.org"
 ]
 
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "https://bigctruckingservices.org",
+    "https://api.bigctruckingservices.org"
 ]
 
 
