@@ -107,7 +107,7 @@ const SalaryBreakdown = () => {
         end_date: endDate.toISOString(),
       });
 
-      fetch(`http://localhost:8000/api/employee-trip-salaries/?${query}`)
+      fetch(`${process.env.NEXT_PUBLIC_DOMAIN}/employee-trip-salaries/?${query}`)
         .then((res) => res.json())
         .then((data) => {
           setTripSalaries(data);
@@ -117,7 +117,7 @@ const SalaryBreakdown = () => {
   }, [selectedEmployee, startDate, endDate]);
 
   useEffect(() => {
-    fetch("http://localhost:8000/api/employees/")
+    fetch(`${process.env.NEXT_PUBLIC_DOMAIN}/employees/`)
       .then((response) => response.json())
       .then((data) => {
         if (Array.isArray(data)) {
