@@ -31,7 +31,6 @@ const DriverDropdown: React.FC<DriverDropdownProps> = ({ onSelect }) => {
     const fetchEmployees = async () => {
       try {
         const response = await axios.get(
-          // "http://127.0.0.1:8000/api/employees/"
           `${process.env.NEXT_PUBLIC_DOMAIN}/employees/` 
         ); // Adjust the API URL
         const data: Employee[] = response.data; // The response is typed as Employee[]
