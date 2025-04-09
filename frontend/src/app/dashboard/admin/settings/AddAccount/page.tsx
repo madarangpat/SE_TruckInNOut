@@ -168,7 +168,7 @@ const AddAccountPage = () => {
       }
 
       const response = await axios.post(
-        "http://127.0.0.1:8000/api/register/",
+        `${process.env.NEXT_PUBLIC_DOMAIN}/register/`,
         data,
         {
           headers: {

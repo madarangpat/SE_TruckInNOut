@@ -24,7 +24,7 @@ const DeleteAccountClient = ({ users }: { users: User[] }) => {
     }
   
     try {
-        const res = await fetch(`http://127.0.0.1:8000/api/delete-user-by-username/${selectedUser.username}/`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_DOMAIN}/delete-user-by-username/${selectedUser.username}/`, {
             method: "DELETE",
         });
           

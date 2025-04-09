@@ -24,7 +24,7 @@ const DeleteVehicleClient = ({ vehicles }: { vehicles: Vehicle[] }) => {
 
     try {
       const res = await fetch(
-        `http://127.0.0.1:8000/api/delete-vehicle-by-plate/${selectedVehicle.plate_number}/`,
+        `${process.env.NEXT_PUBLIC_DOMAIN}/delete-vehicle-by-plate/${selectedVehicle.plate_number}/`,
         {
           method: "DELETE",
         }

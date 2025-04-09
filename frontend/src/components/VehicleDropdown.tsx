@@ -25,7 +25,7 @@ const VehicleDropdown: React.FC<VehicleDropdownProps> = ({ onSelect }) => {
   useEffect(() => {
     const fetchVehicles = async () => {
       try {
-        const response = await axios.get("http://127.0.0.1:8000/api/vehicles/");
+        const response = await axios.get(`${process.env.NEXT_PUBLIC_DOMAIN}/vehicles/`);
         const data: Vehicle[] = response.data;
         setVehicles(data);
       } catch (error) {
