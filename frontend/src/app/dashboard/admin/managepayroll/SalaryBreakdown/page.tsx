@@ -155,7 +155,7 @@ const SalaryBreakdown = () => {
     }
   
     try {
-      await axios.post(`${process.env.NEXT_PUBLIC_DOMAIN}/api/update-salary-configs/`, {
+      await axios.post(`${process.env.NEXT_PUBLIC_DOMAIN}/update-salary-configs/`, {
         username: selectedEmployee.user.username,
         start_date: startDate.toISOString(),
         end_date: endDate.toISOString(),
