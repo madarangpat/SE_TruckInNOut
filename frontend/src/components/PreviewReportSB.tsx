@@ -23,7 +23,7 @@ const PreviewReportSB: React.FC<Props> = ({ employee, start, end, onClose }) => 
         });
 
         const response = await fetch(
-          `http://localhost:8000/api/generate-pdf/salary-breakdown/?${params}`,
+          `${process.env.NEXT_PUBLIC_DOMAIN}/generate-pdf/salary-breakdown/?${params}`,
           { method: "GET" }
         );
 

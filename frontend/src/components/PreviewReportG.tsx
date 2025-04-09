@@ -21,7 +21,7 @@ const PreviewReportG: React.FC<Props> = ({ start, end, onClose }) => {
         });
 
         const response = await fetch(
-          `http://localhost:8000/api/generate-pdf/gross-preview/?${params}`
+          `${process.env.NEXT_PUBLIC_DOMAIN}/generate-pdf/gross-preview/?${params}`
         );
 
         if (!response.ok) throw new Error("Failed to fetch gross payroll PDF preview");

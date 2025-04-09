@@ -56,7 +56,7 @@ const MapsPage = () => {
   useEffect(() => {
     const fetchTrip = async () => {
       try {
-        const res = await axios.get(`http://localhost:8000/api/trips/by-trip-id/${tripId}/`);
+        const res = await axios.get(`${process.env.NEXT_PUBLIC_DOMAIN}/trips/by-trip-id/${tripId}/`);
         setTrip(res.data);
         console.log("✅ Trip fetched by ID:", res.data);
       } catch (err) {
@@ -78,7 +78,7 @@ const MapsPage = () => {
     const fetchLiveLocation = async () => {
       try {
         const res = await axios.get(
-          `http://localhost:8000/api/employees/location/${employeeId}/`
+          `${process.env.NEXT_PUBLIC_DOMAIN}/employees/location/${employeeId}/`
         );
         const { latitude, longitude } = res.data;
   

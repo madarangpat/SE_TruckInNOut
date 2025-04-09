@@ -25,7 +25,7 @@ const ViewGross = () => {
         end_date: grossEndDate.toISOString(),
       });
 
-      fetch(`http://localhost:8000/api/trips-by-date-range/?${query}`)
+      fetch(`${process.env.NEXT_PUBLIC_DOMAIN}/trips-by-date-range/?${query}`)
         .then((res) => res.json())
         .then((data) => {
           console.log("Fetched Trip Data:", data);
@@ -40,7 +40,7 @@ const ViewGross = () => {
     if (!grossStartDate || !grossEndDate) return;
 
     try {
-      const response = await fetch("http://localhost:8000/api/calculate_totals/", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_DOMAIN}/calculate_totals/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

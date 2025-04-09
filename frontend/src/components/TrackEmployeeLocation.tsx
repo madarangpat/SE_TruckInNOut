@@ -29,7 +29,7 @@ const TrackEmployeeLocation = ({ employeeId }: Props) => {
         console.log("📡 Got location:", latitude, longitude);
 
         try {
-            const res = await axios.post("http://localhost:8000/api/employees/update-location/", {
+            const res = await axios.post(`${process.env.NEXT_PUBLIC_DOMAIN}/employees/update-location/`, {
               employee_id: employeeId,
               latitude,
               longitude,

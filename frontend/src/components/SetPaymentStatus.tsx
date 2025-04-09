@@ -14,7 +14,7 @@ const SetPaymentStatus: React.FC = () => {
   const [status, setStatus] = useState<boolean>(false);
 
   useEffect(() => {
-    fetch("http://localhost:8000/api/employees/")
+    fetch(`${process.env.NEXT_PUBLIC_DOMAIN}/employees/`)
       .then((res) => res.json())
       .then((data) => {
         const formatted = data.map((emp: any) => ({
@@ -38,7 +38,7 @@ const SetPaymentStatus: React.FC = () => {
     if (selectedEmployeeId === null) return;
 
     try {
-      const response = await fetch(`http://localhost:8000/api/set-payment-status/`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_DOMAIN}/set-payment-status/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

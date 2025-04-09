@@ -24,7 +24,7 @@ const SalaryBreakdownPDF: React.FC<Props> = ({ employeeUsername, startDate, endD
       });
 
       // Fetch all trips
-      const response = await axios.get(`http://localhost:8000/api/employee-trip-salaries/?${params}`);
+      const response = await axios.get(`${process.env.NEXT_PUBLIC_DOMAIN}/employee-trip-salaries/?${params}`);
       const allTrips = response.data;
 
       // Filter only completed trips
@@ -37,7 +37,7 @@ const SalaryBreakdownPDF: React.FC<Props> = ({ employeeUsername, startDate, endD
 
       // 3. Download PDF
       const pdfResponse = await axios.get(
-        `http://localhost:8000/api/generate-pdf/salary-breakdown/?${params}`,
+        `${process.env.NEXT_PUBLIC_DOMAIN}/generate-pdf/salary-breakdown/?${params}`,
         { responseType: "blob" }
       );
 

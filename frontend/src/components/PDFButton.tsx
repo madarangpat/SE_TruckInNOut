@@ -3,7 +3,7 @@ import Image from "next/image";
 
 const PDFButton: React.FC = () => {
   const handleDownload = () => {
-    const pdfUrl = "http://localhost:8000/api/generate-pdf/";
+    const pdfUrl = `${process.env.NEXT_PUBLIC_DOMAIN}/generate-pdf/`;
     window.open(pdfUrl, "_blank");
   };
 

@@ -20,7 +20,7 @@ const GrossPayrollPDF: React.FC<GrossPayrollPDFProps> = ({
       return;
     }
 
-    const url = `http://localhost:8000/api/generate_gross_payroll_pdf/?totals_id=${totalsId}`;
+    const url = `${process.env.NEXT_PUBLIC_DOMAIN}/generate_gross_payroll_pdf/?totals_id=${totalsId}`;
     window.open(url, "_blank");
   };
 

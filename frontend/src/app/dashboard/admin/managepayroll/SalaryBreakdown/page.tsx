@@ -130,7 +130,7 @@ const SalaryBreakdown = () => {
   }, []);
 
   useEffect(() => {
-    fetch("http://localhost:8000/api/salary-config/")
+    fetch(`${process.env.NEXT_PUBLIC_DOMAIN}/salary-config/`)
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
@@ -155,7 +155,7 @@ const SalaryBreakdown = () => {
     }
   
     try {
-      await axios.post("http://localhost:8000/api/update-salary-configs/", {
+      await axios.post(`${process.env.NEXT_PUBLIC_DOMAIN}/api/update-salary-configs/`, {
         username: selectedEmployee.user.username,
         start_date: startDate.toISOString(),
         end_date: endDate.toISOString(),
@@ -272,7 +272,7 @@ const SalaryBreakdown = () => {
                   end_date: endDate.toISOString(),
                 });
 
-                const res = await fetch(`http://localhost:8000/api/completed-trips/?${query}`);
+                const res = await fetch(`${process.env.NEXT_PUBLIC_DOMAIN}/completed-trips/?${query}`);
                 if (!res.ok) throw new Error("Failed to fetch completed trips.");
 
                 const data = await res.json();
@@ -339,7 +339,7 @@ const SalaryBreakdown = () => {
                 }
 
                 try {
-                  await axios.post("http://localhost:8000/api/distribute-deductions/", {
+                  await axios.post(`${process.env.NEXT_PUBLIC_DOMAIN}/distribute-deductions/`, {
                     username: selectedEmployee.user.username,
                     start_date: startDate.toISOString(),
                     end_date: endDate.toISOString(),
