@@ -77,11 +77,12 @@ def update_salary_configurations(request):
         start_date = parse_datetime(data.get("start_date"))
         end_date = parse_datetime(data.get("end_date"))
 
-        sss_percentage = Decimal(data.get("sss_percentage", 0))
-        philhealth_percentage = Decimal(data.get("philhealth_percentage", 0))
-        pagibig_percentage = Decimal(data.get("pagibig_percentage", 0))
+        sss_contribution = Decimal(data.get("sss_contribution", 0))
+        philhealth_contribution = Decimal(data.get("philhealth_contribution", 0))
         pagibig_contribution = Decimal(data.get("pagibig_contribution", 0))
-        bonuses = Decimal(data.get("bonuses", 0))
+        sss_loan = Decimal(data.get("sss_loan", 0))
+        pagibig_loan = Decimal(data.get("pagibig_loan", 0))
+
 
         if not username or not start_date or not end_date:
             return JsonResponse({"error": "Missing required data"}, status=400)
@@ -101,23 +102,23 @@ def update_salary_configurations(request):
             # Update SalaryConfig
             config = SalaryConfiguration.objects.filter(trip=trip).first()
             if config:
-                config.sss_percentage = sss_percentage
-                config.philhealth_percentage = philhealth_percentage
-                config.pagibig_percentage = pagibig_percentage
+                config.sss_contribution = sss_contribution
+                config.philhealth_contribution = philhealth_contribution
                 config.pagibig_contribution = pagibig_contribution
+                config.sss_loan = sss_loan
+                config.pagibig_loan = pagibig_loan
                 config.save()
                 updated_configs += 1
 
             # Update Salary
             salary = Salary.objects.filter(trip=trip).first()
             if salary:
-                salary.bonuses = bonuses
-                salary.adjusted_salary = adjusted_salary
-                salary.sss_contribution = adjusted_salary * sss_percentage
-                salary.philhealth_contribution = adjusted_salary * philhealth_percentage
+                salary.adjusted_salary = trip.base_salary * trip.multiplier
+                salary.sss_contribution = sss_contribution
+                salary.philhealth_contribution = philhealth_contribution
                 salary.pagibig_contribution = pagibig_contribution
-                salary.sss_loan = 0  # or use a string like "Pending"
-                salary.pagibig_loan = 0  # or use "Pending"
+                salary.sss_loan = sss_loan
+                salary.pagibig_loan = pagibig_loan
                 salary.save()
                 updated_salaries += 1
 
@@ -1027,12 +1028,17 @@ class RegisterTripView(APIView):
         try:
             vehicle = Vehicle.objects.get(pk=request.data["vehicle_id"])
             employee = Employee.objects.get(pk=request.data["employee_id"])
+            
             helper = None
             if request.data.get("helper_id"):
                 helper = Employee.objects.get(pk=request.data["helper_id"])
             helper2 = None
             if request.data.get("helper2_id"):
                 helper2 = Employee.objects.get(pk=request.data["helper2_id"])
+                
+            trip_origin = request.data.get("origin", "")
+            if not trip_origin:
+                trip_origin = None
 
             trip = Trip.objects.create(
                 vehicle=vehicle,
@@ -1050,11 +1056,14 @@ class RegisterTripView(APIView):
                 dest_lng=request.data.get("dest_lng", []),
                 completed=request.data.get("completed", []),
                 multiplier=request.data.get("multiplier"),
-                base_salary=request.data.get("base_salary"),
+                driver_base_salary=request.data.get("driver_base_salary"),
+                helper_base_salary=request.data.get("helper_base_salary"),
                 num_of_drops=request.data.get("num_of_drops"),
                 additionals=request.data.get("additionals"),
                 start_date=request.data.get("start_date"),
                 end_date=request.data.get("end_date"),
+                trip_origin=request.data.get("origin"),
+                trip_description=request.data.get("trip_description"),
                 
                 is_completed=False
             )
@@ -1511,3 +1520,9 @@ def ongoing_trips(request):
     return Response(serializer.data)
 
 
+@csrf_exempt
+def get_salary_config(request):
+    if request.method == "GET":
+        configs = SalaryConfiguration.objects.all()
+        return JsonResponse([model_to_dict(cfg) for cfg in configs], safe=False)
+    return JsonResponse({"error": "GET method only"}, status=405)

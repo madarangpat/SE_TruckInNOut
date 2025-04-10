@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import SettingsOverlayTwo from "@/components/SettingsOverlayTwo";
+import { toast } from "sonner";
 
 const DeleteAccountClient = ({ users }: { users: User[] }) => {
   const [showSettings, setShowSettings] = useState(false);
@@ -19,7 +20,7 @@ const DeleteAccountClient = ({ users }: { users: User[] }) => {
   const handleDeleteAccount = async () => {
     console.log(selectedUser)
     if (!selectedUser || !selectedUser.username) {
-      alert("No valid user selected.");
+      toast.warning("No valid user selected.");
       return;
     }
   
@@ -30,15 +31,15 @@ const DeleteAccountClient = ({ users }: { users: User[] }) => {
           
   
       if (res.ok) {
-        alert(`Deleted ${selectedUser.username}`);
+        toast.success(`Deleted ${selectedUser.username}`);
         setUserList(userList.filter((u) => u.username !== selectedUser.username));
         setSelectedUser(null);
         setShowOverlay(false);
       } else {
-        alert("Failed to delete account");
+        toast.warning("Failed to delete account");
       }
     } catch (error) {
-      alert("An error occurred");
+      toast.warning("An error occurred");
     }
   };
 

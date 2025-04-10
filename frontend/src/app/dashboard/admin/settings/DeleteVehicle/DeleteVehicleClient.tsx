@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import SettingsOverlayTwo from "@/components/SettingsOverlayTwo";
+import { toast } from "sonner";
 
 const DeleteVehicleClient = ({ vehicles }: { vehicles: Vehicle[] }) => {
   const [showSettings, setShowSettings] = useState(false);
@@ -18,7 +19,7 @@ const DeleteVehicleClient = ({ vehicles }: { vehicles: Vehicle[] }) => {
 
   const handleDeleteVehicle = async () => {
     if (!selectedVehicle?.plate_number) {
-      alert("No vehicle selected.");
+      toast.warning("No vehicle selected.");
       return;
     }
 
@@ -31,7 +32,7 @@ const DeleteVehicleClient = ({ vehicles }: { vehicles: Vehicle[] }) => {
       );
 
       if (res.ok) {
-        alert(`Deleted ${selectedVehicle.plate_number}`);
+        toast.success(`Deleted ${selectedVehicle.plate_number}`);
         setVehicleList(
           vehicleList.filter(
             (v) => v.plate_number !== selectedVehicle.plate_number
@@ -40,10 +41,10 @@ const DeleteVehicleClient = ({ vehicles }: { vehicles: Vehicle[] }) => {
         setSelectedVehicle(null);
         setShowOverlay(false);
       } else {
-        alert("Failed to delete vehicle");
+        toast.warning("Failed to delete vehicle");
       }
     } catch (error) {
-      alert("An error occurred");
+      toast.warning("An error occurred");
     }
   };
 
@@ -51,18 +52,18 @@ const DeleteVehicleClient = ({ vehicles }: { vehicles: Vehicle[] }) => {
     <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-10">
       <div className="wrapper w-full max-w-md p-6 sm:p-8 rounded-xl shadow-lg bg-black/20">
         {/* Header Section with Title and Logo */}
-          <div className="flex justify-between items-end mx-3 gap-2 mb-2">
-            <h2 className="uppercase text-xl sm:text-3xl font-bold text-black/70">
-              Delete Account
-            </h2>
-            <Image
-              src="/tinowlabel2.png"
-              alt="Logo"
-              width={80}
-              height={80}
-              className="w-12 sm:w-16 md:w-20 h-auto opacity-100"
-            />
-          </div>
+        <div className="flex justify-between items-end mx-3 gap-2 mb-2">
+          <h2 className="uppercase text-xl sm:text-3xl font-bold text-black/70">
+            Delete Vehicle
+          </h2>
+          <Image
+            src="/tinowlabel2.png"
+            alt="Logo"
+            width={80}
+            height={80}
+            className="w-12 sm:w-16 md:w-20 h-auto opacity-100"
+          />
+        </div>
 
         <p className="px-3 text-start text-[8px] sm:text-base font-medium text-black/50 mb-4">
           Clearing the road for new journeys.
@@ -85,7 +86,10 @@ const DeleteVehicleClient = ({ vehicles }: { vehicles: Vehicle[] }) => {
                   onClick={() => handleVehicleSelect(vehicle)}
                   className="w-full text-left px-4 py-2 hover:bg-black/30 uppercase tracking-widest text-xs sm:text-sm"
                 >
-                  {vehicle.plate_number}
+                  {vehicle.plate_number}{" "}
+                  {vehicle.is_company_owned
+                    ? "(Company Owned)"
+                    : `(Subcon: ${vehicle.subcon_name})`}
                 </button>
               ))}
             </div>

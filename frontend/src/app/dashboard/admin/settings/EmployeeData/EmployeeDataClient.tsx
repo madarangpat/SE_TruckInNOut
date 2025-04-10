@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Image from "next/image";
 import SettingsOverlayTwo from "@/components/SettingsOverlayTwo";
+import { toast } from "sonner";
 
 const EmployeeDataClient = ({ users }: { users: User[] }) => {
   const [showSettings, setShowSettings] = useState(false);
@@ -21,6 +22,18 @@ const EmployeeDataClient = ({ users }: { users: User[] }) => {
       ...user
     });
     setDropdownOpen(false);
+  };
+
+  const filteredUsers = users.filter(user => user.role === "employee");
+
+  // Handle dropdown toggle
+  const handleDropdownToggle = () => {
+    if (filteredUsers.length === 0) {
+      // Display toast if no employees are found
+      toast.error("No employees available to select.");
+    } else {
+      setDropdownOpen(!dropdownOpen);
+    }
   };
 
   return (
@@ -45,7 +58,7 @@ const EmployeeDataClient = ({ users }: { users: User[] }) => {
             />
           </div>
         </div>
-        
+
         {/* Profile Image */}
         <div className="flex justify-center mb-3">
           <div className="w-24 sm:w-28 h-24 sm:h-28 bg-white rounded-full flex items-center justify-center border border-gray-300 shadow-lg relative overflow-hidden">
@@ -63,7 +76,7 @@ const EmployeeDataClient = ({ users }: { users: User[] }) => {
         {/* Select User Dropdown */}
         <div className="relative mb-4">
           <button
-            onClick={() => setDropdownOpen(!dropdownOpen)}
+            onClick={handleDropdownToggle}
             className="w-full px-4 py-2 bg-zinc-700/50 backdrop-blur-md text-white rounded-xl flex justify-between items-center shadow-md hover:bg-zinc-700 transition uppercase tracking-widest text-xs sm:text-sm"
           >
             {selectedUser || "Select User"}
@@ -72,13 +85,13 @@ const EmployeeDataClient = ({ users }: { users: User[] }) => {
 
           {dropdownOpen && (
             <div className="absolute w-full bg-white text-black mt-1 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto backdrop-blur-[10px]">
-              {users.map((user) => (
+              {filteredUsers.map((user) => (
                 <button
                   key={user.username}
                   onClick={() => handleUserSelect(user)}
                   className="w-full text-left px-4 py-2 hover:bg-black/30 uppercase tracking-widest text-xs sm:text-sm"
                 >
-                  {user.username} ({user.role})
+                  {user.username} ({user.employee_type})
                 </button>
               ))}
             </div>
@@ -88,19 +101,21 @@ const EmployeeDataClient = ({ users }: { users: User[] }) => {
         {/* User Information */}
         <div className="p-3 text-black/80 text-xs sm:text-sm">
           {userData ? (
-            Object.entries(userData).map(([key, value], index) => (
-              <div
-                key={index}
-                className="flex justify-between items-center py-2 border-b-2 border-black/70"
-              >
-                <span className="text-black/80 capitalize">
-                  {key.replace(/_/g, " ").replace(/([A-Z])/g, " $1")}
-                </span>
-                <span className="text-black text-xs sm:text-sm">
-                  {value?.toString() || "N/A"}
-                </span>
-              </div>
-            ))
+            Object.entries(userData)
+              .filter(([key]) => key !== "id" && key !== "profile_image") // Exclude id and profile_image
+              .map(([key, value], index) => (
+                <div
+                  key={index}
+                  className="flex justify-between items-center py-2 border-b-2 border-black/70"
+                >
+                  <span className="text-black/80 capitalize">
+                    {key.replace(/_/g, " ").replace(/([A-Z])/g, " $1")}
+                  </span>
+                  <span className="text-black text-xs sm:text-sm">
+                    {value?.toString() || "N/A"}
+                  </span>
+                </div>
+              ))
           ) : (
             <div className="py-4 text-center text-black/60">
               Select a user to view details

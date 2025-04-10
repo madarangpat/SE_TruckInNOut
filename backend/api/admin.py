@@ -57,8 +57,8 @@ class VehicleAdmin(admin.ModelAdmin):
 #=============================================================================================================================================================================================================
 class TripAdmin(admin.ModelAdmin):
     list_display = (
-        'trip_id', 'vehicle', 'employee', 'helper', 'helper2',  'base_salary', 'additionals',
-        'num_of_drops',  'user_lat', 'user_lng', 'start_date', 'end_date'
+        'trip_id', 'vehicle', 'employee', 'helper', 'helper2',  'driver_base_salary', 'helper_base_salary', 'additionals',
+        'num_of_drops',  'user_lat', 'user_lng', 'start_date', 'end_date', 'trip_description', 'trip_origin'
     )
     list_filter = ('vehicle', 'employee', 'helper', 'helper2')
     search_fields = (

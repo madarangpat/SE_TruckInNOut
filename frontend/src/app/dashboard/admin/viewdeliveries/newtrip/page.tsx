@@ -29,7 +29,7 @@ interface Employee {
   user: User;
 }
 
-interface GoogelAddress {
+interface GoogleAddress {
   address: string;
   lat: number;
   lng: number;
@@ -42,12 +42,13 @@ const CreateNewTripPage = () => {
   const [selectedHelper2, setSelectedHelper2] = useState<Employee | null>(null);
 
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const router = useRouter();
 
   const [startDate, setStartDate] = useState<Date | null>(new Date());
   const [endDate, setEndDate] = useState<Date | null>(null);
-  const [tripDestinations, setTripDestinations] = useState<GoogelAddress[]>([]);
+  const [tripDestinations, setTripDestinations] = useState<GoogleAddress[]>([]);
+
+  const [tripOrigin, setTripOrigin] = useState<GoogleAddress | null>(null);
 
   const [busyEmployeeIds, setBusyEmployeeIds] = useState<number[]>([]);
   const [busyVehicleIds, setBusyVehicleIds] = useState<number[]>([]);
@@ -106,10 +107,13 @@ const CreateNewTripPage = () => {
     dest_lng: string[]; 
     completed: boolean[];
     multiplier: string;
-    base_salary: string;
+    driver_base_salary: string;
+    helper_base_salary: string;
     additionals: string;
     start_date: string;
     end_date: string;
+    origin: string;
+    trip_description: string[];
   }
 
   const [tripFormData, setTripFormData] = useState<TripFormData>({
@@ -122,10 +126,13 @@ const CreateNewTripPage = () => {
     dest_lng: [""],
     completed: [false],
     multiplier: "",
-    base_salary: "",
+    driver_base_salary: "",
+    helper_base_salary: "",
     additionals: "",
     start_date: startDate ? startDate.toISOString() : "",
     end_date: endDate ? endDate.toISOString() : "",
+    origin: "",
+    trip_description: [],
   });
 
   const numOfDrops = tripFormData.addresses.length;
@@ -138,6 +145,41 @@ const CreateNewTripPage = () => {
       toast.error("Please select both a vehicle and an employee.");
       return;
     }
+
+    if (!tripOrigin || !tripFormData.trip_description.length) {
+      toast.error("Please provide the trip origin and a description.");
+      return;
+    }
+
+    if (!tripFormData.multiplier) {
+      toast.error("Please provide a multiplier.");
+      return;
+    }
+
+    if (!tripFormData.driver_base_salary) {
+      toast.error("Please provide the driver base salary.");
+      return;
+    }
+
+    if (!tripFormData.end_date) {
+      toast.error("Please provide an end date for the trip.");
+      return;
+    }
+
+    if (
+      (selectedHelper || selectedHelper2) && !tripFormData.helper_base_salary
+    ) {
+      toast.error("Please provide a base salary for the helper(s).");
+      return;
+    }
+
+    // If helper base salary is provided but no helpers are selected
+  if (
+    tripFormData.helper_base_salary && !selectedHelper && !selectedHelper2
+  ) {
+    toast.error("Please select helpers if you have provided a base salary for them.");
+    return;
+  }
   
     // Prevent duplicate helper selection
     if (selectedHelper && selectedHelper2 && selectedHelper.employee_id === selectedHelper2.employee_id) {
@@ -195,11 +237,16 @@ const CreateNewTripPage = () => {
       dest_lat: [tripDestinations.map((dest) => dest.lat.toString())],
       dest_lng: [tripDestinations.map((dest) => dest.lng.toString())],
       completed: tripFormData.completed,
+      origin: tripOrigin,
+      trip_description: tripFormData.trip_description,
       multiplier: tripFormData.multiplier
         ? parseFloat(tripFormData.multiplier)
         : null,
-      base_salary: tripFormData.base_salary
-        ? parseFloat(tripFormData.base_salary)
+      driver_base_salary: tripFormData.driver_base_salary
+        ? parseFloat(tripFormData.driver_base_salary)
+        : null,
+      helper_base_salary: tripFormData.helper_base_salary
+        ? parseFloat(tripFormData.helper_base_salary)
         : null,
       additionals: tripFormData.additionals
         ? parseFloat(tripFormData.additionals)
@@ -207,8 +254,7 @@ const CreateNewTripPage = () => {
         start_date: new Date(tripFormData.start_date).toISOString().split("T")[0],
         end_date: toNullable(tripFormData.end_date)
           ? new Date(tripFormData.end_date).toISOString().split("T")[0]
-          : null,
-        
+          : null,       
     };
 
     try {
@@ -220,8 +266,15 @@ const CreateNewTripPage = () => {
       console.log("API Response:", response);
       toast.success("Trip successfully created!", { duration: 4000 });
 
-      setSelectedVehicle(null);
+      router.push("/dashboard/admin/viewdeliveries");
+
+      setSelectedVehicle(null);     
       setSelectedEmployee(null);
+      setSelectedHelper(null);
+      setSelectedHelper2(null);
+      setTripOrigin(null);
+      setTripDestinations([]);
+      setEndDate(null);
       setTripFormData({
         addresses: [""],
         clients: [""],
@@ -232,11 +285,15 @@ const CreateNewTripPage = () => {
         dest_lng: [""],
         completed: [false],
         multiplier: "",
-        base_salary: "",
+        driver_base_salary: "",
+        helper_base_salary: "",
         additionals: "",
         start_date: new Date().toISOString().split("T")[0],
         end_date: "",
+        origin: "",
+        trip_description: [],
       });
+      setTripDestinations([]);
     } catch (error: any) {
       console.error("API Error:", error.response?.data);
       toast.error(error.response?.data?.error || "Failed to create trip.");
@@ -327,6 +384,37 @@ const CreateNewTripPage = () => {
           style={{ marginTop: "2px" }}
           disabled
         />
+
+        {/* TRIP ORIGIN */}
+        
+        <div className="flex flex-col gap-2">
+          <h3 className="text-lg font-bold text-black/70">Trip Origin</h3>
+          <div className="flex">
+            <AddressAutoComplete
+              onSelect={({ address, lat, lng }) => {
+                setTripOrigin({address : address, lat : lat, lng : lng})
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Trip Description */}
+        <div className="text-black">
+          <h3 className="text-lg font-bold text-black/70">Trip Description: </h3>
+            <input
+              type="text"
+              value={tripFormData.trip_description.join(", ")} // Show selected descriptions
+              onChange={(e) => {
+                setTripFormData((prevData) => ({
+                  ...prevData,
+                  trip_description: e.target.value.split(", ").map((desc) => desc.trim()), // Update trip_description state
+                }));
+              }}
+              placeholder="Frozen, Chilled, Dry, Skin"
+              className="input-field text-black rounded "
+            />   
+        </div>
+
 
         {/* ADDRESS ARRAY */}
         <div>
@@ -530,17 +618,31 @@ const CreateNewTripPage = () => {
           }
         />
 
-        {/* Base Salary */}
-        <h3 className="text-lg font-bold text-black/70">Base Salary</h3>
+        {/* Driver Base Salary */}
+        <h3 className="text-lg font-bold text-black/70">Driver Base Salary</h3>
         <input
           type="number"
           step="0.01"
-          placeholder="Base Salary"
+          placeholder="Driver Base Salary"
           className="input-field text-black rounded placeholder:text-sm"
           style={{ marginTop: "4px" }}
-          value={tripFormData.base_salary}
+          value={tripFormData.driver_base_salary}
           onChange={(e) =>
-            setTripFormData({ ...tripFormData, base_salary: e.target.value })
+            setTripFormData({ ...tripFormData, driver_base_salary: e.target.value })
+          }
+        />
+
+        {/* Helper Base Salary */}
+        <h3 className="text-lg font-bold text-black/70">Helper Base Salary</h3>
+        <input
+          type="number"
+          step="0.01"
+          placeholder="Helper Base Salary"
+          className="input-field text-black rounded placeholder:text-sm"
+          style={{ marginTop: "4px" }}
+          value={tripFormData.helper_base_salary}
+          onChange={(e) =>
+            setTripFormData({ ...tripFormData, helper_base_salary: e.target.value })
           }
         />
 

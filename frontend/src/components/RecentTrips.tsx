@@ -48,7 +48,7 @@ const RecentTrips = () => {
   }, []);
 
   return (
-    <div className="wrapper w-full max-w-5xl rounded-2xl shadow-lg p-6 bg-black/40">
+    <div className="wrapper w-full max-w-5xl rounded-2xl shadow-lg p-6 bg-black/40 mb-8">
       <div className="flex justify-center items-center mx-3 gap-2">
         <h2 className="capitalize text-2xl font-semibold flex items-center gap-2 mb-4 text-black/40">
           <Image

@@ -5,13 +5,14 @@ import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import SettingsOverlayTwo from "@/components/SettingsOverlayTwo";
 import axios from "axios";
+import { toast } from "sonner";
 
 const AddVehiclePage = () => {
   const [formData, setFormData] = useState<{
     plate_number: string;
     vehicle_type: string;
     is_company_owned: boolean;
-    subcon_name?: string; // 👈 mark as optional
+    subcon_name?: string;
   }>({
     plate_number: "",
     vehicle_type: "Truck",
@@ -85,9 +86,11 @@ const AddVehiclePage = () => {
 
       setTimeout(() => setSuccess(null), 6000);
     } catch (error: any) {
-      console.error("API Error:", error.response?.data);
-      setError(error.response?.data?.error || "Failed to register vehicle.");
-      setTimeout(() => setError(null), 6000);
+      if(error.response?.data?.error?.includes("UNIQUE constraint failed")){
+        toast.error("The plate number already exists in the system.");
+      } else {
+        toast.error(error.response?.data?.error || "Failed to register vehicle.");
+      }
     }
   };
 
@@ -172,11 +175,11 @@ const AddVehiclePage = () => {
               type="text"
               name="plate_number"
               id="plate_number"
-              placeholder="Plate Number (e.g., ABC 1234)*"
+              placeholder="Plate Number (e.g., ABC 1234 or CCC 123)*"
               className="input-field"
               value={formData.plate_number}
               onChange={handleChange}
-              pattern="^[A-Z]{3} \d{4}$"
+              pattern="^[A-Z]{3} \d{3,4}$"
               title="Plate Number must follow the format ABC 1234"
               required
             />

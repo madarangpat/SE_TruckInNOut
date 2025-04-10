@@ -6,17 +6,17 @@ import SettingsOverlayTwo from "@/components/SettingsOverlayTwo";
 const CompanyInformation = () => {
   const [showSettings, setShowSettings] = useState(false);
 
-  // Company Information (Static for now, can be fetched from backend)
   const companyData = {
-    companyName: "Big C Trucking",
-    companyAddress: "456 Freight Lane, Industrial Park, Metro City",
-    contactNumber: "+1 987 654 3210",
-    email: "info@bigctrucking.com",
-    website: "www.bigctrucking.com",
-    taxId: "TIN-789-456-123",
-    registrationNo: "REG-456123789",
+    companyName: "BIG C TRUCKING SERVICES",
+    companyAddress: "983 J. P. Rizal St, Marikina, 1800 Metro Manila",
+    contactNumber: "09173894034 /89486652",
+    email: "bigctruckingservices@yahoo.com",
+    website: "bigctruckingservices.org",
+    tinNo: "761-838-706-000",
+    dti: "Business Name No. 1906178",
+    businessPermit: "",
     industryType: "Freight & Logistics",
-    established: "1998",
+    established: "2018",
   };
 
   return (
@@ -24,28 +24,19 @@ const CompanyInformation = () => {
       <div className="wrapper w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl p-6 sm:p-8 rounded-xl shadow-lg bg-black/20">
         {/* Company Name at the Top */}
         <h1 className="text-center text-lg sm:text-xl md:text-2xl font-semibold text-black/70 mb-4 tracking-[0.1em]">
-          {companyData.companyName} Company
+          {companyData.companyName}
         </h1>
 
         {/* Company Logo (Rectangular Frame) */}
-        <div className="w-full h-24 sm:h-32 md:h-36 bg-black/20 flex items-center justify-center border-2 border-black/10 shadow-lg rounded-lg overflow-hidden mb-4">
+        <div className="flex justify-center mb-3">
           <Image
-            src="/tinowlabel2.png" // REPLACE WITH ACTUAL COMPANY LOGO PO HEHE
+            src="/bigc.png"
             alt="Company Logo"
-            width={100}
-            height={100}
-            className="object-contain"
+            width={200}
+            height={200}
+            className="flex items-center justify-center"
           />
         </div>
-
-        {/* Company Description Placeholder */}
-        <p className="text-center text-xs sm:text-sm text-black/60 italic mb-5 px-4 sm:px-10">
-          &quot;A trusted name in freight and logistics, delivering excellence
-          since 1998.&quot;
-        </p>
-        <p className="text-center text-xs sm:text-sm text-black/60 italic mt-1 mb-5 px-4 sm:px-10">
-          *REPLACE WITH ACTUAL COMPANY DESCRIPTION*
-        </p>
 
         {/* Company Information (View-Only) */}
         <div className="p-3 text-black/80 text-xs sm:text-sm">

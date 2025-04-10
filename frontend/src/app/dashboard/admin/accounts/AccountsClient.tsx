@@ -1,11 +1,18 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { updateUserData } from "@/lib/actions/user.actions";
 import { PencilIcon } from "lucide-react";
 import { toast } from "sonner";
+
+// Cellphone number validation function
+const validateCellphoneNumber = (cellphone_no: string) => {
+  // Regular expression to match a valid Philippine cellphone number (11 digits, starts with 09)
+  const regex = /^09\d{9}$/;
+  return regex.test(cellphone_no);
+};
 
 const AccountsPage = ({ users }: { users: User[] }) => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -18,26 +25,26 @@ const AccountsPage = ({ users }: { users: User[] }) => {
   // Mark email and cellphone_no as editable
   const editableFields = ["email", "cellphone_no"];
 
+  // Remove profile_image from formFields
   const formFields = [
-    "username", 
-    "first_name", 
-    "last_name", 
-    "email", 
+    "username",
+    "first_name",
+    "last_name",
+    "email",
     "role",
-    "employee_type", 
-    "cellphone_no", 
-    "philhealth_no", 
-    "pag_ibig_no", 
-    "sss_no", 
-    "license_no", 
-    "profile_image", 
+    "employee_type",
+    "cellphone_no",
+    "philhealth_no",
+    "pag_ibig_no",
+    "sss_no",
+    "license_no",
   ];
 
   const hasChanges =
-  tempData &&
-  selectedUser &&
-  (tempData.email !== selectedUser.email ||
-    tempData.cellphone_no !== selectedUser.cellphone_no);
+    tempData &&
+    selectedUser &&
+    (tempData.email !== selectedUser.email ||
+      tempData.cellphone_no !== selectedUser.cellphone_no);
 
   const handleUserSelect = (user: User) => {
     console.log("Selected user:", user); // 🔍 Add this
@@ -77,18 +84,24 @@ const AccountsPage = ({ users }: { users: User[] }) => {
   const handleSaveChanges = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!selectedUser || !tempData) return;
-  
+
+    // Validate cellphone number
+    if (tempData.cellphone_no && !validateCellphoneNumber(tempData.cellphone_no)) {
+      toast.error("Invalid cellphone number. It must follow the local format: 0917XXXXXXX (11 digits starting with 09).");
+      return;
+    }
+
     // Ensure you have the userId, it should come from selectedUser
-    const userId = selectedUser.id;  // Assuming `id` is the user's unique identifier
-    console.log("To be updated profile: ",userId);
+    const userId = selectedUser.id; // Assuming `id` is the user's unique identifier
+    console.log("To be updated profile: ", userId);
     try {
       // Call updateUserData with userId, email, and cellphone_no
       await updateUserData({
-        userId,  // Pass the userId
+        userId, // Pass the userId
         email: tempData.email,
-        cellPhoneNo: tempData.cellphone_no,
+        cellphone_no: tempData.cellphone_no,
       });
-  
+
       toast.success("Profile updated successfully!");
     } catch (error) {
       console.error("Error updating profile:", error);
@@ -96,24 +109,10 @@ const AccountsPage = ({ users }: { users: User[] }) => {
     }
   };
 
-  // Handle Profile Image Change for selected user
-  const handleProfileImageChange = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setSelectedProfileImage(reader.result as string); // Update profile image with selected file
-      };
-      reader.readAsDataURL(file); // Read the image file
-    }
-  };
-
   return (
     <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-10">
       <div className="wrapper w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl p-6 sm:p-8 rounded-xl shadow-lg bg-black/20">
-        {/* Profile Image */}
+        {/* Profile Image Display (Removed from form) */}
         <div className="flex justify-center mb-3">
           <div className="w-24 sm:w-28 h-24 sm:h-28 bg-white rounded-full flex items-center justify-center border-2 border-black/10 shadow-lg relative overflow-hidden">
             <Image
@@ -125,23 +124,6 @@ const AccountsPage = ({ users }: { users: User[] }) => {
               unoptimized
             />
           </div>
-        </div>
-
-        {/* Profile Image Input for Selected User */}
-        <div className="mb-4 text-center">
-          <label
-            htmlFor="profileImage"
-            className="cursor-pointer text-blue-500"
-          >
-            Change Profile Image
-          </label>
-          <input
-            type="file"
-            id="profileImage"
-            accept="image/*"
-            className="hidden"
-            onChange={handleProfileImageChange}
-          />
         </div>
 
         {/* Select User Dropdown */}
@@ -225,12 +207,7 @@ const AccountsPage = ({ users }: { users: User[] }) => {
               <div className="flex justify-center space-x-4 mt-4">
                 <button
                   type="submit"
-                  disabled={!hasChanges}
-                  className={`py-1 px-3 text-sm rounded-lg ${
-                    hasChanges
-                      ? "bg-green-600 text-white hover:bg-green-700"
-                      : "bg-gray-400 text-white cursor-not-allowed"
-                  }`}
+                  className="py-1 px-3 text-sm rounded-lg bg-green-600 text-white hover:bg-green-700"
                 >
                   ✓ Save Changes
                 </button>

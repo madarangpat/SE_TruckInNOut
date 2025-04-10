@@ -29,11 +29,11 @@ async function getUsers(): Promise<User[]> {
 async function updateUserData({
   userId,
   email,
-  cellPhoneNo,
+  cellphone_no,
 }: {
   userId: string;
   email: string;
-  cellPhoneNo: string | undefined;
+  cellphone_no: string | undefined;
 }) {
   const url = `${process.env.NEXT_PUBLIC_DOMAIN}/users/profile/update/${userId}/`;
   const session = getSession();
@@ -42,7 +42,7 @@ async function updateUserData({
     cache: "no-store",
     body: JSON.stringify({
       email,
-      cellPhoneNo,
+      cellphone_no,
     }), // Remove the extra `{ user }` wrapper
     method: "PATCH",
     headers: {

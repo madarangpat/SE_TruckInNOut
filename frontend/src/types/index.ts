@@ -3,7 +3,7 @@ type BaseUser = {
   username: string;
   role: "super_admin" | "admin" | "employee" | "";
   profile_image?: string;
-  employee_type?: "Driver" | "Helper" | "Staff" | "" | undefined;
+  employee_type?: "Driver" | "Helper" | "" | undefined;
 };
 
 type User = BaseUser & {

@@ -6,7 +6,7 @@ from .views import (
     SalaryListView, SalaryDetailView,
     TripListView, TripDetailView, TripDetailAPIView,
     VehicleListView, 
-    RegisterUserView, RegisterVehicleView, RegisterTripView, get_recent_trips, employee_trip_salaries, update_salary_deductions, delete_vehicle_by_plate, update_completed_status,
+    RegisterUserView, RegisterVehicleView, RegisterTripView, get_recent_trips, employee_trip_salaries, update_salary_deductions, delete_vehicle_by_plate, update_completed_status, get_salary_config,
     SendPasswordLinkView, ResetPasswordView, get_employees, get_all_salary_configurations, calculate_totals, update_user_data, get_user_trip_data, current_user_employee,
     EmployeeCreateView, delete_user_by_username, UserProfileView, get_employee_profile,update_employee_profile, priority_queue_view, get_completed_trips_salaries, ongoing_trips, 
     ValidateResetPasswordTokenView, get_ongoing_trips, generate_gross_payroll_pdf, generate_salary_breakdown_pdf, update_user_profile, TotalViewSet, trips_by_date_range,
@@ -129,6 +129,8 @@ urlpatterns = [
     path('employees/reset-completed-trips/', reset_completed_trip_counts, name='reset_completed_trip_counts'),
 
     path('ongoing-trips/', ongoing_trips, name='ongoing-trips'),
+    
+    path('salary-config/', get_salary_config, name='salary-config'),
 
 ]
 

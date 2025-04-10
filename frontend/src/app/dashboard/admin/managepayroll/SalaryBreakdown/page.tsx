@@ -32,7 +32,6 @@ const SalaryBreakdown = () => {
   const [tripSalaries, setTripSalaries] = useState<any[]>([]);
 
   const [bale, setBale] = useState("");
-  const [bonuses, setBonuses] = useState("");
   const [cashAdvance, setCashAdvance] = useState("");
   const [cashBond, setCashBond] = useState("");
   const [charges, setCharges] = useState("");
@@ -70,10 +69,11 @@ const SalaryBreakdown = () => {
   };
   
   const salaryPlaceholders: Record<string, string> = {
-    sss_percentage: "SSS %",
-    philhealth_percentage: "PhilHealth %",
-    pag_ibig_percentage: "Pag-IBIG %",
+    sss_contribution: "SSS Contribution",
+    philhealth_contribution: "PhilHealth Contribution",
     pagibig_contribution: "Pag-IBIG Contribution",
+    pagibig_loan: "Pag-IBIG Loan",
+    sss_loan: "SSS Loan",
   };
 
   const handleClearAll = () => {
@@ -82,7 +82,6 @@ const SalaryBreakdown = () => {
     setEndDate(null);
     setTripSalaries([]);
     setBale("");
-    setBonuses("");
     setCashAdvance("");
     setCashBond("");
     setCharges("");
@@ -92,10 +91,11 @@ const SalaryBreakdown = () => {
     setDeductionsSet(false);
     setSalaryConfig({
       id: 0,
-      sss_percentage: "",
-      philhealth_percentage: "",
-      pag_ibig_percentage: "",
+      sss_contribution: "",
+      philhealth_contribution: "",
       pagibig_contribution: "",
+      pagibig_loan: "",
+      sss_loan: "",
     });
   };  
   
@@ -137,10 +137,11 @@ const SalaryBreakdown = () => {
           const config = data[0];
           setSalaryConfig({
             id: config.id,
-            sss_percentage: config.sss_percentage.toString(),
-            philhealth_percentage: config.philhealth_percentage.toString(),
-            pag_ibig_percentage: config.pag_ibig_percentage.toString(),
+            sss_contribution: config.sss_contribution.toString(),
+            philhealth_contribution: config.philhealth_contribution.toString(),
             pagibig_contribution: config.pagibig_contribution.toString(),
+            pagibig_loan: config.pagibig_loan.toString(),
+            sss_loan: config.sss_loan.toString(),
           });
           setOriginalConfig(data[0]);
         }
@@ -159,11 +160,11 @@ const SalaryBreakdown = () => {
         username: selectedEmployee.user.username,
         start_date: startDate.toISOString(),
         end_date: endDate.toISOString(),
-        sss_percentage: parseFloat(salaryConfig.sss_percentage) || 0,
-        philhealth_percentage: parseFloat(salaryConfig.philhealth_percentage) || 0,
-        pagibig_percentage: parseFloat(salaryConfig.pag_ibig_percentage) || 0,
+        sss_contribution: parseFloat(salaryConfig.sss_contribution) || 0,
+        philhealth_contribution: parseFloat(salaryConfig.philhealth_contribution) || 0,
         pagibig_contribution: parseFloat(salaryConfig.pagibig_contribution) || 0,
-        bonuses: parseFloat(bonuses) || 0,
+        pagibig_loan: parseFloat(salaryConfig.pagibig_loan) || 0,
+        sss_loan: parseFloat(salaryConfig.sss_loan) || 0,
       });
   
       toast.success("Salary configuration and bonuses applied to each completed trip!");
@@ -172,17 +173,6 @@ const SalaryBreakdown = () => {
       console.error("Failed to update salary configuration:", err);
       toast.error("Something went wrong while saving salary config.");
     }
-  };
-  
-
-  const hasConfigChanges = () => {
-    if (!originalConfig) return false;
-    return (
-      salaryConfig.sss !== originalConfig.sss ||
-      salaryConfig.philhealth !== originalConfig.philhealth ||
-      salaryConfig.pag_ibig !== originalConfig.pag_ibig ||
-      salaryConfig.pagibig_contribution !== originalConfig.pagibig_contribution
-    );
   };
 
   return (
@@ -397,22 +387,6 @@ const SalaryBreakdown = () => {
                   </div>
                 );
               })}
-
-
-              {/* Bonuses moved here */}
-              <div className="flex items-center gap-4">
-                <label className="w-36 text-sm font-semibold text-black">Bonuses:</label>
-                <input
-                  type="text"
-                  step="0.01"
-                  min="0"
-                  value={bonuses}
-                  onChange={(e) => setBonuses(e.target.value)}
-                  onKeyDown={handleNumericInputKeyDown}
-                  placeholder="Bonuses"
-                  className="flex-1 px-4 py-2 rounded-md text-black bg-white shadow"
-                />
-              </div>
             </div>
 
             <button

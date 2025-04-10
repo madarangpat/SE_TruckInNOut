@@ -24,13 +24,13 @@ function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
 
 interface Trip {
   trip_id: number;
-  clients: string[][];
-  dest_lat: string[][] | string[];
-  dest_lng: string[][] | string[];
-  completed: boolean[][];
-  user_latitude: string;
+  clients: string[][]; 
+  dest_lat: string[][] | string[]; 
+  dest_lng: string[][] | string[]; 
+  completed: boolean[][]; 
+  user_latitude: string; 
   user_longitude: string;
-  distance_traveled: string;
+  distance_traveled: string; 
   vehicle: {
     plate_number: string;
   };
@@ -52,6 +52,7 @@ const MapsPage = () => {
   const [liveUserLat, setLiveUserLat] = useState<number>(14.659143275880561);
   const [liveUserLng, setLiveUserLng] = useState<number>(121.10416933800876);
   const [currentCity, setcurrentCity] = useState<string | null>(null);
+  const [locationTimestamp, setLocationTimestamp] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchTrip = async () => {
@@ -71,30 +72,29 @@ const MapsPage = () => {
   }, [tripId]);
 
   const employeeId = trip?.employee.employee_id;
-  console.log(employeeId)
   useEffect(() => {
     if (!trip) return;
-  
+
     const fetchLiveLocation = async () => {
       try {
         const res = await axios.get(
           `${process.env.NEXT_PUBLIC_DOMAIN}/employees/location/${employeeId}/`
         );
-        const { latitude, longitude } = res.data;
-  
+        const { latitude, longitude, timestamp } = res.data;
+
         if (!isNaN(parseFloat(latitude)) && !isNaN(parseFloat(longitude))) {
           setLiveUserLat(parseFloat(latitude));
           setLiveUserLng(parseFloat(longitude));
           console.log("📡 Live location updated:", latitude, longitude);
+          setLocationTimestamp(timestamp); // Store the timestamp
         }
       } catch (err) {
         console.error("❌ Failed to fetch live employee location", err);
       }
     };
-  
+
     fetchLiveLocation();
   }, [trip, employeeId]);
-  
 
   const locations = useMemo(() => {
     if (!trip?.dest_lat || !trip?.dest_lng) return [];
@@ -183,8 +183,13 @@ const MapsPage = () => {
                   <strong>DESTINATION:</strong> ({formattedDistance} km)
                 </p>
                 <p className="text-sm bg-black/45 text-white px-2 py-1 rounded-md mt-1 w-full">
-                <strong>LOCATION:</strong>{" "}
-                {currentCity ? `${currentCity}` : `${liveUserLat}, ${liveUserLng}`}
+                  <strong>LOCATION:</strong>{" "}
+                  {currentCity ? `${currentCity}` : `${liveUserLat}, ${liveUserLng}`}{" "}
+                  {locationTimestamp && (
+                    <span className="ml-2 text-xs text-gray-300">
+                      (Last updated: {new Date(locationTimestamp).toLocaleString()})
+                    </span>
+                  )}
                 </p>
               </div>
             </div>

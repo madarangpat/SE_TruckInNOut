@@ -4,6 +4,7 @@ from django.core.validators import FileExtensionValidator
 from .validators import validate_image
 from .utils import remove_file_from_s3
 from storages.backends.s3boto3 import S3Boto3Storage
+from datetime import date
 
 class SalaryConfiguration(models.Model):
     salconfig_id = models.AutoField(primary_key=True)  # <- unique identifier
@@ -143,14 +144,13 @@ class Employee(models.Model):
 class Salary(models.Model):
     salary_id = models.AutoField(primary_key=True)
     trip = models.ForeignKey('Trip', on_delete=models.CASCADE)   
-    bonuses = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     
     #Monthly Deductions
     sss_contribution = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    sss_loan = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     philhealth_contribution = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     pagibig_contribution = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
     pagibig_loan = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    sss_loan = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     
     #Weekly Deductions
     bale = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
@@ -158,6 +158,7 @@ class Salary(models.Model):
     cash_bond = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     charges = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     others = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    others_description = models.CharField(max_length=50, null=True)
     adjusted_salary = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
      
     def __str__(self):
@@ -165,12 +166,21 @@ class Salary(models.Model):
 
 #==============================================================================================================================================
 # TRIP MODEL
-class Trip(models.Model):   
+class Trip(models.Model):    
+    TRIP_STATUS_CHOICES = [
+        ("Foul", "Foul"),
+        ("Confirmed", "Confirmed"),
+        ("Cancelled", "Cancelled"),
+        ("Ongoing", "Ongoing"),
+    ]
+     
     trip_id = models.AutoField(primary_key=True)
     vehicle = models.ForeignKey('Vehicle', on_delete=models.CASCADE)
     employee = models.ForeignKey('Employee', on_delete=models.SET_NULL, null=True, blank=True, related_name='trips')
     helper = models.ForeignKey('Employee', on_delete=models.SET_NULL, null=True, blank=True, related_name='helper_trips')
     helper2 = models.ForeignKey('Employee', on_delete=models.SET_NULL, null=True, blank=True, related_name='helper2_trips')
+    trip_origin = models.CharField(max_length=50, null=True, blank=True)
+    trip_description = models.CharField(max_length=50, null=True)
     
     user_lat = models.DecimalField(max_digits=12, decimal_places=6, null=True, blank=True)
     user_lng = models.DecimalField(max_digits=12, decimal_places=6, null=True, blank=True)
@@ -183,11 +193,14 @@ class Trip(models.Model):
     completed = models.JSONField(default=list, blank=True)
     
     multiplier = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    base_salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    driver_base_salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    helper_base_salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     additionals = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     num_of_drops = models.IntegerField(null=True, blank=True)
     start_date = models.DateField(null=True, blank=True)
-    end_date = models.DateField(null=True, blank=True)  
+    end_date = models.DateField(null=True, blank=True)
+    date_created = models.DateField(null=True, blank=True)  
+    trip_status = models.CharField(max_length=50, choices=TRIP_STATUS_CHOICES, null=True)
     
     is_completed = models.BooleanField(default=False)
     
@@ -197,6 +210,13 @@ class Trip(models.Model):
     def save(self, *args, **kwargs):
         is_new = self.pk is None
         was_completed = None
+        
+        # Set default trip status to "Ongoing" when the trip is being created
+        if not self.trip_status:
+            self.trip_status = "Ongoing"
+        
+        if not self.date_created:
+            self.date_created = date.today()
 
         if not is_new:
             previous = Trip.objects.get(pk=self.pk)

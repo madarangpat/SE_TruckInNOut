@@ -142,7 +142,7 @@ const AddressAutoComplete = ({ onSelect }: AddressAutoCompleteProps) => {
         value={value}
         onChange={handleInput}
         disabled={!ready}
-        placeholder="Where are you going?"
+        placeholder="Enter an address"
         className="w-full p-2 border rounded"
       />
       {status === "OK" && value.length >=10 && (

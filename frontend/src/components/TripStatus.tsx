@@ -26,7 +26,7 @@ interface Trip {
   clients: string[];
 }
 
-const TripsToVerify = () => {
+const TripStatus = () => {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -160,4 +160,4 @@ const TripsToVerify = () => {
   );
 };
 
-export default TripsToVerify;
+export default TripStatus;

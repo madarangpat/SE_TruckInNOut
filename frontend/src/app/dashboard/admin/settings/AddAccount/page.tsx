@@ -57,11 +57,21 @@ const AddAccountPage = () => {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-      ...(name === "role" && ["admin", "super_admin"].includes(value) && { employee_type: "" }),
-    }));
+  
+    // If employee type is selected, automatically set role to "employee"
+    if (name === "employee_type" && value !== "") {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+        role: "employee",  // Automatically set role to "employee" when employee type is selected
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+        ...(name === "role" && ["admin", "super_admin"].includes(value) && { employee_type: "" }),
+      }));
+    }
   };
 
   const validatePassword = (password: string) => {
@@ -132,7 +142,7 @@ const AddAccountPage = () => {
     }
 
     if (!validateLicenseNumber(formData.license_no)) {
-      toast.error("❌ Invalid Driver's License number. Format must be: CXX-XX-XXXXXX (e.g., D12-34-567890).");
+      toast.error("Invalid Driver's License number. Format must be: CXX-XX-XXXXXX (e.g., D12-34-567890).");
       return;
     }
 
@@ -177,7 +187,7 @@ const AddAccountPage = () => {
         }
       );
 
-      toast.success("\u2705 Account successfully created!");
+      toast.success("Account successfully created!");
       setFormData({
         username: "",
         password: "",
@@ -197,7 +207,6 @@ const AddAccountPage = () => {
       fileInput.value = "";
 
       setTimeout(() => {
-        toast.success(null);
       }, 5000);
     } catch (error: any) {
       console.error("API Error:", error.response?.data);
@@ -333,7 +342,6 @@ const AddAccountPage = () => {
               required
             >
               <option value="">Select Role*</option>
-              <option value="super_admin">Super Admin</option>
               <option value="admin">Admin</option>
               <option value="employee">Employee</option>
             </select>
@@ -356,7 +364,6 @@ const AddAccountPage = () => {
               </option>
               <option value="Driver">Driver</option>
               <option value="Helper">Helper</option>
-              <option value="Staff">Staff</option>
             </select>
           </div>
 
@@ -378,6 +385,7 @@ const AddAccountPage = () => {
             </button>
           </div>
         </form>
+
       </div>
 
       {showSettings && (

@@ -26,18 +26,20 @@ const TrackEmployeeLocation = ({ employeeId }: Props) => {
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords;
-        console.log("📡 Got location:", latitude, longitude);
+        const timestamp = new Date().toISOString(); // Get the current time in ISO format
+        console.log("📡 Got location:", latitude, longitude, "at", timestamp);
 
         try {
-            const res = await axios.post(`${process.env.NEXT_PUBLIC_DOMAIN}/employees/update-location/`, {
-              employee_id: employeeId,
-              latitude,
-              longitude,
-            });
-            console.log("✅ Location sent successfully:", res.data);
-          } catch (err) {
-            console.error("❌ Failed to send location to server", err);
-          }          
+          const res = await axios.post(`${process.env.NEXT_PUBLIC_DOMAIN}/employees/update-location/`, {
+            employee_id: employeeId,
+            latitude,
+            longitude,
+            timestamp, // Include the timestamp in the request
+          });
+          console.log("✅ Location sent successfully:", res.data);
+        } catch (err) {
+          console.error("❌ Failed to send location to server", err);
+        }          
       },
       (error) => {
         console.error("🚫 Geolocation error:", error);
