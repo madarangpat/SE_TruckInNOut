@@ -85,8 +85,8 @@ interface Props {
   userLng: number;
   isAdmin: boolean;
   onCityFetched? : (city: string) => void;
-  originLat?: number; // Optional prop to pass origin latitude
-  originLng?: number; // Optional prop to pass origin longitude
+  originLat?: number | null; // Optional prop to pass origin latitude
+  originLng?: number | null; // Optional prop to pass origin longitude
 }
 
 export default function LeafletMap({

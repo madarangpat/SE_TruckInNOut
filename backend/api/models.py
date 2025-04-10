@@ -9,10 +9,11 @@ from datetime import date
 class SalaryConfiguration(models.Model):
     salconfig_id = models.AutoField(primary_key=True)  # <- unique identifier
     trip = models.ForeignKey('Trip', on_delete=models.CASCADE, null=True)
-    sss_percentage = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    philhealth_percentage = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    pagibig_percentage = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    sss_contribution = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    philhealth_contribution = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     pagibig_contribution = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    pagibig_loan = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    sss_loan = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
 
     def __str__(self):
         return f"SalConfig #{self.salconfig_id} "
@@ -283,7 +284,6 @@ class Total(models.Model):
     total_pagibig = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     total_pagibig_loan = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     total_others = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    total_bonuses = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     total_charges = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     total_base_salary = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     total_additionals = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)

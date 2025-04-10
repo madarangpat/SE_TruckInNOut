@@ -116,7 +116,6 @@ class TotalAdmin(admin.ModelAdmin):
         'end_date',
         'total_base_salary',
         'total_additionals',
-        'total_bonuses',
         'total_charges',
         'total_bale',
         'total_cash_advance',

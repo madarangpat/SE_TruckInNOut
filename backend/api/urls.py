@@ -10,7 +10,7 @@ from .views import (
     SendPasswordLinkView, ResetPasswordView, get_employees, get_all_salary_configurations, calculate_totals, update_user_data, get_user_trip_data, current_user_employee,
     EmployeeCreateView, delete_user_by_username, UserProfileView, get_employee_profile,update_employee_profile, priority_queue_view, get_completed_trips_salaries, ongoing_trips, 
     ValidateResetPasswordTokenView, get_ongoing_trips, generate_gross_payroll_pdf, generate_salary_breakdown_pdf, update_user_profile, TotalViewSet, trips_by_date_range,
-    update_employee_location, get_employee_location, completed_trips_view, distribute_deductions, update_salary_configurations, generate_gross_payroll_pdf, set_payment_status, reset_completed_trip_counts,
+    update_employee_location, get_employee_location, completed_trips_view, distribute_deductions, update_salaries, generate_gross_payroll_pdf, set_payment_status, reset_completed_trip_counts,
 )
 from django.contrib.auth.views import (
     PasswordResetView,
@@ -81,10 +81,6 @@ urlpatterns = [
     #CREATE NEW TRIP GET EMPLOYEES
     path('employees/', get_employees, name='get_employees'),
     
-    # # SalaryConfiguration API Routes
-    # path('salary-configurations/<int:configId>/', update_salary_configuration, name='salary-configuration-update'),
-    # path('salary-configurations/', get_all_salary_configurations, name='salary-configuration-list'),  # For listing all salary configs
-    
     #Delete User
     path('delete-user-by-username/<str:username>/', delete_user_by_username, name='delete-user-by-username'),
     path('update-salary-deductions/', update_salary_deductions, name='update_salary_deductions'),
@@ -112,7 +108,7 @@ urlpatterns = [
     
     path("distribute-deductions/", distribute_deductions),
     
-    path("update-salary-configs/", update_salary_configurations),
+    path("update-salaries/", update_salaries),
     
     path("generate-pdf/gross-preview/", generate_gross_payroll_pdf, name="generate_gross_payroll_pdf"),
     

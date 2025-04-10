@@ -53,6 +53,10 @@ const MapsPage = () => {
   const [liveUserLng, setLiveUserLng] = useState<number>(121.10416933800876);
   const [currentCity, setcurrentCity] = useState<string | null>(null);
   const [locationTimestamp, setLocationTimestamp] = useState<string | null>(null);
+  const [originAddress, setOriginAddress] = useState<number | null>(null);
+  const [originLat, setOriginLat] = useState<number | null>(null);
+  const [originLng, setOriginLng] = useState<number | null>(null);
+
   const remainingDrops = useMemo(() => {
     if (!trip?.completed) return 0;
   
@@ -70,6 +74,22 @@ const MapsPage = () => {
         const res = await axios.get(`${process.env.NEXT_PUBLIC_DOMAIN}/trips/by-trip-id/${tripId}/`);
         setTrip(res.data);
         console.log("✅ Trip fetched by ID:", res.data);
+        const tripOrigin = res.data.trip_origin
+        console.log(tripOrigin)
+      
+        // Step 1: Replace single quotes with double quotes for valid JSON format
+        const formattedTripOrigin = tripOrigin.replace(/'/g, '"');
+
+        // Step 2: Parse the string to a JavaScript object
+        const parsedTripOrigin = JSON.parse(formattedTripOrigin);
+
+        // Step 3: Access lat and lng values
+        setOriginAddress(parsedTripOrigin.address)
+        setOriginLat(parsedTripOrigin.lat);
+        setOriginLng(parsedTripOrigin.lng);
+
+        console.log('Latitude:', parsedTripOrigin.lat); 
+        console.log('Longitude:', parsedTripOrigin.lat); 
       } catch (err) {
         console.error("❌ Error fetching trip by ID:", err);
         setTrip(null);
@@ -197,7 +217,10 @@ const MapsPage = () => {
                   <strong>TOTAL DROPS:</strong> {trip.clients?.length || "__________"} <span className="italic text-xs">Remaining: {remainingDrops}</span> 
                 </p>
                 <p className="text-sm bg-black/45 text-white px-2 py-1 rounded-md mt-1 w-full">
-                  <strong>DESTINATION:</strong> ({formattedDistance} km)
+                  <strong>DESTINATION:</strong> {formattedDistance} km
+                </p>
+                <p className="text-sm bg-black/45 text-white px-2 py-1 rounded-md mt-1 w-full">
+                  <strong>ORIGIN LOCATION:</strong> {originAddress}
                 </p>
                 <p className="text-sm bg-black/45 text-white px-2 py-1 rounded-md mt-1 w-full">
                   <strong>LOCATION:</strong>{" "}
@@ -219,8 +242,8 @@ const MapsPage = () => {
                   userLng={liveUserLng}
                   isAdmin={true}
                   onCityFetched={(city) => setcurrentCity(city)}
-		     //         originLat={parseFloat(trip.origin.lat)} 
-         //     	  originLng={parseFloat(trip.origin.lng)} 
+		              originLat={originLat} 
+              	  originLng={originLng} 
                 />
               ) : (
                 <p className="text-red-400 p-4">⚠️ No valid destination coordinates found.</p>

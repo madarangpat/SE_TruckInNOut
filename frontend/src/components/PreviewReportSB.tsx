@@ -16,22 +16,37 @@ const PreviewReportSB: React.FC<Props> = ({ employee, start, end, onClose }) => 
   useEffect(() => {
     const fetchPDF = async () => {
       try {
+        // Ensure start and end are valid
+        if (!employee || !start || !end) {
+          console.error("Missing required parameters");
+          return; // Exit if required parameters are missing
+        }
+  
+        const startDateOnly = start.split("T")[0]; // Format the start date
+        const endDateOnly = end ? end.split("T")[0] : ""; // Ensure end is valid, fallback to "" if not
+  
+        // If endDate is empty, we may want to either skip it or set a default
+        if (!endDateOnly) {
+          console.error("End date is missing or invalid");
+          return; // Exit if end date is invalid
+        }
+  
+        // Create query parameters
         const params = new URLSearchParams({
           employee,
-          start_date: start.split("T")[0],
-          end_date: end.split("T")[0],
+          start_date: startDateOnly,
+          end_date: endDateOnly, // Only include if valid
         });
-
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_DOMAIN}/generate-pdf/salary-breakdown/?${params}`,
-          { method: "GET" }
-        );
-
+  
+        const url = `${process.env.NEXT_PUBLIC_DOMAIN}/generate-pdf/salary-breakdown/?${params}`;
+        console.log(url); // Log the final URL to check its structure
+  
+        const response = await fetch(url, { method: "GET" });
         if (!response.ok) throw new Error("Failed to fetch PDF preview");
-
+  
         const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-        setPdfUrl(url);
+        const urlBlob = URL.createObjectURL(blob);
+        setPdfUrl(urlBlob);
       } catch (err) {
         console.error("PDF Preview Error:", err);
         setPdfUrl(null);
@@ -39,11 +54,12 @@ const PreviewReportSB: React.FC<Props> = ({ employee, start, end, onClose }) => 
         setLoading(false);
       }
     };
-
+  
     if (employee && start && end) {
       fetchPDF();
     }
   }, [employee, start, end]);
+  
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
@@ -66,7 +82,7 @@ const PreviewReportSB: React.FC<Props> = ({ employee, start, end, onClose }) => 
             />
           ) : (
             <div className="text-center mt-20 text-red-500">
-              Failed to load PDF preview.
+              AAAAA to load PDF preview.
             </div>
           )}
         </div>

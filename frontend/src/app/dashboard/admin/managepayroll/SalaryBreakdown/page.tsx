@@ -36,19 +36,26 @@ const SalaryBreakdown = () => {
   const [cashBond, setCashBond] = useState("");
   const [charges, setCharges] = useState("");
   const [others, setOthers] = useState("");
+  const [othersDescription, setOthersDescription] = useState("");
   const [completedTripsSet, setCompletedTripsSet] = useState(false);
   const [deductionsSet, setDeductionsSet] = useState(false);
   const [salaryConfigSet, setSalaryConfigSet] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
 
-  const [salaryConfig, setSalaryConfig] = useState<any>({
+  const adjustForTimezone = (date: Date) => {
+    const offset = date.getTimezoneOffset(); // Returns the difference in minutes
+    date.setMinutes(date.getMinutes() - offset); // Adjust for the time zone offset
+    return date.toISOString().split('T')[0]; // Return only the date part in YYYY-MM-DD format
+  };
+
+  const [salaryData, setSalaryData] = useState<any>({
     id: 0,
-    sss_percentage: "",
-    philhealth_percentage: "",
-    pag_ibig_percentage: "",
+    sss_contribution: "",
+    philhealth_contribution: "",
     pagibig_contribution: "",
+    pagibig_loan: "",
+    sss_loan: "",
   });
-  const [originalConfig, setOriginalConfig] = useState<any>(null);
 
   const handleEmployeeSelect = (employee: Employee) => {
     setSelectedEmployee(employee);
@@ -86,10 +93,12 @@ const SalaryBreakdown = () => {
     setCashBond("");
     setCharges("");
     setOthers("");
+    setOthers("");
+    setOthersDescription("");
     setSalaryConfigSet(false);
     setCompletedTripsSet(false);
     setDeductionsSet(false);
-    setSalaryConfig({
+    setSalaryData({
       id: 0,
       sss_contribution: "",
       philhealth_contribution: "",
@@ -101,10 +110,14 @@ const SalaryBreakdown = () => {
   
   useEffect(() => {
     if (selectedEmployee && startDate && endDate) {
+      const startDateOnly = adjustForTimezone(startDate).split('T')[0]; // Adjusted start date
+      const endDateOnly = adjustForTimezone(endDate).split('T')[0]; // Adjusted end date
+
+
       const query = new URLSearchParams({
         employee: selectedEmployee.user.username,
-        start_date: startDate.toISOString(),
-        end_date: endDate.toISOString(),
+        start_date: startDateOnly,
+        end_date: endDateOnly,
       });
 
       fetch(`${process.env.NEXT_PUBLIC_DOMAIN}/employee-trip-salaries/?${query}`)
@@ -129,51 +142,50 @@ const SalaryBreakdown = () => {
       .catch((error) => console.error("Error fetching employees:", error));
   }, []);
 
+  // Fetch Salary data for the selected employee and date range
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_DOMAIN}/salary-config/`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
-          const config = data[0];
-          setSalaryConfig({
-            id: config.id,
-            sss_contribution: config.sss_contribution.toString(),
-            philhealth_contribution: config.philhealth_contribution.toString(),
-            pagibig_contribution: config.pagibig_contribution.toString(),
-            pagibig_loan: config.pagibig_loan.toString(),
-            sss_loan: config.sss_loan.toString(),
-          });
-          setOriginalConfig(data[0]);
-        }
-      })
-      .catch((err) => console.error("Failed to fetch salary config:", err));
-  }, []);
+    if (selectedEmployee && startDate && endDate) {
+      const query = new URLSearchParams({
+        employee: selectedEmployee.user.username,
+        start_date: startDate.toISOString(),
+        end_date: endDate.toISOString(),
+      });
+    }
+  }, [selectedEmployee, startDate, endDate]);
+
 
   const handleApplySalaryConfigToTrips = async () => {
     if (!selectedEmployee || !startDate || !endDate || !completedTripsSet) {
       toast.warning("Please complete all required fields and click 'Set Completed Trips' first.");
       return;
     }
+
+    const startDateOnly = adjustForTimezone(startDate).split('T')[0]; // Adjusted start date
+    const endDateOnly = adjustForTimezone(endDate).split('T')[0]; // Adjusted end date
+
+    console.log("Sending Dates:", { startDateOnly, endDateOnly });
   
     try {
-      await axios.post(`${process.env.NEXT_PUBLIC_DOMAIN}/update-salary-configs/`, {
+      // Use the same method as deductions to update the salary configurations
+      await axios.post(`${process.env.NEXT_PUBLIC_DOMAIN}/update-salaries/`, {
         username: selectedEmployee.user.username,
-        start_date: startDate.toISOString(),
-        end_date: endDate.toISOString(),
-        sss_contribution: parseFloat(salaryConfig.sss_contribution) || 0,
-        philhealth_contribution: parseFloat(salaryConfig.philhealth_contribution) || 0,
-        pagibig_contribution: parseFloat(salaryConfig.pagibig_contribution) || 0,
-        pagibig_loan: parseFloat(salaryConfig.pagibig_loan) || 0,
-        sss_loan: parseFloat(salaryConfig.sss_loan) || 0,
+        start_date: startDateOnly,
+        end_date: endDateOnly,
+        sss_contribution: parseFloat(salaryData.sss_contribution) || 0,
+        philhealth_contribution: parseFloat(salaryData.philhealth_contribution) || 0,
+        pagibig_contribution: parseFloat(salaryData.pagibig_contribution) || 0,
+        pagibig_loan: parseFloat(salaryData.pagibig_loan) || 0,
+        sss_loan: parseFloat(salaryData.sss_loan) || 0,
       });
   
-      toast.success("Salary configuration and bonuses applied to each completed trip!");
+      toast.success("Salary configuration applied to each completed trip!");
       setSalaryConfigSet(true);
     } catch (err) {
       console.error("Failed to update salary configuration:", err);
       toast.error("Something went wrong while saving salary config.");
     }
   };
+  
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-10 px-4 sm:px-6 lg:px-10 py-8">
@@ -319,12 +331,25 @@ const SalaryBreakdown = () => {
                   />
                 </div>
               ))}
+              {/* Show others description input when 'others' is filled */}
+              {others && (
+                <div className="flex items-center gap-4">
+                  <label className="w-36 text-sm font-semibold text-black">Others Description:</label>
+                  <input
+                    type="text"
+                    value={othersDescription}
+                    onChange={(e) => setOthersDescription(e.target.value)}
+                    placeholder="Enter description"
+                    className="flex-1 px-4 py-2 rounded-md text-black bg-white shadow"
+                  />
+                </div>
+              )}
             </div>
 
             <button
               onClick={async () => {
                 if (!selectedEmployee || !startDate || !endDate || !completedTripsSet) {
-                  alert("Please complete all required fields and click 'Set Completed Trips' first.");
+                  toast.warning("Please complete all required fields and click 'Set Completed Trips' first.");
                   return;
                 }
 
@@ -338,9 +363,10 @@ const SalaryBreakdown = () => {
                     cash_bond: parseFloat(cashBond) || 0,
                     charges: parseFloat(charges) || 0,
                     others: parseFloat(others) || 0,
+                    others_description: othersDescription,
                   });
 
-                  toast.warning("Deductions distributed and saved!");
+                  toast.success("Deductions distributed and saved!");
                   setDeductionsSet(true);
                 } catch (err) {
                   console.error("Failed to update deductions:", err);
@@ -363,7 +389,7 @@ const SalaryBreakdown = () => {
           <div className="w-full lg:w-1/2 p-4 rounded-lg shadow-md text-white" style={{ backgroundColor: "rgba(168, 206, 130, 0.4)" }}>
             <h2 className="text-lg font-semibold text-black/70 mb-4">Salary Configuration</h2>
             <div className="space-y-3">
-              {Object.entries(salaryConfig).map(([key, value]) => {
+              {Object.entries(salaryData).map(([key, value]) => {
                 if (key === "id") return null;
                 const label = salaryPlaceholders[key] || key;
 
@@ -375,7 +401,7 @@ const SalaryBreakdown = () => {
                       step="0.01"
                       value={value as number}
                       onChange={(e) =>
-                        setSalaryConfig((prev: any) => ({
+                        setSalaryData((prev: any) => ({
                           ...prev,
                           [key]: e.target.value,
                         }))
@@ -446,8 +472,8 @@ const SalaryBreakdown = () => {
                 <h2 className="text-lg font-semibold mb-4">Salary Breakdown Preview</h2>
                 <PreviewReportSB
                   employee={selectedEmployee?.user.username || ""}
-                  start={startDate?.toLocaleDateString('en-CA') || ""}
-                  end={endDate?.toLocaleDateString('en-CA') || ""}
+                  start={startDate ? startDate.toISOString().split('T')[0] : ""}
+                  end={endDate ? endDate.toISOString().split('T')[0] : ""}
                   onClose={() => setShowPreviewModal(false)}
                 />
               </div>

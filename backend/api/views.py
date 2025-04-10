@@ -52,7 +52,11 @@ from decimal import Decimal
 from reportlab.platypus import KeepTogether, PageBreak
 from django.forms.models import model_to_dict
 from django.utils.timezone import now
+from django.utils.dateparse import parse_date
+import logging
+from django.utils.dateparse import parse_datetime
 
+logger = logging.getLogger(__name__)
 User = get_user_model()
 
 #==================================================================================================================================================================================
@@ -67,9 +71,15 @@ def get_all_salary_configurations(request):
 
 #==================================================================================================================================================================================
 @csrf_exempt
-def update_salary_configurations(request):
+def update_salaries(request):
     if request.method != "POST":
         return JsonResponse({"error": "POST required"}, status=405)
+    
+    def parse_float(value):
+        try:
+            return float(value)
+        except (ValueError, TypeError):
+            return 0.0
 
     try:
         data = json.loads(request.body)
@@ -78,58 +88,56 @@ def update_salary_configurations(request):
         start_date = parse_datetime(data.get("start_date"))
         end_date = parse_datetime(data.get("end_date"))
 
-        sss_contribution = Decimal(data.get("sss_contribution", 0))
-        philhealth_contribution = Decimal(data.get("philhealth_contribution", 0))
-        pagibig_contribution = Decimal(data.get("pagibig_contribution", 0))
-        sss_loan = Decimal(data.get("sss_loan", 0))
-        pagibig_loan = Decimal(data.get("pagibig_loan", 0))
-
+        sss_contribution = parse_float(data.get("sss_contribution"))
+        philhealth_contribution = parse_float(data.get("philhealth_contribution"))
+        pagibig_contribution = parse_float(data.get("pagibig_contribution"))
+        sss_loan = parse_float(data.get("sss_loan"))
+        pagibig_loan = parse_float(data.get("pagibig_loan"))
 
         if not username or not start_date or not end_date:
             return JsonResponse({"error": "Missing required data"}, status=400)
 
         trips = Trip.objects.filter(
             employee__user__username=username,
-            is_completed=True,
+            trip_status="Confirmed",
             end_date__range=[start_date, end_date]
         )
 
-        updated_configs = 0
         updated_salaries = 0
 
         for trip in trips:
-            adjusted_salary = trip.base_salary * trip.multiplier
-            
-            # Update SalaryConfig
-            config = SalaryConfiguration.objects.filter(trip=trip).first()
-            if config:
-                config.sss_contribution = sss_contribution
-                config.philhealth_contribution = philhealth_contribution
-                config.pagibig_contribution = pagibig_contribution
-                config.sss_loan = sss_loan
-                config.pagibig_loan = pagibig_loan
-                config.save()
-                updated_configs += 1
-
-            # Update Salary
+            # Get the employee role (assuming the employee has a role field)
+            employee = trip.employee
+            if employee.user.employee_type == "Driver":
+                base_salary = trip.driver_base_salary  # Using the driver's base salary
+            elif employee.user.employee_type == "Helper":
+                base_salary = trip.helper_base_salary  # Using the helper's base salary
+            else:
+                # In case there's another role or an unexpected case
+                base_salary = 0
+                
             salary = Salary.objects.filter(trip=trip).first()
             if salary:
-                salary.adjusted_salary = trip.base_salary * trip.multiplier
                 salary.sss_contribution = sss_contribution
                 salary.philhealth_contribution = philhealth_contribution
                 salary.pagibig_contribution = pagibig_contribution
                 salary.sss_loan = sss_loan
                 salary.pagibig_loan = pagibig_loan
+
+                # Calculate and update the adjusted salary
+                salary.adjusted_salary = (base_salary * trip.multiplier) + trip.additionals
                 salary.save()
                 updated_salaries += 1
+            else:
+                print(f"No Salary found for Trip {trip.id}")
 
         return JsonResponse({
-            "message": f"✅ Updated {updated_configs} SalaryConfigs and {updated_salaries} Salary bonuses."
+            "message": f"✅ Updated {updated_salaries} Salary records."
         }, status=200)
 
     except Exception as e:
         print(f"[ERROR] {e}")
-        return JsonResponse({"error": "Server error while updating salary configurations."}, status=500)
+        return JsonResponse({"error": "Server error while updating salary."}, status=500)
     
 #==================================================================================================================================================================================
 @api_view(["PATCH"])
@@ -761,24 +769,34 @@ def update_salary_deductions(request):
         print("Error updating salary:", e)
         return Response({"error": str(e)}, status=500)
 #==============================================================================================================================
-# SALARY BREAKDOWN PDF
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def generate_salary_breakdown_pdf(request):
     username = request.GET.get("employee")
-    start = date.fromisoformat(request.GET.get("start_date"))
-    end = date.fromisoformat(request.GET.get("end_date"))
+    start = request.GET.get("start_date")
+    end = request.GET.get("end_date")
+
+    # Log the received parameters for debugging
+    print(f"Received parameters: employee={username}, start_date={start}, end_date={end}")
 
     if not all([username, start, end]):
         return Response({"error": "Missing parameters"}, status=400)
 
     try:
+        # Validate and parse the dates
+        start_date = datetime.strptime(start, "%Y-%m-%d").date()
+        end_date = datetime.strptime(end, "%Y-%m-%d").date()
+    except ValueError:
+        return Response({"error": "Invalid date format. Expected YYYY-MM-DD."}, status=400)
+
+    try:
+        # Retrieve the employee object
         employee = Employee.objects.select_related("user").get(user__username=username)
-        user_type = employee.user.employee_type.lower()
+        user_type = employee.user.employee_type.lower()  # Get employee type (driver/helper/staff)
     except Employee.DoesNotExist:
         return Response({"error": "Employee not found"}, status=404)
 
-    # For staff - placeholder
+    # For staff - placeholder PDF content
     if user_type == "staff":
         buffer = BytesIO()
         p = canvas.Canvas(buffer, pagesize=letter)
@@ -792,10 +810,11 @@ def generate_salary_breakdown_pdf(request):
             'Content-Disposition': f'attachment; filename="{username}_staff_salary_breakdown.pdf"'
         })
 
+    # Get trips for the employee within the date range and confirm the trip status
     trips = Trip.objects.filter(
         Q(employee=employee) | Q(helper=employee) | Q(helper2=employee),
-        end_date__range=(start, end),
-        is_completed=True
+        end_date__range=(start_date, end_date),
+        trip_status="Confirmed"  # Ensure that trip status is confirmed
     )
 
     if not trips.exists():
@@ -803,6 +822,7 @@ def generate_salary_breakdown_pdf(request):
 
     data = [{"trip": t, "salary": Salary.objects.filter(trip=t).first()} for t in trips]
 
+    # Generate the PDF document
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=landscape(letter), topMargin=30, leftMargin=30, rightMargin=30, bottomMargin=30)
     styles = getSampleStyleSheet()
@@ -814,8 +834,8 @@ def generate_salary_breakdown_pdf(request):
     elements.append(Paragraph(f"<b>Date Range:</b> {start} to {end}", left_align))
     elements.append(Spacer(1, 12))
 
-    # Trip Table
-    trip_table_data = [["Trip ID", "Num of Drops", "End Date", "Base Salary", "Multiplier", "Final Drop Made", "Adjusted Salary"]]
+    # Trip Table (Additionals moved here)
+    trip_table_data = [["Trip ID", "Total Drops", "Date Created", "Base Salary", "Multiplier", "Additionals", "Final Drop Made", "Adjusted Salary"]]
     gross_total = 0
 
     for record in data:
@@ -823,6 +843,14 @@ def generate_salary_breakdown_pdf(request):
         salary = record["salary"]
         if not salary:
             continue
+
+        # Calculate adjusted salary based on employee type
+        if user_type == "driver":
+            base_salary = trip.driver_base_salary  # Use driver_base_salary for drivers
+        elif user_type == "helper":
+            base_salary = trip.helper_base_salary  # Use helper_base_salary for helpers
+        else:
+            base_salary = trip.base_salary  # Default to base_salary if needed (adjust for your case)
 
         adjusted = salary.adjusted_salary or 0
         gross_total += adjusted
@@ -839,20 +867,27 @@ def generate_salary_breakdown_pdf(request):
 
             final_drop = f"{city} (Client: {trip.clients[-1]})"
 
+        # Get additionals for the trip
+        additionals = getattr(trip, "additionals", 0)
+        
+        created_date = trip.date_created.strftime("%Y-%m-%d")
 
+        # Add data for the trip to the table
         trip_table_data.append([
             str(trip.trip_id),
             str(getattr(trip, "num_of_drops", "N/A")),
-            trip.end_date.strftime("%Y-%m-%d"),
-            f"{trip.base_salary:.2f}",
+            created_date,
+            f"{base_salary:.2f}",  # Use the updated salary reference
             str(trip.multiplier),
+            f"{additionals:.2f}",  # Display additionals here
             final_drop,
             f"{adjusted:.2f}"
         ])
 
+    # Create the trip table and add it to the document
     trip_table = Table(trip_table_data, repeatRows=1, hAlign='LEFT')
     trip_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgreen),
         ('GRID', (0, 0), (-1, -1), 1, colors.black),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
@@ -861,19 +896,7 @@ def generate_salary_breakdown_pdf(request):
     elements.append(trip_table)
     elements.append(Spacer(1, 12))
 
-    # Additionals
-    bonus_total = sum(s["salary"].bonuses for s in data if s["salary"])
-    additionals_total = sum(getattr(s["trip"], "additionals", 0) for s in data if s["salary"])
-    elements.append(Paragraph("<b>ADDITIONALS</b>", left_heading))
-    add_table = Table([["Bonuses", "Additionals"], [f"{bonus_total:.2f}", f"{additionals_total:.2f}"]], hAlign='LEFT')
-    add_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-    ]))
-    elements.append(add_table)
-    elements.append(Spacer(1, 12))
+    # Removed the Bonus Section as requested, additionals are now part of the Trip Table
 
     # Monthly deductions based on week of export date
     def get_week_of_month(d):
@@ -897,7 +920,7 @@ def generate_salary_breakdown_pdf(request):
         elements.append(Paragraph("<b>MONTHLY DEDUCTIONS</b>", left_heading))
         monthly_table = Table(monthly_table_data, hAlign='LEFT')
         monthly_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.lightcoral),
             ('GRID', (0, 0), (-1, -1), 1, colors.black),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
@@ -917,7 +940,7 @@ def generate_salary_breakdown_pdf(request):
     elements.append(Paragraph("<b>WEEKLY DEDUCTIONS</b>", left_heading))
     weekly_table = Table(weekly_table_data, hAlign='LEFT')
     weekly_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.lightcoral),
         ('GRID', (0, 0), (-1, -1), 1, colors.black),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
@@ -925,27 +948,39 @@ def generate_salary_breakdown_pdf(request):
     elements.append(weekly_table)
     elements.append(Spacer(1, 12))
 
-    # Totals
+    # Totals Table
     total_deductions = sum(monthly_deductions.values()) + sum(weekly_deductions.values())
-    net_pay = gross_total + bonus_total + additionals_total - total_deductions
-    totals_table_data = [["Gross Salary", "Additionals", "Deductions", "Net Pay"],
-                         [f"{gross_total:.2f}", f"{bonus_total + additionals_total:.2f}", f"- {total_deductions:.2f}", f"{net_pay:.2f}"]]
-    elements.append(Paragraph("<b>TOTALS</b>", left_heading))
-    totals_table = Table(totals_table_data, hAlign='LEFT')
+    net_pay = gross_total - total_deductions  # Removed bonuses from the calculation
+
+    # Updated table with larger font size and row height
+    totals_table_data = [["Gross Salary", "Deductions", "Net Pay"],
+                        [f"{gross_total:.2f}", f"{total_deductions:.2f}", f"{net_pay:.2f}"]]
+
+    # Create Totals Table and adjust style
+    totals_table = Table(totals_table_data, hAlign='LEFT', colWidths=[200, 200, 200])  # Adjust column widths
     totals_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.lightyellow),  # Background color for header row
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),  # Grid lines around all cells
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),  # Bold font for the entire table
+        ('FONTSIZE', (0, 0), (-1, -1), 14),  # Increase font size
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),  # Center-align all content
+        ('TOPPADDING', (0, 0), (-1, -1), 12),  # Add padding to the top of each row
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),  # Add padding to the bottom of each row
+        ('LEFTPADDING', (0, 0), (-1, -1), 10),  # Add padding to the left side of each cell
+        ('RIGHTPADDING', (0, 0), (-1, -1), 10),  # Add padding to the right side of each cell
     ]))
+
+    # Add the Totals Table to the document
+    elements.append(Paragraph("<b>TOTALS</b>", left_heading))
     elements.append(totals_table)
+    elements.append(Spacer(1, 12))  # Add space below the table
+
 
     doc.build(elements)
     buffer.seek(0)
     return HttpResponse(buffer, content_type='application/pdf', headers={
         'Content-Disposition': f'attachment; filename="{username}_salary_breakdown.pdf"'
     })
-    
 #==================================================================================================================================================================================
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -1000,7 +1035,6 @@ def generate_gross_payroll_pdf(request):
             ["SSS (including loan)", f"{(totals.total_sss + totals.total_sss_loan):.2f}"],
             ["PHILHEALTH", f"{totals.total_philhealth:.2f}"],
             ["PAG-IBIG (including loan)", f"{(totals.total_pagibig + totals.total_pagibig_loan):.2f}"],
-            ["BONUSES", f"{totals.total_bonuses:.2f}"],
             ["BASE SALARY", f"{totals.total_base_salary:.2f}"],
             ["ADDITIONALS", f"{totals.total_additionals:.2f}"],
             ["OVERALL TOTAL", f"{totals.overall_total:.2f}"],
@@ -1376,7 +1410,7 @@ def completed_trips_view(request):
 
     trips = Trip.objects.filter(
         employee__user__username=employee_username,
-        is_completed=True,
+        trip_status="Confirmed",
         end_date__range=[start_date, end_date]
     )
 
@@ -1391,7 +1425,6 @@ def completed_trips_view(request):
             "cash_bond": salary.cash_bond if salary else 0,
             "charges": salary.charges if salary else 0,
             "others": salary.others if salary else 0,
-            "bonuses": salary.bonuses if salary else 0,
         })
 
     return JsonResponse(trip_data, safe=False)
@@ -1418,10 +1451,12 @@ def distribute_deductions(request):
         cash_bond = parse_float(data.get("cash_bond"))
         charges = parse_float(data.get("charges"))
         others = parse_float(data.get("others"))
+        
+        others_description = data.get("others_description", "")
 
         trips = Trip.objects.filter(
             employee__user__username=username,
-            is_completed=True,
+            trip_status="Confirmed",
             end_date__range=[start_date, end_date]
         )
 
@@ -1436,6 +1471,7 @@ def distribute_deductions(request):
                 salary.cash_bond = cash_bond
                 salary.charges = charges
                 salary.others = others
+                salary.others_description = others_description
                 salary.save()
                 updated += 1
             else:
