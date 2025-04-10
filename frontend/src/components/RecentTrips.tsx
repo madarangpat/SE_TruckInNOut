@@ -7,9 +7,11 @@ import { toast } from "sonner";
 
 interface Trip {
   trip_id: number;
+  trip_status: string;
   is_completed: boolean;
   num_of_drops: number;
-  base_salary: number;
+  driver_base_salary: number;
+  helper_base_salary: number;
   vehicle: {
     plate_number: string;
   };
@@ -34,7 +36,7 @@ const RecentTrips = () => {
     const fetchTrips = async () => {
       try {
         const res = await axios.get(`${process.env.NEXT_PUBLIC_DOMAIN}/trips/`);
-        const completedTrips = res.data.filter((trip: Trip) => trip.is_completed === true);
+        const completedTrips = res.data.filter((trip: Trip) => trip.trip_status === "Confirmed");
         setTrips(completedTrips);
       } catch (err) {
         console.error("Failed to fetch recent trips:", err);
@@ -110,7 +112,11 @@ const RecentTrips = () => {
                     </p>
 
                     <p className="text-sm bg-white/50 text-black px-3 py-1 rounded-md mt-1 w-full">
-                      <strong>Salary:</strong> ₱{trip.base_salary || "—"}
+                      <strong>Driver Salary:</strong> ₱{trip.driver_base_salary || "—"}
+                    </p>
+
+                    <p className="text-sm bg-white/50 text-black px-3 py-1 rounded-md mt-1 w-full">
+                      <strong>Helper Salary:</strong> ₱{trip.helper_base_salary || "—"}
                     </p>
 
                     <p className="text-sm bg-white/50 text-black px-3 py-1 rounded-md mt-1 w-full">

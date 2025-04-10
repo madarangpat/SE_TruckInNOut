@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { toast } from "sonner";
-import axios from "axios";
 import { updateCompletedStatus } from "@/lib/actions/deliveries.actions";
 
 type DeliveriesClientProps = {
@@ -43,11 +42,12 @@ const DeliveriesClient = ({
   ongoingTrips: initialOngoingTrips,
 }: DeliveriesClientProps) => {
   const [ongoingTrips, setOngoingTrips] = useState<Trip[]>(initialOngoingTrips);
+  const employee = ongoingTrips[0]?.employee; // Assuming all trips have the same employee
 
   const filteredOngoing = (ongoingTrips ?? []).filter(
     (trip) => trip.is_completed === false || trip.is_completed === "false"
   );
-  
+
   const filteredRecent = (recentTrips ?? []).filter(
     (trip) => trip.is_completed === true || trip.is_completed === "true"
   );
@@ -55,14 +55,14 @@ const DeliveriesClient = ({
   const handleDropToggle = async (tripId: number, dropIndex: number) => {
     const trip = ongoingTrips.find((t) => t.trip_id === tripId);
     if (!trip) return;
-  
+
     const updatedCompleted = [...trip.completed];
     updatedCompleted[dropIndex] = !updatedCompleted[dropIndex];
-  
+
     try {
       await updateCompletedStatus(tripId, updatedCompleted);
       toast.success("Drop status updated!");
-  
+
       setOngoingTrips((prevTrips) =>
         prevTrips.map((t) =>
           t.trip_id === tripId ? { ...t, completed: updatedCompleted } : t
@@ -76,10 +76,44 @@ const DeliveriesClient = ({
 
   return (
     <div className="min-h-fit flex flex-col items-center justify-center px-4 sm:px-6 lg:px-10 pt-4">
+      {/* Welcome Section with Profile and Logo */}
+      <div className="w-full max-w-5xl flex justify-between items-center mb-6">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-gray-300 rounded-full overflow-hidden">
+            <Image
+              src={employee?.user.profile_image || "/accounts.png"}
+              alt="Profile"
+              width={70}
+              height={70}
+              className="object-cover"
+            />
+          </div>
+          <div>
+            <p className="text-lg text-black/60">Welcome back,</p>
+            <h1 className="text-2xl font-semibold text-black/80">
+              {employee?.user.username || "Loading..."}
+            </h1>
+          </div>
+        </div>
+        <Image
+          src="/bigc.png"
+          alt="Big C Logo"
+          width={100}
+          height={50}
+          className="object-contain -mt-4" // Adjusted margin-top to move logo up
+        />
+      </div>
+
       {/* Ongoing Trips */}
       <div className="wrapper w-full max-w-5xl rounded-2xl shadow-lg p-6 my-8 bg-black/40">
         <h2 className="text-center text-2xl font-semibold text-black/40 mb-4 flex justify-center items-center gap-2">
-          <Image src="/truck.png" alt="Ongoing Trips" width={30} height={30} className="opacity-40" />
+          <Image
+            src="/truck.png"
+            alt="Ongoing Trips"
+            width={30}
+            height={30}
+            className="opacity-40"
+          />
           Ongoing Trips
         </h2>
 
@@ -87,8 +121,14 @@ const DeliveriesClient = ({
           {filteredOngoing.length > 0 ? (
             filteredOngoing.map((trip) => {
               const driverName = trip.employee?.user.username || "None";
-              const helperUsernames = [trip.helper?.username, trip.helper2?.username].filter(Boolean);
-              const helpers = helperUsernames.length > 0 ? helperUsernames.join(", ") : "None";
+              const helperUsernames = [
+                trip.helper?.username,
+                trip.helper2?.username,
+              ].filter(Boolean);
+              const helpers =
+                helperUsernames.length > 0
+                  ? helperUsernames.join(", ")
+                  : "None";
 
               return (
                 <div
@@ -98,7 +138,9 @@ const DeliveriesClient = ({
                   <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left w-full">
                     <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center border border-white overflow-hidden">
                       <Image
-                        src={trip.employee?.user.profile_image || "/accounts.png"}
+                        src={
+                          trip.employee?.user.profile_image || "/accounts.png"
+                        }
                         alt="Profile"
                         width={70}
                         height={70}
@@ -108,8 +150,8 @@ const DeliveriesClient = ({
 
                     <div className="w-full">
                       <p className="font-medium">
-                        {driverName} (
-                        {trip.vehicle.plate_number} | {trip.vehicle.vehicle_type} |{" "}
+                        {driverName} ({trip.vehicle.plate_number} |{" "}
+                        {trip.vehicle.vehicle_type} |{" "}
                         {trip.vehicle.is_company_owned
                           ? "Company Owned"
                           : `Private (${trip.vehicle.subcon_name || "N/A"})`}
@@ -123,7 +165,8 @@ const DeliveriesClient = ({
                       )}
 
                       <p className="text-sm bg-white/20 text-white px-3 py-1 rounded-md mt-1 w-full">
-                        <strong>Number of Drops:</strong> {trip.num_of_drops || "__________"}
+                        <strong>Number of Drops:</strong>{" "}
+                        {trip.num_of_drops || "__________"}
                       </p>
 
                       <p className="text-sm bg-white/20 text-white px-3 py-1 rounded-md mt-1 w-full">
@@ -143,11 +186,16 @@ const DeliveriesClient = ({
 
                       {/* Drop Toggles */}
                       {trip.addresses.map((address, index) => (
-                        <label key={index} className="flex items-center gap-2 text-xs text-white/90 mt-1">
+                        <label
+                          key={index}
+                          className="flex items-center gap-2 text-xs text-white/90 mt-1"
+                        >
                           <input
                             type="checkbox"
                             checked={trip.completed?.[index] || false}
-                            onChange={() => handleDropToggle(trip.trip_id, index)}
+                            onChange={() =>
+                              handleDropToggle(trip.trip_id, index)
+                            }
                             className="form-checkbox h-4 w-4 text-green-500"
                           />
                           {address
@@ -171,7 +219,13 @@ const DeliveriesClient = ({
       {/* Recent Trips */}
       <div className="wrapper w-full max-w-5xl rounded-2xl shadow-lg p-6 bg-black/20">
         <h2 className="text-center text-2xl font-semibold text-black/50 mb-4 flex justify-center items-center gap-2">
-          <Image src="/package.png" alt="Recent Trips" width={30} height={30} className="opacity-50" />
+          <Image
+            src="/package.png"
+            alt="Recent Trips"
+            width={30}
+            height={30}
+            className="opacity-50"
+          />
           Recent Trips
         </h2>
 
@@ -179,8 +233,14 @@ const DeliveriesClient = ({
           {filteredRecent.length > 0 ? (
             filteredRecent.map((trip) => {
               const driverName = trip.employee?.user.username || "None";
-              const helperUsernames = [trip.helper?.username, trip.helper2?.username].filter(Boolean);
-              const helpers = helperUsernames.length > 0 ? helperUsernames.join(", ") : "None";
+              const helperUsernames = [
+                trip.helper?.username,
+                trip.helper2?.username,
+              ].filter(Boolean);
+              const helpers =
+                helperUsernames.length > 0
+                  ? helperUsernames.join(", ")
+                  : "None";
 
               return (
                 <div
@@ -190,7 +250,10 @@ const DeliveriesClient = ({
                   <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left w-full">
                     <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center border border-gray-500 overflow-hidden">
                       <Image
-                        src={trip.employee?.user.profile_image || "/accountsblk.png"}
+                        src={
+                          trip.employee?.user.profile_image ||
+                          "/accountsblk.png"
+                        }
                         alt="Profile"
                         width={70}
                         height={70}
@@ -200,8 +263,8 @@ const DeliveriesClient = ({
 
                     <div className="w-full">
                       <p className="font-medium">
-                        {driverName} (
-                        {trip.vehicle.plate_number} | {trip.vehicle.vehicle_type} |{" "}
+                        {driverName} ({trip.vehicle.plate_number} |{" "}
+                        {trip.vehicle.vehicle_type} |{" "}
                         {trip.vehicle.is_company_owned
                           ? "Company Owned"
                           : `Private (${trip.vehicle.subcon_name || "N/A"})`}
@@ -213,7 +276,8 @@ const DeliveriesClient = ({
                       </p>
 
                       <p className="text-sm bg-white/50 text-black px-3 py-1 rounded-md mt-1 w-full">
-                        <strong>Number of Drops:</strong> {trip.num_of_drops || "__________"}
+                        <strong>Number of Drops:</strong>{" "}
+                        {trip.num_of_drops || "__________"}
                       </p>
 
                       <p className="text-sm bg-white/50 text-black px-3 py-1 rounded-md mt-1 w-full">
@@ -227,7 +291,9 @@ const DeliveriesClient = ({
                               ?.split(",")
                               .slice(0, 2)
                               .map((part) => part.trim())
-                              .join(", ")} (Client: ${trip.clients[trip.clients.length - 1]})`
+                              .join(", ")} (Client: ${
+                              trip.clients[trip.clients.length - 1]
+                            })`
                           : "No address available"}
                       </p>
                     </div>

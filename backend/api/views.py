@@ -51,6 +51,7 @@ from django.db import OperationalError
 from decimal import Decimal
 from reportlab.platypus import KeepTogether, PageBreak
 from django.forms.models import model_to_dict
+from django.utils.timezone import now
 
 User = get_user_model()
 
@@ -473,13 +474,36 @@ def get_vehicles(request):
     vehicles = list(Vehicle.objects.values("vehicle_id", "plate_number", "vehicle_type"))
     return JsonResponse(vehicles, safe=False)
 
+@api_view(['GET'])
+@permission_classes([AllowAny])  # Adjust this as needed based on your permissions
 def get_employees(request):
-    employees = list(Employee.objects.values(
-        "employee_id", 
-        "user__username", 
-        "employee_type"
-        ))
-    return JsonResponse(employees, safe=False)
+    # Fetch employees with the necessary fields
+    employees = Employee.objects.all()
+
+    employee_data = []
+
+    # Get start (Sunday) and end (Saturday) of current week
+    today = now().date()
+    start_of_week = today - timedelta(days=today.weekday() + 1 if today.weekday() < 6 else 6)
+    end_of_week = start_of_week + timedelta(days=6)
+
+    # Loop through employees and get completed trip count for each
+    for employee in employees:
+        # Count completed trips for the employee
+        completed_trips_count = Trip.objects.filter(
+            Q(employee=employee) | Q(helper=employee) | Q(helper2=employee),
+            trip_status="Confirmed",  # Filter by trip_status="Confirmed"
+            end_date__date__range=(start_of_week, end_of_week)  # Filter by date range (current week)
+        ).count()
+
+        # Serialize employee data
+        employee_data.append({
+            "employee_id": employee.employee_id,
+            "username": employee.user.username,
+            "employee_type": employee.user.employee_type,
+            "completed_trip_count": completed_trips_count,  # Add completed trip count here
+        })
+
 
 #==================================================================================================================================================================================
 #SETTINGS EMPLOYEE DATA
@@ -1078,7 +1102,6 @@ class RegisterTripView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
 #==================================================================================================================================================================================
-# PRIORITY QUEUE
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def priority_queue_view(request):
@@ -1098,21 +1121,37 @@ def priority_queue_view(request):
         # Find trips where this employee is either the driver or helper and ended this week
         weekly_trips = Trip.objects.filter(
             end_date__range=(start_of_week_dt, end_of_week_dt),
-            is_completed=True
+            trip_status="Confirmed"
         ).filter(
             Q(employee=employee) | Q(helper=employee) | Q(helper2=employee)
         )
 
-        # Calculate total base salary from trips this week
-        total_base_salary = sum([trip.base_salary or 0 for trip in weekly_trips])
+        # If no trips are found for this employee, skip further processing
+        if not weekly_trips:
+            continue
 
+        # Calculate total salary based on employee type
+        if employee.user.employee_type == "Driver":
+            # Sum the base_salary for drivers
+            total_salary = sum([trip.driver_base_salary or 0 for trip in weekly_trips])
+            salary_field = "driver_base_salary"
+        else:
+            # Sum the base_salary for helpers
+            total_salary = sum([trip.helper_base_salary or 0 for trip in weekly_trips])
+            salary_field = "helper_base_salary"
+
+        # Add serialized data including the total salary
         serialized = EmployeeSerializer(employee).data
-        serialized["base_salary"] = total_base_salary
+        serialized["base_salary"] = total_salary
+        serialized["salary_field"] = salary_field  # Field to identify the type of salary
         employee_data.append(serialized)
 
     # Sort employees by total base salary (ascending, prioritize lower earners)
     sorted_employees = sorted(employee_data, key=lambda e: e["base_salary"])
+
     return Response(sorted_employees)
+
+
 #==================================================================================================================================================================================
 # DELETE VEHICLES
 @csrf_exempt
@@ -1515,7 +1554,7 @@ def reset_completed_trip_counts(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def ongoing_trips(request):
-    ongoing = Trip.objects.filter(is_completed=False)
+    ongoing = Trip.objects.filter(trip_status="Ongoing")
     serializer = OngoingTripSerializer(ongoing, many=True)
     return Response(serializer.data)
 

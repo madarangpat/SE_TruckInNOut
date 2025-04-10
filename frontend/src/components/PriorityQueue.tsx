@@ -6,7 +6,8 @@ import { toast } from "sonner";
 interface Employee {
   id: number;
   name: string;
-  base_salary: number;
+  base_salary: number; // Total salary value for either driver or helper
+  salary_field: string; // Identifies if it’s a driver or helper salary
 }
 
 const PriorityQueue = () => {
@@ -23,7 +24,7 @@ const PriorityQueue = () => {
         
         // Sort by base salary ascending
         const sorted = data.sort(
-          (a: Employee, b: Employee) => (a.base_salary || 0) - (b.base_salary || 0)
+          (a: Employee, b: Employee) => a.base_salary - b.base_salary
         );
 
         setEmployees(sorted);
@@ -58,7 +59,8 @@ const PriorityQueue = () => {
           >
             <span>{employee.name}</span>
             <span className="text-xs bg-black/25 text-white px-2 py-1 rounded-lg">
-              ₱ {employee.base_salary?.toFixed(2) || "0.00"} BASE SALARY
+              ₱{" "}
+              {employee.base_salary?.toFixed(2)} BASE SALARY
             </span>
           </div>
         ))}

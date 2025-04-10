@@ -172,6 +172,7 @@ class Trip(models.Model):
         ("Confirmed", "Confirmed"),
         ("Cancelled", "Cancelled"),
         ("Ongoing", "Ongoing"),
+        ("Pending","Pending"),
     ]
      
     trip_id = models.AutoField(primary_key=True)
@@ -179,7 +180,7 @@ class Trip(models.Model):
     employee = models.ForeignKey('Employee', on_delete=models.SET_NULL, null=True, blank=True, related_name='trips')
     helper = models.ForeignKey('Employee', on_delete=models.SET_NULL, null=True, blank=True, related_name='helper_trips')
     helper2 = models.ForeignKey('Employee', on_delete=models.SET_NULL, null=True, blank=True, related_name='helper2_trips')
-    trip_origin = models.CharField(max_length=50, null=True, blank=True)
+    trip_origin = models.CharField(max_length=150, null=True, blank=True)
     trip_description = models.CharField(max_length=50, null=True)
     
     user_lat = models.DecimalField(max_digits=12, decimal_places=6, null=True, blank=True)

@@ -12,7 +12,6 @@ interface Employee {
     employee_type: string;
   };
   completed_trip_count: number;
-  payment_status: boolean;
 }
 
 const EmployeeStatus = () => {
@@ -89,13 +88,6 @@ const EmployeeStatus = () => {
               <div className="flex justify-between items-center mt-1">
                 <span className="text-xs bg-black/25 text-white px-2 py-1 rounded-lg">
                   Completed Trips: {emp.completed_trip_count}
-                </span>
-                <span
-                  className={`text-xs px-2 py-1 rounded-lg ${
-                    emp.payment_status ? "bg-green-500" : "bg-red-500"
-                  }`}
-                >
-                  Payment Status: {emp.payment_status ? "PAID" : "UNPAID"}
                 </span>
               </div>
             </div>

@@ -6,7 +6,7 @@ import { toast } from "sonner";
 
 interface Trip {
   trip_id: number;
-  is_completed: boolean;
+  trip_status: string;
   employee: {
     employee_id: number;
     user: {
@@ -32,7 +32,7 @@ const TripsInTransit = () => {
     const fetchTrips = async () => {
       try {
         const res = await axios.get(`${process.env.NEXT_PUBLIC_DOMAIN}/trips/`);
-        const ongoingTrips = res.data.filter((trip: Trip) => trip.is_completed === false);
+        const ongoingTrips = res.data.filter((trip: Trip) => trip.trip_status === "Ongoing");
         setTrips(ongoingTrips);
       } catch (err) {
         console.error("Failed to fetch trips:", err);

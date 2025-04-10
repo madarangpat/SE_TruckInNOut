@@ -105,7 +105,7 @@ class TripSerializer(serializers.ModelSerializer):
 class OngoingTripSerializer(serializers.ModelSerializer):
     class Meta:
         model = Trip
-        fields = ['vehicle_id', 'employee_id', 'helper_id', 'helper2_id', 'is_completed']
+        fields = ['vehicle_id', 'employee_id', 'helper_id', 'helper2_id', 'is_completed', 'trip_status']
 
 class LoginSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
@@ -158,7 +158,6 @@ class AdministratorSerializer(serializers.ModelSerializer):
         model = Administrator
         fields = ['admin_id', 'user']
 
-# ✅ Employee Serializer
 class EmployeeSerializer(serializers.ModelSerializer):
     user = UserSerializer()
     completed_trip_count = serializers.IntegerField(read_only=True)
@@ -166,23 +165,11 @@ class EmployeeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Employee
-        fields = ['employee_id', 'user', 'completed_trip_count', 'name', 'payment_status']
+        fields = ['employee_id', 'user', 'completed_trip_count', 'name']
         
     def get_name(self, obj):
         full_name = f"{obj.user.first_name} {obj.user.last_name}".strip()
-        return full_name if full_name else obj.user.username
-    
-    def get_completed_trip_count(self, obj):
-        # Get start (Sunday) and end (Saturday) of current week
-        today = now().date()
-        start_of_week = today - timedelta(days=today.weekday() + 1 if today.weekday() < 6 else 6)
-        end_of_week = start_of_week + timedelta(days=6)
-        
-        return Trip.objects.filter(
-            Q(employee=obj) | Q(helper=obj) | Q(helper2=obj),
-            is_completed=True,
-            end_date__date__range=(start_of_week, end_of_week)
-            ).count()       
+        return full_name if full_name else obj.user.username    
 
     def create(self, validated_data):
         user_data = validated_data.pop('user')
@@ -190,6 +177,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
         employee = Employee.objects.create(user=user, **validated_data)
         employee.save()
         return employee
+
     
 class TotalSerializer(serializers.ModelSerializer):
     class Meta:

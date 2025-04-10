@@ -6,7 +6,6 @@ import "leaflet/dist/leaflet.css";
 import { useEffect, useState } from "react";
 import { useCallback } from "react";
 
-
 // Fix Leaflet icon paths
 delete (L.Icon.Default.prototype as any).getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -35,6 +34,16 @@ const blueIcon = new L.Icon({
 
 const greenIcon = new L.Icon({
   iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
+
+// Black marker for the origin location
+const blackIcon = new L.Icon({
+  iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-black.png",
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
   iconSize: [25, 41],
   iconAnchor: [12, 41],
@@ -75,7 +84,9 @@ interface Props {
   userLat: number;
   userLng: number;
   isAdmin: boolean;
-  onCityFetched? : (city:string) => void;
+  onCityFetched? : (city: string) => void;
+  originLat?: number; // Optional prop to pass origin latitude
+  originLng?: number; // Optional prop to pass origin longitude
 }
 
 export default function LeafletMap({
@@ -84,6 +95,8 @@ export default function LeafletMap({
   userLng,
   isAdmin,
   onCityFetched,
+  originLat,
+  originLng,
 }: Props) {
   const userPos: [number, number] = [userLat, userLng];
   const [debugEnabled, setDebugEnabled] = useState(false);
@@ -99,7 +112,6 @@ export default function LeafletMap({
     boundsArray.push([currentLocation.lat, currentLocation.lng]);
   }
   const bounds: L.LatLngBoundsExpression = boundsArray;
-
 
   const toggleDebugMode = () => {
     if (!debugEnabled) {
@@ -151,8 +163,7 @@ export default function LeafletMap({
       setNearbyLocation("Failed to fetch location");
     }
   }, [onCityFetched]);
-  
-  
+
   useEffect(() => {
     return () => {
       if (watchId !== null) {
@@ -163,10 +174,9 @@ export default function LeafletMap({
 
   useEffect(() => {
     if (userLat && userLng) {
-      fetchNearbyLocation(userLat,userLng);
+      fetchNearbyLocation(userLat, userLng);
     }
   }, [userLat, userLng, fetchNearbyLocation]);
-  
 
   return (
     <div className="relative h-full">
@@ -195,7 +205,7 @@ export default function LeafletMap({
         />
 
         {/* ✅ Destination Markers */}
-          {locations.map((loc, idx) => {
+        {locations.map((loc, idx) => {
           const distance = haversineDistance(userLat, userLng, loc.lat, loc.lng).toFixed(2);
           return (
             <Marker
@@ -212,16 +222,17 @@ export default function LeafletMap({
           );
         })}
 
-
         {/* 🔴 User Marker */}
         <Marker position={userPos} icon={redIcon}>
           <Popup>
-            <strong>Your Location</strong> <br/>
-            {nearbyLocation? (
+            <strong>Your Location</strong> <br />
+            {nearbyLocation ? (
               <>
-              <span>{nearbyLocation}</span>
+                <span>{nearbyLocation}</span>
               </>
-            ): (<span>Loading address...</span>)}
+            ) : (
+              <span>Loading address...</span>
+            )}
           </Popup>
         </Marker>
 
@@ -237,7 +248,18 @@ export default function LeafletMap({
             </Popup>
           </Marker>
         )}
+
+        {/* 🖤 Origin Marker */}
+        {originLat && originLng && (
+          <Marker position={[originLat, originLng]} icon={blackIcon}>
+            <Popup>
+              <strong>Origin Location</strong>
+            </Popup>
+          </Marker>
+        )}
       </MapContainer>
     </div>
   );
 }
+
+

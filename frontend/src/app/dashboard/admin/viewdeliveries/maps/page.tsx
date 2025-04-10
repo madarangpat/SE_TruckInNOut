@@ -53,6 +53,17 @@ const MapsPage = () => {
   const [liveUserLng, setLiveUserLng] = useState<number>(121.10416933800876);
   const [currentCity, setcurrentCity] = useState<string | null>(null);
   const [locationTimestamp, setLocationTimestamp] = useState<string | null>(null);
+  const remainingDrops = useMemo(() => {
+    if (!trip?.completed) return 0;
+  
+    // Log the structure of trip.completed to verify its format
+    console.log("trip.completed:", trip.completed);
+  
+    const completedArray = Array.isArray(trip.completed[0]) ? trip.completed[0] : trip.completed;
+  
+    return completedArray.filter((status) => status === false).length || 0;
+  }, [trip]);
+  
 
   useEffect(() => {
     const fetchTrip = async () => {
@@ -177,7 +188,7 @@ const MapsPage = () => {
                   {trip.vehicle?.plate_number || "No Plate"})
                 </p>
                 <p className="text-sm bg-black/45 text-white px-2 py-1 rounded-md mt-1 w-full">
-                  <strong>NUMBER OF DROPS:</strong> {trip.clients?.length || "__________"}
+                <strong>TOTAL DROPS:</strong> {trip.clients?.length || "__________"} <span className="italic text-xs">Remaining: {remainingDrops}</span> 
                 </p>
                 <p className="text-sm bg-black/45 text-white px-2 py-1 rounded-md mt-1 w-full">
                   <strong>DESTINATION:</strong> ({formattedDistance} km)

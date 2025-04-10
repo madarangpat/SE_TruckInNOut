@@ -26,7 +26,17 @@ const TrackEmployeeLocation = ({ employeeId }: Props) => {
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords;
-        const timestamp = new Date().toISOString(); // Get the current time in ISO format
+
+        // Get the current time in UTC
+        const utcTime = new Date();
+
+        // Adjust to Philippine Time (UTC + 8 hours)
+        const phtOffset = 8 * 60 * 60 * 1000; // 8 hours in milliseconds
+        const phtTime = new Date(utcTime.getTime() + phtOffset); // Adjust UTC time to PHT
+
+        // Format to ISO string
+        const timestamp = phtTime.toISOString(); // Convert to ISO format for consistency
+
         console.log("📡 Got location:", latitude, longitude, "at", timestamp);
 
         try {
@@ -34,12 +44,12 @@ const TrackEmployeeLocation = ({ employeeId }: Props) => {
             employee_id: employeeId,
             latitude,
             longitude,
-            timestamp, // Include the timestamp in the request
+            timestamp, // Include the PHT timestamp in the request
           });
           console.log("✅ Location sent successfully:", res.data);
         } catch (err) {
           console.error("❌ Failed to send location to server", err);
-        }          
+        }
       },
       (error) => {
         console.error("🚫 Geolocation error:", error);
