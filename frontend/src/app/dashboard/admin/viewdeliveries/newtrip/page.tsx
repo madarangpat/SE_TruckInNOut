@@ -49,6 +49,9 @@ const CreateNewTripPage = () => {
   const [tripDestinations, setTripDestinations] = useState<GoogleAddress[]>([]);
 
   const [tripOrigin, setTripOrigin] = useState<GoogleAddress | null>(null);
+  const [address, setAddress] = useState<string>("");
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
 
   const [busyEmployeeIds, setBusyEmployeeIds] = useState<number[]>([]);
   const [busyVehicleIds, setBusyVehicleIds] = useState<number[]>([]);
@@ -391,10 +394,10 @@ const CreateNewTripPage = () => {
           <h3 className="text-lg font-bold text-black/70">Trip Origin</h3>
           <div className="flex">
             <AddressAutoComplete
-              onSelect={({ address, lat, lng }) => {
-                setTripOrigin({address : address, lat : lat, lng : lng})
-              }}
-            />
+                onSelect={({ address, lat, lng }) => {
+                  setTripOrigin({address : address, lat : lat, lng : lng})
+                }}
+              />
           </div>
         </div>
 

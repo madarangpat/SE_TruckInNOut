@@ -14,7 +14,7 @@ const CompanyInformation = () => {
     website: "bigctruckingservices.org",
     tinNo: "761-838-706-000",
     dti: "Business Name No. 1906178",
-    businessPermit: "",
+    businessPermit: "2025-08800",
     industryType: "Freight & Logistics",
     established: "2018",
   };

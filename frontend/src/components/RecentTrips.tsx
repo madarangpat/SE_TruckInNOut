@@ -14,6 +14,9 @@ interface Trip {
   helper_base_salary: number;
   vehicle: {
     plate_number: string;
+    vehicle_type: string;
+    is_company_owned: boolean;
+    subcon_name?: string | null;
   };
   employee: {
     employee_id: number;
@@ -100,7 +103,12 @@ const RecentTrips = () => {
 
                   <div className="w-full">
                     <p className="font-medium">
-                      {driverName} ({trip.vehicle?.plate_number || "No Plate"})
+                      {driverName} (
+                      {trip.vehicle?.plate_number || "No Plate"} — {trip.vehicle?.vehicle_type || "Unknown Type"}
+                      {trip.vehicle?.is_company_owned === false && trip.vehicle?.subcon_name
+                        ? ` | Subcon: ${trip.vehicle.subcon_name}`
+                        : ""}
+                      )
                     </p>
 
                     <p className="text-sm italic text-black/70 mt-1">
@@ -108,7 +116,14 @@ const RecentTrips = () => {
                     </p>
 
                     <p className="text-sm bg-white/50 text-black px-3 py-1 rounded-md mt-1 w-full">
-                      <strong>Number of Drops:</strong> {trip.num_of_drops || "—"}
+                      <strong>Final Drop:</strong>{" "}
+                      {trip.addresses?.length > 0 && trip.clients?.length > 0
+                        ? `${lastAddress} (Client: ${lastClient})`
+                        : "No address available"}
+                    </p>
+
+                    <p className="text-sm bg-white/50 text-black px-3 py-1 rounded-md mt-1 w-full">
+                      <strong>Total Drops:</strong> {trip.num_of_drops || "—"}
                     </p>
 
                     <p className="text-sm bg-white/50 text-black px-3 py-1 rounded-md mt-1 w-full">
@@ -118,13 +133,7 @@ const RecentTrips = () => {
                     <p className="text-sm bg-white/50 text-black px-3 py-1 rounded-md mt-1 w-full">
                       <strong>Helper Salary:</strong> ₱{trip.helper_base_salary || "—"}
                     </p>
-
-                    <p className="text-sm bg-white/50 text-black px-3 py-1 rounded-md mt-1 w-full">
-                      <strong>Final Drop:</strong>{" "}
-                      {trip.addresses?.length > 0 && trip.clients?.length > 0
-                        ? `${lastAddress} (Client: ${lastClient})`
-                        : "No address available"}
-                    </p>
+                    
                   </div>
                 </div>
               </div>

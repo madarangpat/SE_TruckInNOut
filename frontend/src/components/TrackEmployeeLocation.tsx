@@ -11,11 +11,13 @@ const TrackEmployeeLocation = ({ employeeId }: Props) => {
   useEffect(() => {
     console.log("🛰️ TrackEmployeeLocation mounted for employee ID:", employeeId);
 
+    // Ensure we're in the browser environment
     if (typeof window === "undefined") {
       console.log("🚫 Not running in the browser.");
       return;
     }
 
+    // Check if geolocation is supported
     if (!navigator.geolocation) {
       console.warn("❌ Geolocation is not supported by this browser.");
       return;
@@ -30,12 +32,9 @@ const TrackEmployeeLocation = ({ employeeId }: Props) => {
         // Get the current time in UTC
         const utcTime = new Date();
 
-        // Adjust to Philippine Time (UTC + 8 hours)
-        const phtOffset = 8 * 60 * 60 * 1000; // 8 hours in milliseconds
-        const phtTime = new Date(utcTime.getTime() + phtOffset); // Adjust UTC time to PHT
-
-        // Format to ISO string
-        const timestamp = phtTime.toISOString(); // Convert to ISO format for consistency
+    
+        // Format to ISO string for consistency
+        const timestamp = utcTime.toISOString(); // Convert to ISO format for consistency
 
         console.log("📡 Got location:", latitude, longitude, "at", timestamp);
 
@@ -44,12 +43,26 @@ const TrackEmployeeLocation = ({ employeeId }: Props) => {
             employee_id: employeeId,
             latitude,
             longitude,
-            timestamp, // Include the PHT timestamp in the request
+            timestamp
           });
-          console.log("✅ Location sent successfully:", res.data);
+        
+          // Log the full response
+          console.log("Full response from server:", res);
+          console.log(timestamp)
+          // Log the status and timestamp specifically
+          console.log("Response status:", res.status);
+          console.log("Response data:", res.data);
+        
+          // Check for the presence of timestamp
+          if (res.data.timestamp) {
+            console.log("Timestamp received:", res.data.timestamp);
+          } else {
+            console.error("❌ Missing timestamp in response:", res);
+          }
         } catch (err) {
           console.error("❌ Failed to send location to server", err);
         }
+        
       },
       (error) => {
         console.error("🚫 Geolocation error:", error);

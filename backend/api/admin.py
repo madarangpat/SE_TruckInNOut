@@ -139,7 +139,11 @@ class EmployeeLocationAdmin(admin.ModelAdmin):
     search_fields = ('employee__user__username',)
     list_filter = ('updated_at',)
 #=============================================================================================================================================================================================================
-
+class EmployeeLocationAdmin(admin.ModelAdmin):
+    list_display = ('employee', 'latitude', 'longitude', 'updated_at', 'timestamp')
+    search_fields = ('employee__user__username',)
+    list_filter = ('updated_at',)
+    
 
 admin.site.register(User, CustomUserAdmin)
 admin.site.register(Administrator, AdministratorAdmin)
@@ -149,4 +153,4 @@ admin.site.register(Trip, TripAdmin)
 admin.site.register(Vehicle, VehicleAdmin)
 admin.site.register(SalaryConfiguration)
 admin.site.register(Total, TotalAdmin)
-admin.site.register(EmployeeLocation)
+admin.site.register(EmployeeLocation, EmployeeLocationAdmin)

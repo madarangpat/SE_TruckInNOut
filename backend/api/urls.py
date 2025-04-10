@@ -130,7 +130,7 @@ urlpatterns = [
 
     path('ongoing-trips/', ongoing_trips, name='ongoing-trips'),
     
-    path('salary-config/', get_salary_config, name='salary-config'),
+    path('salary-config/', get_salary_config, name='salary-config')
 
 ]
 

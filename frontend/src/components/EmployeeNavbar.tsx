@@ -19,14 +19,8 @@ const EmployeeNavbar = () => {
       {/* TOP NAVIGATION BAR */}
       <nav className="top-nav flex justify-between items-center bg-[#8FA479] shadow-md h-[60px] px-4 md:px-6 font-bold text-black/80">
         <h1 className="text-2xl font-semibold text-black/50 tracking-[0.3rem]">
-          Dashboard
+          TruckIn-N-Out
         </h1>
-        <button
-          onClick={() => setIsSidebarOpen(true)}
-          className="burger-menu text-black/50 text-2xl"
-        >
-          ☰
-        </button>
       </nav>
 
       {/* SIDEBAR OVERLAY (Detects Clicks Outside) */}
@@ -53,7 +47,7 @@ const EmployeeNavbar = () => {
         <div className="mt-12 flex flex-col space-y-6 p-6">
           <Link
             href="/dashboard/employee/home"
-            className="menu-item"
+            className="menu-item flex items-center space-x-2 opacity-60"
             onClick={closeSidebar}
           >
             <Image src="/homee.png" alt="Home" width={24} height={24} />
@@ -61,7 +55,7 @@ const EmployeeNavbar = () => {
           </Link>
           <Link
             href="/dashboard/employee/deliveries"
-            className="menu-item"
+            className="menu-item flex items-center space-x-2 opacity-60"
             onClick={closeSidebar}
           >
             <Image
@@ -74,7 +68,7 @@ const EmployeeNavbar = () => {
           </Link>
           <Link
             href="/dashboard/employee/salary"
-            className="menu-item"
+            className="menu-item flex items-center space-x-2 opacity-60"
             onClick={closeSidebar}
           >
             <Image src="/peso.png" alt="Salary" width={30} height={30} />
@@ -82,12 +76,20 @@ const EmployeeNavbar = () => {
           </Link>
           <Link
             href="/dashboard/employee/myprofile"
-            className="menu-item"
+            className="menu-item flex items-center space-x-2 opacity-60"
             onClick={closeSidebar}
           >
             <Image src="/accounts.png" alt="Profile" width={27} height={27} />
             <span>My Profile</span>
           </Link>
+
+          {/* Burger Icon to open sidebar */}
+          <button
+            onClick={() => setIsSidebarOpen(true)}
+            className="burger-menu text-black/50 text-2xl opacity-60"
+          >
+            ☰
+          </button>
         </div>
 
         {/* Logout Button with Logout Functionality */}
@@ -98,10 +100,60 @@ const EmployeeNavbar = () => {
               router.push("/login");
               router.refresh();
             }}
-            className="menu-item flex items-center w-full text-left"
+            className="menu-item flex items-center w-full text-left opacity-60"
           >
             <Image src="/logoutt.png" alt="Logout" width={30} height={30} />
             <span>Logout</span>
+          </button>
+        </div>
+      </div>
+
+      {/* NAVIGATION BAR BUTTONS BELOW THE HEADER */}
+      <div className="flex justify-between bg-[#8FA479] py-4 px-4">
+        {/* Add icons with no labels and evenly spaced */}
+        <div className="flex space-x-12 w-full justify-between">
+          <Link
+            href="/dashboard/employee/deliveries"
+            className="flex items-center justify-center bg-transparent p-2 opacity-60"
+          >
+            <Image src="/truck.png" alt="Deliveries" width={30} height={30} />
+          </Link>
+          <Link
+            href="/dashboard/employee/salary"
+            className="flex items-center justify-center bg-transparent p-2 opacity-60"
+          >
+            <Image src="/pesoblk.png" alt="Salary" width={30} height={30} />
+          </Link>
+          <Link
+            href="/dashboard/employee/myprofile"
+            className="flex items-center justify-center bg-transparent p-2 opacity-60"
+          >
+            <Image
+              src="/accountsblk.png"
+              alt="My Profile"
+              width={30}
+              height={30}
+            />
+          </Link>
+
+          {/* Burger Button to open sidebar */}
+          <button
+            onClick={() => setIsSidebarOpen(true)}
+            className="burger-menu text-black/50 text-2xl"
+          >
+            ☰
+          </button>
+
+          {/* Logout Button on the Right */}
+          <button
+            onClick={async () => {
+              await logout();
+              router.push("/login");
+              router.refresh();
+            }}
+            className="bg-transparent p-2 opacity-60"
+          >
+            <Image src="/logouttt.png" alt="Logout" width={30} height={30} />
           </button>
         </div>
       </div>
@@ -110,4 +162,3 @@ const EmployeeNavbar = () => {
 };
 
 export default EmployeeNavbar;
-

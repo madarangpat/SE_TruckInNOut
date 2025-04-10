@@ -1565,3 +1565,65 @@ def get_salary_config(request):
         configs = SalaryConfiguration.objects.all()
         return JsonResponse([model_to_dict(cfg) for cfg in configs], safe=False)
     return JsonResponse({"error": "GET method only"}, status=405)
+
+
+# EMPLOYEE LOCATION FETCHING
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def update_employee_location(request):
+    print(f"Received data: ")
+    employee_id = request.data.get("employee_id")
+    latitude = request.data.get("latitude")
+    longitude = request.data.get("longitude")
+    timestamp = request.data.get("timestamp")
+
+    # Log the incoming data
+    print(f"Received data: employee_id={employee_id}, latitude={latitude}, longitude={longitude}, timestamp={timestamp}")
+
+    if not all([employee_id, latitude, longitude]):
+        return Response({"message": "Missing fields"}, status=400)
+
+    try:
+        employee = Employee.objects.get(pk=employee_id)
+
+        if not timestamp:
+            timestamp = datetime.now().astimezone(timezone('Asia/Manila')).isoformat()
+
+        location, created = EmployeeLocation.objects.update_or_create(
+            employee=employee,
+            defaults={
+                "latitude": latitude,
+                "longitude": longitude,
+                "timestamp": timestamp
+            }
+        )
+
+        print(f"Location updated: {location.latitude}, {location.longitude} with timestamp {timestamp}")
+
+        return Response({
+            "message": "Location updated successfully WHY WONT THIS CHANGE",
+            "created": created,
+            "latitude": location.latitude,
+            "longitude": location.longitude,
+            "timestamp": timestamp
+        })
+    except Employee.DoesNotExist:
+        return Response({"message": "Employee not found"}, status=404)
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        return Response({"message": str(e)}, status=500)
+
+#==================================================================================================================================================================================
+# EMPLOYEE LOCATION UPDATE
+@api_view(['GET'])
+@permission_classes([AllowAny])  # You can adjust this if needed
+def get_employee_location(request, employee_id):
+    try:
+        location = EmployeeLocation.objects.get(employee__employee_id=employee_id)
+        return Response({
+            "latitude": location.latitude,
+            "longitude": location.longitude,
+            "timestamp": location.timestamp
+        })
+    except EmployeeLocation.DoesNotExist:
+        return Response({"message": "Location not available"}, status=404)

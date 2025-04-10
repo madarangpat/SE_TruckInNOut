@@ -211,7 +211,7 @@ class Trip(models.Model):
     def save(self, *args, **kwargs):
         is_new = self.pk is None
         was_completed = None
-        
+             
         # Set default trip status to "Ongoing" when the trip is being created
         if not self.trip_status:
             self.trip_status = "Ongoing"
@@ -301,6 +301,7 @@ class EmployeeLocation(models.Model):
     latitude = models.FloatField()
     longitude = models.FloatField()
     updated_at = models.DateTimeField(auto_now=True)
+    timestamp = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
-        return f"{self.employee.user.username}- {self.latitude}, {self.longitude}"  
+        return f"{self.employee.user.username}- {self.latitude}, {self.longitude}, {self.timestamp}"

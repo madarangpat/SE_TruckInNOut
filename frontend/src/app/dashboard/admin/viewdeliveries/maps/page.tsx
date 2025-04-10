@@ -63,7 +63,6 @@ const MapsPage = () => {
   
     return completedArray.filter((status) => status === false).length || 0;
   }, [trip]);
-  
 
   useEffect(() => {
     const fetchTrip = async () => {
@@ -96,8 +95,15 @@ const MapsPage = () => {
         if (!isNaN(parseFloat(latitude)) && !isNaN(parseFloat(longitude))) {
           setLiveUserLat(parseFloat(latitude));
           setLiveUserLng(parseFloat(longitude));
-          console.log("📡 Live location updated:", latitude, longitude);
-          setLocationTimestamp(timestamp); // Store the timestamp
+          console.log("📡 Live location updated:", latitude, longitude, timestamp);
+          
+          const date = new Date(timestamp);
+
+          // Use toLocaleTimeString to get the time part only
+          const formattedTime = date.toLocaleTimeString("en-PH", { timeZone: "Asia/Manila" });
+        
+          // Set only the time to the state
+          setLocationTimestamp(formattedTime);
         }
       } catch (err) {
         console.error("❌ Failed to fetch live employee location", err);
@@ -188,7 +194,7 @@ const MapsPage = () => {
                   {trip.vehicle?.plate_number || "No Plate"})
                 </p>
                 <p className="text-sm bg-black/45 text-white px-2 py-1 rounded-md mt-1 w-full">
-                <strong>TOTAL DROPS:</strong> {trip.clients?.length || "__________"} <span className="italic text-xs">Remaining: {remainingDrops}</span> 
+                  <strong>TOTAL DROPS:</strong> {trip.clients?.length || "__________"} <span className="italic text-xs">Remaining: {remainingDrops}</span> 
                 </p>
                 <p className="text-sm bg-black/45 text-white px-2 py-1 rounded-md mt-1 w-full">
                   <strong>DESTINATION:</strong> ({formattedDistance} km)
@@ -198,7 +204,7 @@ const MapsPage = () => {
                   {currentCity ? `${currentCity}` : `${liveUserLat}, ${liveUserLng}`}{" "}
                   {locationTimestamp && (
                     <span className="ml-2 text-xs text-gray-300">
-                      (Last updated: {new Date(locationTimestamp).toLocaleString()})
+                      (Last updated: {locationTimestamp})
                     </span>
                   )}
                 </p>
@@ -213,6 +219,8 @@ const MapsPage = () => {
                   userLng={liveUserLng}
                   isAdmin={true}
                   onCityFetched={(city) => setcurrentCity(city)}
+		     //         originLat={parseFloat(trip.origin.lat)} 
+         //     	  originLng={parseFloat(trip.origin.lng)} 
                 />
               ) : (
                 <p className="text-red-400 p-4">⚠️ No valid destination coordinates found.</p>
@@ -228,3 +236,4 @@ const MapsPage = () => {
 };
 
 export default MapsPage;
+
