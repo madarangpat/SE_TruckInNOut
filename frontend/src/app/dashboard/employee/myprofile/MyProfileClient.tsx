@@ -89,7 +89,7 @@ const MyProfileClient = ({ user }: { user: User }) => {
       await updateUserData({
         userId: employeeData.user_id.toString(),
         email: employeeData.email,
-        cellPhoneNo: employeeData.cellphone_no,
+        cellphone_no: employeeData.cellphone_no,
       });
       toast.success("Profile updated successfully!");
       setEditableField(null);
