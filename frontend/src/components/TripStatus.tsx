@@ -9,7 +9,9 @@ interface Trip {
   trip_id: number;
   is_completed: boolean;
   num_of_drops: number;
-  base_salary: number;
+  driver_base_salary: number;
+  helper_base_salary: number;
+  trip_status: string;
   vehicle: {
     plate_number: string;
   };
