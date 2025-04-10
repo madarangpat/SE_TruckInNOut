@@ -42,15 +42,16 @@ const DeliveriesClient = ({
   ongoingTrips: initialOngoingTrips,
 }: DeliveriesClientProps) => {
   const [ongoingTrips, setOngoingTrips] = useState<Trip[]>(initialOngoingTrips);
-  const employee = ongoingTrips[0]?.employee; // Assuming all trips have the same employee
+  const employee = ongoingTrips.length > 0 ? ongoingTrips[0]?.employee : null;
+ // Assuming all trips have the same employee
 
   const filteredOngoing = (ongoingTrips ?? []).filter(
     (trip) => trip.is_completed === false || trip.is_completed === "false"
   );
-
+  
   const filteredRecent = (recentTrips ?? []).filter(
     (trip) => trip.is_completed === true || trip.is_completed === "true"
-  );
+  );  
 
   const handleDropToggle = async (tripId: number, dropIndex: number) => {
     const trip = ongoingTrips.find((t) => t.trip_id === tripId);

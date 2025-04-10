@@ -3,12 +3,16 @@ import DeliveriesClient from "./DeliveriesClient";
 import { getRecentTrips, getOngoingTrips, } from "@/lib/actions/deliveries.actions";
 
 export default async function DeliveriesPage() {
-  const [{ data: ongoingTrips }, {data: recentTrips}] = await Promise.all([
+  const [{ data: ongoingTrips, error: ongoingError }, { data: recentTrips, error: recentError }] = await Promise.all([
     tryCatch(getOngoingTrips()),
     tryCatch(getRecentTrips())
   ]);
-
-  console.log(recentTrips)
-
+  
+  if (ongoingError || recentError) {
+    console.error('Error fetching data:', ongoingError, recentError);
+    return <div>Error loading trips.</div>;
+  }
+  
+  console.log(recentTrips);
   return <DeliveriesClient ongoingTrips={ongoingTrips} recentTrips={recentTrips} />;
 }
