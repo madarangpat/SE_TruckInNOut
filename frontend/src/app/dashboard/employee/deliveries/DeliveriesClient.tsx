@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { toast } from "sonner";
 import { updateCompletedStatus } from "@/lib/actions/deliveries.actions";
+import { StringValidation } from "zod";
 
 type DeliveriesClientProps = {
   recentTrips: Trip[];
@@ -15,6 +16,7 @@ type Trip = {
   num_of_drops: number;
   start_date: string;
   end_date?: string;
+  trip_status: string;
   is_completed: boolean | string;
   base_salary?: number;
   addresses: string[];
@@ -46,11 +48,11 @@ const DeliveriesClient = ({
  // Assuming all trips have the same employee
 
   const filteredOngoing = (ongoingTrips ?? []).filter(
-    (trip) => trip.is_completed === false || trip.is_completed === "false"
+    (trip) => trip.trip_status === "Ongoing" || trip.trip_status === "Ongoing"
   );
   
   const filteredRecent = (recentTrips ?? []).filter(
-    (trip) => trip.is_completed === true || trip.is_completed === "true"
+    (trip) => trip.trip_status === "Confirmed" || trip.trip_status === "Confirmed"
   );  
 
   const handleDropToggle = async (tripId: number, dropIndex: number) => {

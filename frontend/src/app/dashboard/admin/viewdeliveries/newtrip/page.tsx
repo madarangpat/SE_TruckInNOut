@@ -50,8 +50,6 @@ const CreateNewTripPage = () => {
 
   const [tripOrigin, setTripOrigin] = useState<GoogleAddress | null>(null);
   const [address, setAddress] = useState<string>("");
-  const [latitude, setLatitude] = useState<number | null>(null);
-  const [longitude, setLongitude] = useState<number | null>(null);
 
   const [busyEmployeeIds, setBusyEmployeeIds] = useState<number[]>([]);
   const [busyVehicleIds, setBusyVehicleIds] = useState<number[]>([]);
@@ -82,13 +80,11 @@ const CreateNewTripPage = () => {
     fetchBusyAssignments();
   }, []);
 
-
-  // Update tripFormData whenever the dates change
   const handleStartDateChange = (date: Date | null) => {
     setStartDate(date);
     setTripFormData((prevData) => ({
       ...prevData,
-      start_date: date ? date.toISOString() : "", // Store as ISO string
+      start_date: date ? date.toISOString() : "", 
     }));
   };
 
@@ -96,7 +92,7 @@ const CreateNewTripPage = () => {
     setEndDate(date);
     setTripFormData((prevData) => ({
       ...prevData,
-      end_date: date ? date.toISOString() : "", // Store as ISO string
+      end_date: date ? date.toISOString() : "", 
     }));
   };
 
@@ -123,7 +119,7 @@ const CreateNewTripPage = () => {
     addresses: [""],
     clients: [""],
     distances: [""],
-    user_lat: "14.65889",
+    user_lat: "14.65889",  // Keeping default values for user lat/lng
     user_lng: "121.10419",
     dest_lat: [""],
     dest_lng: [""],
@@ -176,40 +172,37 @@ const CreateNewTripPage = () => {
       return;
     }
 
-    // If helper base salary is provided but no helpers are selected
-  if (
-    tripFormData.helper_base_salary && !selectedHelper && !selectedHelper2
-  ) {
-    toast.error("Please select helpers if you have provided a base salary for them.");
-    return;
-  }
-  
-    // Prevent duplicate helper selection
+    if (
+      tripFormData.helper_base_salary && !selectedHelper && !selectedHelper2
+    ) {
+      toast.error("Please select helpers if you have provided a base salary for them.");
+      return;
+    }
+
     if (selectedHelper && selectedHelper2 && selectedHelper.employee_id === selectedHelper2.employee_id) {
       toast.error("Helper 1 and Helper 2 cannot be the same person.");
       return;
     }
-  
-    // 👇 Check if employee/helper are already in an ongoing trip
+
     try {
       const ongoingRes = await axios.get(`${process.env.NEXT_PUBLIC_DOMAIN}/ongoing-trips/`);
       const ongoingTrips = ongoingRes.data;
-  
+
       const isDriverBusy = ongoingTrips.some(
         (trip: any) => trip.employee_id === selectedEmployee.employee_id
       );
-  
+
       const isHelperBusy = selectedHelper &&
         ongoingTrips.some((trip: any) => trip.helper_id === selectedHelper.employee_id || trip.helper2_id === selectedHelper.employee_id);
-  
+
       const isHelper2Busy = selectedHelper2 &&
         ongoingTrips.some((trip: any) => trip.helper_id === selectedHelper2.employee_id || trip.helper2_id === selectedHelper2.employee_id);
-  
+
       if (isDriverBusy) {
         toast.error("Selected driver is already part of an ongoing trip.");
         return;
       }
-  
+
       if (isHelperBusy || isHelper2Busy) {
         toast.error("One or both of the selected helpers are already part of an ongoing trip.");
         return;
@@ -220,22 +213,19 @@ const CreateNewTripPage = () => {
       return;
     }
 
-
     const toNullable = (value: string) => (value === "" ? null : value);
 
     const payload: any = {
-      // People Included
       vehicle_id: selectedVehicle.vehicle_id,
       employee_id: selectedEmployee.employee_id,
       helper_id: selectedHelper?.employee_id || null,
       helper2_id: selectedHelper2?.employee_id || null,
 
-      // Arrays
       num_of_drops: numOfDrops,
       addresses: [...tripDestinations.map((dest) => dest.address)],
       clients: tripFormData.clients,
       distances: tripFormData.distances,
-      user_lat: tripFormData.user_lat,
+      user_lat: tripFormData.user_lat,  // Using state values
       user_lng: tripFormData.user_lng,
       dest_lat: [tripDestinations.map((dest) => dest.lat.toString())],
       dest_lng: [tripDestinations.map((dest) => dest.lng.toString())],
@@ -254,10 +244,10 @@ const CreateNewTripPage = () => {
       additionals: tripFormData.additionals
         ? parseFloat(tripFormData.additionals)
         : null,
-        start_date: new Date(tripFormData.start_date).toISOString().split("T")[0],
-        end_date: toNullable(tripFormData.end_date)
-          ? new Date(tripFormData.end_date).toISOString().split("T")[0]
-          : null,       
+      start_date: new Date(tripFormData.start_date).toISOString().split("T")[0],
+      end_date: toNullable(tripFormData.end_date)
+        ? new Date(tripFormData.end_date).toISOString().split("T")[0]
+        : null,       
     };
 
     try {
@@ -282,8 +272,8 @@ const CreateNewTripPage = () => {
         addresses: [""],
         clients: [""],
         distances: [""],
-        user_lat: "14.65889",
-        user_lng: "121.10419",
+        user_lat: "14.65889",  // Default value
+        user_lng: "121.10419",  // Default value
         dest_lat: [""],
         dest_lng: [""],
         completed: [false],
@@ -303,41 +293,41 @@ const CreateNewTripPage = () => {
     }
   };
 
-   useEffect(() => {
-     const delay = setTimeout(async () => {
-       try {
-         const apiKey = process.env.GOOGLE_API_KEY;
+  useEffect(() => {
+    const delay = setTimeout(async () => {
+      try {
+        const apiKey = process.env.GOOGLE_API_KEY;
 
-         const updatedDestinations = await Promise.all(
-           tripDestinations.map(async (dest) => {
-             const response = await fetch(
-               `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
-                 dest.address
-               )}&key=${apiKey}`
-             );
+        const updatedDestinations = await Promise.all(
+          tripDestinations.map(async (dest) => {
+            const response = await fetch(
+              `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+                dest.address
+              )}&key=${apiKey}`
+            );
 
-             const data = await response.json();
-             console.log("Auto-geocode Google response:", data);
+            const data = await response.json();
+            console.log("Auto-geocode Google response:", data);
 
-             if (!data.results || data.results.length === 0) return dest; // Keep original if no results
+            if (!data.results || data.results.length === 0) return dest;
 
-             const { lat, lng } = data.results[0].geometry.location;
+            const { lat, lng } = data.results[0].geometry.location;
 
-             return { ...dest, lat, lng }; // Update with lat/lng
-           })
-         );
+            return { ...dest, lat, lng };
+          })
+        );
 
-         setTripFormData((prev) => ({
-           ...prev,
-           destinations: updatedDestinations, // Store updated destinations array
-         }));
-       } catch (err) {
-         console.error("Auto-geocoding failed:", err);
-       }
-     }, 1500);
+        setTripFormData((prev) => ({
+          ...prev,
+          destinations: updatedDestinations,
+        }));
+      } catch (err) {
+        console.error("Auto-geocoding failed:", err);
+      }
+    }, 1500);
 
-     return () => clearTimeout(delay);
-   }, [tripFormData, tripDestinations]);
+    return () => clearTimeout(delay);
+  }, [tripFormData, tripDestinations]);
 
   return (
     <div className="min-h-screen flex flex-col items-center py-8 px-4 md:px-8">
@@ -377,19 +367,18 @@ const CreateNewTripPage = () => {
           </div>
         </div>
 
-        {/* Number of Drops (Calculated Automatically) */}
+        {/* Number of Drops */}
         <h3 className="text-lg font-bold text-black/70">Number of Drops</h3>
         <input
           type="text"
-          value={numOfDrops} // Set value to the number of addresses
+          value={numOfDrops} 
           readOnly
           className="input-field text-black rounded placeholder:text-sm bg-white"
           style={{ marginTop: "2px" }}
           disabled
         />
 
-        {/* TRIP ORIGIN */}
-        
+        {/* Trip Origin */}
         <div className="flex flex-col gap-2">
           <h3 className="text-lg font-bold text-black/70">Trip Origin</h3>
           <div className="flex">
@@ -406,11 +395,11 @@ const CreateNewTripPage = () => {
           <h3 className="text-lg font-bold text-black/70">Trip Description: </h3>
             <input
               type="text"
-              value={tripFormData.trip_description.join(", ")} // Show selected descriptions
+              value={tripFormData.trip_description.join(", ")} 
               onChange={(e) => {
                 setTripFormData((prevData) => ({
                   ...prevData,
-                  trip_description: e.target.value.split(", ").map((desc) => desc.trim()), // Update trip_description state
+                  trip_description: e.target.value.split(", ").map((desc) => desc.trim()),
                 }));
               }}
               placeholder="Frozen, Chilled, Dry, Skin"
@@ -418,8 +407,7 @@ const CreateNewTripPage = () => {
             />   
         </div>
 
-
-        {/* ADDRESS ARRAY */}
+        {/* Address Array */}
         <div>
           <h3 className="w-full text-lg font-bold text-black/70">Address</h3>
           {tripFormData.addresses.map((address, index) => (
@@ -436,11 +424,8 @@ const CreateNewTripPage = () => {
               <button
                 type="button"
                 onClick={() => {
-                  // Add corresponding entries for other fields when a new address is added
-                  const newLat = "14.65889"; // Default value for the first field, empty for others
-                  const newLng = "121.10419"; // Default value for the first field, empty for others
-                  const newDestLat = index === 1 ? ["14.65889"] : [""];
-                  const newDestLng = index === 1 ? ["14.65889"] : [""];
+                  const newLat = "14.65889"; // Default value
+                  const newLng = "121.10419"; // Default value
 
                   setTripFormData({
                     ...tripFormData,
@@ -448,7 +433,6 @@ const CreateNewTripPage = () => {
                       ...tripDestinations.map((dest) => dest.address),
                       "",
                     ],
-                //    distances: [...tripFormData.distances, ""],
                     clients: [...tripFormData.clients, ""],
                     user_lat: newLat,
                     user_lng: newLng,
@@ -473,7 +457,6 @@ const CreateNewTripPage = () => {
               <button
                 type="button"
                 onClick={() => {
-                  // Remove corresponding entries for other fields when an address is removed
                   const newAddresses = tripFormData.addresses.filter((_, i) => i !== index);
                   const newDistances = tripFormData.distances.filter((_, i) => i !== index);
                   const newClients = tripFormData.clients.filter((_, i) => i !== index);
@@ -521,93 +504,8 @@ const CreateNewTripPage = () => {
             </div>
           ))}
         </div>
-        {/* USER LAT ARRAY */}
-        <div>
-          <h3 className="text-lg font-bold text-black/70">User Latitudes</h3>
-          <div className="flex gap-2">
-            <input
-              type="number"
-              placeholder="User Latitude"
-              className="input-field text-black rounded"
-              value={tripFormData.user_lat}
-              onChange={(e) =>
-                setTripFormData({ ...tripFormData, user_lat: e.target.value })
-              }
-            />
-          </div>
-        </div>
 
-        {/* USER LNG ARRAY */}
-        <div>
-          <h3 className="text-lg font-bold text-black/70">User Longitudes</h3>
-
-          <div className="flex gap-2">
-            <input
-              type="number"
-              placeholder="User Longitude"
-              className="input-field text-black rounded"
-              value={tripFormData.user_lng}
-              onChange={(e) =>
-                setTripFormData({ ...tripFormData, user_lng: e.target.value })
-              }
-            />
-          </div>
-
-        </div>
-
-        {/* DEST LAT ARRAY */}
-        <div>
-          <h3 className="text-lg font-bold text-black/70">
-            Destination Latitudes
-          </h3>
-          {tripDestinations.map((tripDestination, index) => (
-            <div key={index} className="flex gap-2">
-              <input
-                type="number"
-                placeholder="Destination Latitude"
-                className="input-field text-black rounded"
-                value={tripDestination.lat}
-              />
-            </div>
-          ))}
-        </div>
-
-        {/* DEST LNG ARRAY */}
-        <div>
-          <h3 className="text-lg font-bold text-black/70">
-            Destination Longitudes
-          </h3>
-          {tripDestinations.map((tripDestination, index) => (
-            <div key={index} className="flex gap-2">
-              <input
-                type="number"
-                placeholder="Destination Longitude"
-                className="input-field text-black rounded"
-                value={tripDestination.lng}
-              />
-            </div>
-          ))}
-        </div>
-
-        {/* COMPLETED ARRAY */}
-        <div>
-          <h3 className="text-lg font-bold text-black/70">Completion Status</h3>
-          {tripFormData.completed.map((status, index) => (
-            <div key={index} className="flex gap-2">
-              <input
-                type="checkbox"
-                checked={status}
-                onChange={() => {
-                  const newCompleted = [...tripFormData.completed];
-                  newCompleted[index] = !status;
-                  setTripFormData({ ...tripFormData, completed: newCompleted });
-                }}
-              />
-            </div>
-          ))}
-        </div>
-
-        {/* MULTIPLIER */}
+        {/* Multiplier */}
         <h3 className="text-lg font-bold text-black/70">Multiplier</h3>
         <input
           type="number"
@@ -663,7 +561,7 @@ const CreateNewTripPage = () => {
           }
         />
 
-        {/* START DATE & END DATE */}
+        {/* Start Date & End Date */}
         <div className="flex gap-4 mb-4">
           {/* Start Date */}
           <div className="w-1/2">
@@ -697,6 +595,7 @@ const CreateNewTripPage = () => {
           </div>
         </div>
 
+        {/* Submit and Back Buttons */}
         <button
           type="submit"
           className="w-full bg-[#668743] text-white py-3 rounded-lg text-lg font-semibold hover:bg-[#345216]"

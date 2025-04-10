@@ -640,7 +640,7 @@ def get_ongoing_trips(request):
         trips = Trip.objects.filter(
             employee=employee
         ).filter(
-            is_completed=False
+            trip_status="Ongoing"
         ).order_by("-start_date")
 
         serializer = TripSerializer(trips, many=True)
@@ -664,7 +664,7 @@ def get_recent_trips(request):
         employee = request.user.employee_profile
         trips = Trip.objects.filter(
             employee=employee,
-            is_completed=True
+            trip_status="Confirmed"
         ).order_by("-start_date")
 
         serializer = TripSerializer(trips, many=True)
@@ -997,8 +997,9 @@ def generate_gross_payroll_pdf(request):
     except ValueError:
         return HttpResponse("Invalid date format", status=400)
 
-    totals_records = Total.objects.filter(start_date=start_date, end_date=end_date)
-    if not totals_records.exists():
+    # Check if totals already exist for this date range
+    existing_totals = Total.objects.filter(start_date=start_date, end_date=end_date)
+    if not existing_totals.exists():
         return HttpResponse("No totals records found within this date range.", status=404)
 
     formatted_start = DateFormat(start_date).format('F d, Y')
@@ -1020,7 +1021,7 @@ def generate_gross_payroll_pdf(request):
         Paragraph("<b>BIG C TRUCKING SERVICES GROSS PAYROLL</b>", styles['Title']),
         Spacer(1, 10),
         Paragraph(f"<b>PAYROLL PERIOD:</b> {formatted_start} to {formatted_end}", left_align),
-        Paragraph(f"<b>TOTAL EMPLOYEES WITH TRIPS:</b> {totals_records.count()}", left_align),
+        Paragraph(f"<b>TOTAL EMPLOYEES WITH TRIPS:</b> {existing_totals.count()}", left_align),
         Spacer(1, 20)
     ]
 
@@ -1040,7 +1041,7 @@ def generate_gross_payroll_pdf(request):
             ["OVERALL TOTAL", f"{totals.overall_total:.2f}"],
         ]
         table = Table(table_data, colWidths=[130, 90])
-        table.setStyle(TableStyle([
+        table.setStyle(TableStyle([ 
             ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
@@ -1049,7 +1050,7 @@ def generate_gross_payroll_pdf(request):
         return table
 
     row_buffer = []
-    for idx, totals in enumerate(totals_records, 1):
+    for idx, totals in enumerate(existing_totals, 1):
         content = [
             Paragraph(f"<b>EMPLOYEE:</b> {totals.employee.user.username.upper()}", left_align),
             Spacer(1, 4),
@@ -1057,12 +1058,12 @@ def generate_gross_payroll_pdf(request):
         ]
         row_buffer.append(content)
 
-        if len(row_buffer) == 3 or idx == len(totals_records):
+        if len(row_buffer) == 3 or idx == len(existing_totals):
             while len(row_buffer) < 3:
                 row_buffer.append([])
 
             row_table = Table([row_buffer], colWidths=[doc.width / 3] * 3)
-            row_table.setStyle(TableStyle([
+            row_table.setStyle(TableStyle([ 
                 ('VALIGN', (0, 0), (-1, -1), 'TOP'),
                 ('LEFTPADDING', (0, 0), (-1, -1), 10),
                 ('RIGHTPADDING', (0, 0), (-1, -1), 10),
@@ -1274,13 +1275,15 @@ def calculate_totals(request):
     except ValueError:
         return Response({'error': 'Invalid date format.'}, status=status.HTTP_400_BAD_REQUEST)
 
+    # Fetch trips with status 'Confirmed' within the date range
     trips = Trip.objects.filter(
-        is_completed=True,
+        trip_status="Confirmed",
         end_date__range=(start_date, end_date)
     ).select_related('employee', 'helper', 'helper2')
 
     user_to_trips = defaultdict(list)
 
+    # Group trips by user (employee, helper, or helper2)
     for trip in trips:
         if trip.employee:
             user_to_trips[trip.employee_id].append(trip)
@@ -1291,6 +1294,7 @@ def calculate_totals(request):
 
     created_records = []
 
+    # Calculate totals for each user
     for user_id, trips_for_user in user_to_trips.items():
         salaries = Salary.objects.filter(trip__in=trips_for_user)
 
@@ -1304,18 +1308,25 @@ def calculate_totals(request):
             'total_pagibig': salaries.aggregate(total=Sum('pagibig_contribution'))['total'] or 0,
             'total_pagibig_loan': salaries.aggregate(total=Sum('pagibig_loan'))['total'] or 0,
             'total_others': salaries.aggregate(total=Sum('others'))['total'] or 0,
-            'total_bonuses': salaries.aggregate(total=Sum('bonuses'))['total'] or 0,
             'total_charges': salaries.aggregate(total=Sum('charges'))['total'] or 0,
-            'total_base_salary': sum([t.base_salary for t in trips_for_user if t.base_salary]) or 0,
             'total_additionals': sum([t.additionals for t in trips_for_user if t.additionals]) or 0,
         }
 
+        # Depending on whether the user is an employee (driver) or helper, assign the respective base salary
+        if any(trip.employee_id == user_id for trip in trips_for_user):
+            driver_base_salary = sum([t.driver_base_salary for t in trips_for_user if t.driver_base_salary]) or 0
+            totals['total_base_salary'] = driver_base_salary
+        else:
+            helper_base_salary = sum([t.helper_base_salary for t in trips_for_user if t.helper_base_salary]) or 0
+            totals['total_base_salary'] = helper_base_salary
+
         totals['overall_total'] = sum(totals.values())
 
+        # Create a new total record in the database
         record = Total.objects.create(
             start_date=start_date,
             end_date=end_date,
-            employee_id=user_id,  # Whether employee or helper, this works
+            employee_id=user_id,  # This works for both employee and helpers
             **totals
         )
 
@@ -1330,6 +1341,7 @@ def calculate_totals(request):
         'records': created_records
     }, status=status.HTTP_201_CREATED)
     
+#========================================================================================================================
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_completed_trips_salaries(request):
@@ -1345,7 +1357,7 @@ def get_completed_trips_salaries(request):
     except ValueError:
         return Response({"error": "Invalid date format. Use YYYY-MM-DD."}, status=400)
 
-    trips = Trip.objects.filter(is_completed=True, end_date__range=(start, end))
+    trips = Trip.objects.filter(trip_status=True, end_date__range=(start, end))
     serializer = TripSerializer(trips, many=True)
     return Response(serializer.data)
 
@@ -1364,7 +1376,7 @@ def trips_by_date_range(request):
     except ValueError:
         return Response({'error': 'Invalid date format.'}, status=400)
 
-    trips = Trip.objects.filter(end_date__range=(start_date, end_date), is_completed=True)
+    trips = Trip.objects.filter(end_date__range=(start_date, end_date), trips_status="Confirmed")
 
     data = []
     for trip in trips:
@@ -1388,7 +1400,6 @@ def trips_by_date_range(request):
                 'philhealth_contribution': float(salary.philhealth_contribution) if salary else 0,
                 'pagibig_contribution': float(salary.pagibig_contribution) if salary else 0,
                 'pagibig_loan': float(salary.pagibig_loan) if salary else 0,
-                'bonuses': float(salary.bonuses) if salary else 0,
             }
         })
 
@@ -1663,3 +1674,23 @@ def get_employee_location(request, employee_id):
         })
     except EmployeeLocation.DoesNotExist:
         return Response({"message": "Location not available"}, status=404)
+    
+@api_view(['PATCH'])
+def update_trip(request, trip_id):
+    try:
+        # Fetch the trip by ID
+        trip = Trip.objects.get(trip_id=trip_id)
+    except Trip.DoesNotExist:
+        # Handle case where the trip is not found
+        return Response({'detail': 'Trip not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    # Validate the incoming data with partial=True to allow partial updates
+    serializer = TripSerializer(trip, data=request.data, partial=True)
+
+    if serializer.is_valid():
+        serializer.save()  # Save the updated trip
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    else:
+        # Provide error details to help debug the issue
+        print("Validation errors:", serializer.errors)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

@@ -32,8 +32,6 @@ const TripStatus = () => {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const statusOptions = ["Pending", "Foul", "Ongoing", "Confirmed"];
-
   useEffect(() => {
     const fetchTrips = async () => {
       try {
@@ -53,7 +51,9 @@ const TripStatus = () => {
     fetchTrips();
   }, []);
 
-  const handleTripStatusChange = async (tripId: number, newStatus: string) => {
+  const handleTripStatusChange = async (tripId: number, isChecked: boolean) => {
+    const newStatus = isChecked ? "Completed" : "Ongoing";
+
     try {
       setTrips((prevTrips) =>
         prevTrips.map((trip) =>
@@ -61,10 +61,9 @@ const TripStatus = () => {
         )
       );
   
-      // Backend update with Authorization Header
       await axios.patch(
         `${process.env.NEXT_PUBLIC_DOMAIN}/update/trips/${tripId}/`,
-        { trip_status: newStatus },
+        { trip_status: newStatus }
       );
   
       toast.success("Trip status updated successfully.");
@@ -73,7 +72,7 @@ const TripStatus = () => {
       toast.error("Failed to update trip status.");
     }
   };
-  
+
   return (
     <div className="wrapper w-full max-w-5xl rounded-2xl shadow-lg p-6 bg-black/40 mb-8">
       <div className="flex justify-center items-center mx-3 gap-2">
@@ -85,7 +84,7 @@ const TripStatus = () => {
             height={30}
             className="opacity-40"
           />
-          Trip Status
+          Trip Verification
         </h2>
       </div>
 
@@ -107,22 +106,10 @@ const TripStatus = () => {
 
             const lastClient = trip.clients?.[trip.clients.length - 1] || "Unknown";
 
-            // Determine the background color based on trip status
-            const statusClass =
-              trip.trip_status === "Ongoing"
-                ? "bg-orange-200"
-                : trip.trip_status === "Foul"
-                ? "bg-red-200"
-                : trip.trip_status === "Confirmed"
-                ? "bg-green-200"
-                : trip.trip_status === "Pending"
-                ? "bg-blue-200"
-                : "bg-gray-300";
-
             return (
               <div
                 key={trip.trip_id}
-                className={`wrappersmall2 flex flex-col sm:flex-row items-center justify-between p-4 text-black/80 rounded-lg mb-3 shadow-sm ${statusClass}`}
+                className="wrappersmall2 flex flex-col sm:flex-row items-center justify-between p-4 bg-[#d9e0cc] text-black/80 rounded-lg mb-3 shadow-sm"
               >
                 <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left w-full">
                   <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center border border-gray-500 overflow-hidden">
@@ -141,7 +128,7 @@ const TripStatus = () => {
                       {trip.vehicle?.plate_number || "No Plate"} — {trip.vehicle?.vehicle_type || "Unknown Type"}
                       {trip.vehicle?.is_company_owned === false && trip.vehicle?.subcon_name
                         ? ` | Subcon: ${trip.vehicle.subcon_name}`
-                        : ""}
+                        : "" }
                       )
                     </p>
 
@@ -158,20 +145,15 @@ const TripStatus = () => {
 
                     <div className="text-sm mt-2">
                       <label htmlFor={`status-${trip.trip_id}`} className="font-semibold mr-2">
-                        Status:
+                        Mark as Completed:
                       </label>
-                      <select
+                      <input
+                        type="checkbox"
                         id={`status-${trip.trip_id}`}
-                        value={trip.trip_status}
-                        onChange={(e) => handleTripStatusChange(trip.trip_id, e.target.value)}
-                        className="px-3 py-1 rounded-md text-black font-medium"
-                      >
-                        {statusOptions.map((status) => (
-                          <option key={status} value={status}>
-                            {status}
-                          </option>
-                        ))}
-                      </select>
+                        checked={trip.trip_status === "Completed"}
+                        onChange={(e) => handleTripStatusChange(trip.trip_id, e.target.checked)}
+                        className="px-3 py-1 rounded-md"
+                      />
                     </div>
                   </div>
                 </div>

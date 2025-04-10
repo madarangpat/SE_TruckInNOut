@@ -26,9 +26,10 @@ const PreviewReportG: React.FC<Props> = ({ start, end, onClose }) => {
 
         if (!response.ok) throw new Error("Failed to fetch gross payroll PDF preview");
 
+        // Fetch the PDF as a Blob
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
-        setPdfUrl(url);
+        setPdfUrl(url); // Create an object URL for the Blob and set it as the src for the iframe
       } catch (err) {
         console.error("Gross PDF Preview Error:", err);
         setPdfUrl(null);

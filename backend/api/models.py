@@ -212,7 +212,7 @@ class Trip(models.Model):
     def save(self, *args, **kwargs):
         is_new = self.pk is None
         was_completed = None
-             
+
         # Set default trip status to "Ongoing" when the trip is being created
         if not self.trip_status:
             self.trip_status = "Ongoing"
@@ -226,8 +226,10 @@ class Trip(models.Model):
         else:
             was_completed = False
 
+        # Call the parent class save method to actually save the instance
         super().save(*args, **kwargs)
 
+        # Create related Salary and SalaryConfiguration objects if the trip is new
         if is_new:
             if self.employee:
                 from api.models import Salary, SalaryConfiguration
@@ -237,11 +239,13 @@ class Trip(models.Model):
                 # Auto-create SalaryConfiguration if not exists for employee
                 SalaryConfiguration.objects.create(trip=self)
 
+        # Update completed trip counts for employees when trip is marked as completed
         if not was_completed and self.is_completed:
             for emp in [self.employee, self.helper, self.helper2]:
                 if emp and emp.user.employee_type in ["Driver", "Helper"]:
                     emp.completed_trip_count += 1
                     emp.save()
+
             
 #======================================================================================================================================
 # VEHICLE MODEL
@@ -289,7 +293,9 @@ class Total(models.Model):
     total_additionals = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     overall_total = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     created_date = models.DateField(auto_now_add=True, null=True)
-
+    
+    class Meta:
+        unique_together = ('start_date', 'end_date', 'employee')
 
     def __str__(self):
         return f"Totals #{self.totals_id}"
