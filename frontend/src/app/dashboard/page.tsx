@@ -13,12 +13,8 @@ export default async function DashboardPage() {
   if (user.role === "admin" || user.role === "super_admin") {
     console.log("Redirecting to admin home");
     redirect("/dashboard/admin/home");
-  } else if (user.role === "employee") {
-    if (user.employee_type === "Staff") {
-      redirect("/dashboard/staff/home");
-    } else {
-      redirect("/dashboard/employee/home");
-    }
+  } else if (user.role === "employee") {   
+      redirect("/dashboard/employee/home");    
   }
 
   // Fallback
