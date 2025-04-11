@@ -4,7 +4,6 @@ import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { toast } from "sonner";
 import { updateCompletedStatus } from "@/lib/actions/deliveries.actions";
-import { StringValidation } from "zod";
 
 type DeliveriesClientProps = {
   recentTrips: Trip[];
@@ -17,8 +16,9 @@ type Trip = {
   start_date: string;
   end_date?: string;
   trip_status: string;
-  is_completed: boolean | string;
-  base_salary?: number;
+  base_salary: string;
+  driver_base_salary: number;
+  helper_base_salary: number;
   addresses: string[];
   clients: string[];
   completed: boolean[];
@@ -36,10 +36,12 @@ type Trip = {
       username: string;
       profile_image: string | null;
     };
+    employee_type?: string;
   } | null;
 };
 
 const DeliveriesClient = ({
+  
   recentTrips,
   ongoingTrips: initialOngoingTrips,
 }: DeliveriesClientProps) => {
@@ -47,12 +49,14 @@ const DeliveriesClient = ({
   const employee = ongoingTrips.length > 0 ? ongoingTrips[0]?.employee : null;
  // Assuming all trips have the same employee
 
+ 
+
   const filteredOngoing = (ongoingTrips ?? []).filter(
     (trip) => trip.trip_status === "Ongoing" || trip.trip_status === "Ongoing"
   );
   
   const filteredRecent = (recentTrips ?? []).filter(
-    (trip) => trip.trip_status === "Confirmed" || trip.trip_status === "Confirmed"
+    (trip) => trip.trip_status === "Confirmed" || trip.trip_status === "true"
   );  
 
   const handleDropToggle = async (tripId: number, dropIndex: number) => {
@@ -168,12 +172,8 @@ const DeliveriesClient = ({
                       )}
 
                       <p className="text-sm bg-white/20 text-white px-3 py-1 rounded-md mt-1 w-full">
-                        <strong>Number of Drops:</strong>{" "}
+                        <strong>Total Drops:</strong>{" "}
                         {trip.num_of_drops || "__________"}
-                      </p>
-
-                      <p className="text-sm bg-white/20 text-white px-3 py-1 rounded-md mt-1 w-full">
-                        <strong>Salary:</strong> {trip.base_salary || "___"}
                       </p>
 
                       <p className="text-sm bg-white/20 text-white px-3 py-1 rounded-md mt-1 w-full">
@@ -187,6 +187,14 @@ const DeliveriesClient = ({
                           : "N/A"}
                       </p>
 
+                      <p className="text-sm bg-white/20 text-white px-3 py-1 rounded-md mt-1 w-full">
+                        <strong>Your Salary:</strong> {trip.driver_base_salary || "___"}
+                      </p>
+
+                      <p className="text-sm bg-white/20 text-white px-3 py-1 rounded-md mt-1 w-full">
+                        <strong>Helper Salary:</strong> {trip.helper_base_salary || "___"}
+                      </p>
+           
                       {/* Drop Toggles */}
                       {trip.addresses.map((address, index) => (
                         <label
@@ -279,12 +287,8 @@ const DeliveriesClient = ({
                       </p>
 
                       <p className="text-sm bg-white/50 text-black px-3 py-1 rounded-md mt-1 w-full">
-                        <strong>Number of Drops:</strong>{" "}
+                        <strong>Total Drops:</strong>{" "}
                         {trip.num_of_drops || "__________"}
-                      </p>
-
-                      <p className="text-sm bg-white/50 text-black px-3 py-1 rounded-md mt-1 w-full">
-                        <strong>Salary:</strong> {trip.base_salary || "___"}
                       </p>
 
                       <p className="text-sm bg-white/50 text-black px-3 py-1 rounded-md mt-1 w-full">
@@ -298,6 +302,14 @@ const DeliveriesClient = ({
                               trip.clients[trip.clients.length - 1]
                             })`
                           : "No address available"}
+                      </p>
+
+                      <p className="text-sm bg-white/20 text-black px-3 py-1 rounded-md mt-1 w-full">
+                        <strong>Your Salary:</strong> {trip.driver_base_salary || "___"}
+                      </p>
+
+                      <p className="text-sm bg-white/20 text-black px-3 py-1 rounded-md mt-1 w-full">
+                        <strong>Helper Salary:</strong> {trip.helper_base_salary || "___"}
                       </p>
                     </div>
                   </div>

@@ -1586,7 +1586,7 @@ def update_completed_status(request):
     except Trip.DoesNotExist:
         return Response({"error": "Trip not found"}, status=404)
     
-@api_view(['POST'])
+@api_view(['PATCH'])
 @permission_classes([AllowAny])  # Change this to IsAdminUser if you want to restrict access
 def reset_completed_trip_counts(request):
     today = datetime.now().date()

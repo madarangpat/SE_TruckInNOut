@@ -26,7 +26,7 @@ const EmployeeStatus = () => {
 
       try {
         const res = await fetch(`${process.env.NEXT_PUBLIC_DOMAIN}/employees/reset-completed-trips/`, {
-          method: "POST",
+          method: "PATCH",
         });
 
         const result = await res.json();
@@ -44,6 +44,7 @@ const EmployeeStatus = () => {
         const res = await fetch(`${process.env.NEXT_PUBLIC_DOMAIN}/employees/`);
         const data = await res.json();
         setEmployees(data);
+        await updateCompletedTrips(data); // Update completed trip counts after fetching employees
       } catch (error) {
         console.error("❌ Failed to fetch employee data:", error);
         toast.error("Failed to load employee data.");
@@ -52,8 +53,45 @@ const EmployeeStatus = () => {
       }
     };
 
+    const updateCompletedTrips = async (employees: Employee[]) => {
+      try {
+        // Fetch the confirmed trips
+        const tripsRes = await fetch(`${process.env.NEXT_PUBLIC_DOMAIN}/trips/`);
+        const trips = await tripsRes.json();
+
+        // Define the type for tripCounts, where keys are employee usernames and values are completed trip counts.
+        const tripCounts: { [username: string]: number } = {};
+
+        trips.forEach((trip: any) => {
+          if (trip.trip_status === "Confirmed") {
+            // Increment the trip count for the employee, helper, and helper2
+            if (trip.employee?.user?.username) {
+              tripCounts[trip.employee.user.username] = (tripCounts[trip.employee.user.username] || 0) + 1;
+            }
+            if (trip.helper?.username) {
+              tripCounts[trip.helper.username] = (tripCounts[trip.helper.username] || 0) + 1;
+            }
+            if (trip.helper2?.username) {
+              tripCounts[trip.helper2.username] = (tripCounts[trip.helper2.username] || 0) + 1;
+            }
+          }
+        });
+
+        // Update each employee's completed trip count
+        const updatedEmployees = employees.map((emp) => {
+          const completedTrips = tripCounts[emp.user.username] || 0; // Get the completed trip count for the employee
+          return { ...emp, completed_trip_count: completedTrips };
+        });
+
+        setEmployees(updatedEmployees); // Update the state with new completed trip counts
+      } catch (error) {
+        console.error("❌ Error updating completed trips:", error);
+        toast.error("Failed to update completed trips.");
+      }
+    };
+
     fetchEmployees();
-  }, []);
+  }, []); // Runs on mount
 
   return (
     <div className="wrapper rounded-2xl p-4 shadow-md w-full flex flex-col">
