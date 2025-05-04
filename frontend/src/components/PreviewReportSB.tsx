@@ -82,7 +82,7 @@ const PreviewReportSB: React.FC<Props> = ({ employee, start, end, onClose }) => 
             />
           ) : (
             <div className="text-center mt-20 text-red-500">
-              AAAAA to load PDF preview.
+              Failed to load PDF preview.
             </div>
           )}
         </div>

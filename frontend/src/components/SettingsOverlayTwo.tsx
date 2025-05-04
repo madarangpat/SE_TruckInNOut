@@ -28,12 +28,11 @@ const SettingsOverlayTwo = ({ onClose }: { onClose: () => void }) => {
         <ul className="space-y-5">
           {[
             { href: "/dashboard/admin/settings/CompanyInformation", icon: "/info.png", label: "Company Information" },
-            { href: "/dashboard/admin/settings/EmployeeData", icon: "/usergroups.png", label: "Employee Data" },
+            //{ href: "/dashboard/admin/settings/EmployeeData", icon: "/usergroups.png", label: "Employee Data" },
             { href: "/dashboard/admin/settings/VehicleData", icon: "/manycars.png", label: "Vehicle Data" },
-            // { href: "/dashboard/admin/settings/SalaryConfiguration", icon: "/payroll.png", label: "Salary Configuration" },
-            { href: "/dashboard/admin/settings/AddAccount", icon: "/plustrip2.png", label: "Add Account" },
+            //{ href: "/dashboard/admin/settings/AddAccount", icon: "/plustrip2.png", label: "Add Account" },
             { href: "/dashboard/admin/settings/AddVehicle", icon: "/truck2.png", label: "Add Vehicle" },
-            { href: "/dashboard/admin/settings/DeleteAccount", icon: "/remove.png", label: "Delete Account", isDanger: true },
+            //{ href: "/dashboard/admin/settings/DeleteAccount", icon: "/remove.png", label: "Delete Account", isDanger: true },
             { href: "/dashboard/admin/settings/DeleteVehicle", icon: "/remove.png", label: "Delete Vehicle", isDanger: true }
           ].map(({ href, icon, label, isDanger }) => (
             <li key={href}>

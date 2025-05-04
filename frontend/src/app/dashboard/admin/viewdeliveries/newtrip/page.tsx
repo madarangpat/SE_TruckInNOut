@@ -136,6 +136,25 @@ const CreateNewTripPage = () => {
 
   const numOfDrops = tripFormData.addresses.length;
 
+  // Handle multiplier input changes with validation
+  const handleMultiplierChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+
+    //Allow empty string (to clear the field)
+    if (value === ""){
+      setTripFormData({ ...tripFormData, multiplier: value });
+      return;
+    }
+
+    // Parse the input as a float
+    const numValue = parseFloat(value);
+
+    // Only update state if the value if greater than 0
+    if (!isNaN(numValue) && numValue > 0) {
+      setTripFormData({ ...tripFormData, multiplier: value });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -150,8 +169,8 @@ const CreateNewTripPage = () => {
       return;
     }
 
-    if (!tripFormData.multiplier) {
-      toast.error("Please provide a multiplier.");
+    if (!tripFormData.multiplier || parseFloat(tripFormData.multiplier) <= 0) {
+      toast.error("Please provide a multiplier greater than zero.");
       return;
     }
 
@@ -510,13 +529,18 @@ const CreateNewTripPage = () => {
         <input
           type="number"
           step="0.01"
-          placeholder="Multiplier"
+          min="0.01"
+          placeholder="Multiplier (must be greater than 0)"
           className="input-field text-black rounded placeholder:text-sm"
           style={{ marginTop: "4px" }}
           value={tripFormData.multiplier}
-          onChange={(e) =>
-            setTripFormData({ ...tripFormData, multiplier: e.target.value })
-          }
+          onChange={handleMultiplierChange}
+          onKeyDown={(e) => {
+            // Prevent entering negative values by blocking the minus key
+            if (e.key === '-' || e.key === 'e') {
+              e.preventDefault();
+            }
+          }}
         />
 
         {/* Driver Base Salary */}

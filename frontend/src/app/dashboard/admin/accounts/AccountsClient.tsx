@@ -6,6 +6,7 @@ import Image from "next/image";
 import { updateUserData } from "@/lib/actions/user.actions";
 import { PencilIcon } from "lucide-react";
 import { toast } from "sonner";
+import Link from "next/link";
 
 // Cellphone number validation function
 const validateCellphoneNumber = (cellphone_no: string) => {
@@ -214,6 +215,33 @@ const AccountsPage = ({ users }: { users: User[] }) => {
               </div>
             </form>
           )}
+          {/* Navigation Links for Employee Data and Add Account */}
+          <div className="mt-6 space-y-3">
+          <div className="w-full h-1 rounded-full bg-black" />
+            <Link
+              href="/dashboard/admin/settings/EmployeeData"
+              className="flex items-center gap-2 px-6 py-3 bg-[#668743] text-white text-base rounded-lg hover:bg-[#345216] transition"
+            >
+              <Image src="/usergroups.png" alt="Employee Data" width={20} height={20} className="opacity-90" />
+              Employee Data
+            </Link>
+
+            <Link
+              href="/dashboard/admin/settings/AddAccount"
+              className="flex items-center gap-2 px-6 py-3 bg-[#668743] text-white text-base rounded-lg hover:bg-[#345216] transition"
+            >
+              <Image src="/plustrip2.png" alt="Add Account" width={20} height={20} className="opacity-90" />
+              Add Account
+            </Link>
+
+            <Link
+              href="/dashboard/admin/settings/DeleteAccount"
+              className="flex items-center gap-2 px-6 py-3 bg-[#668743] text-white text-base rounded-lg hover:bg-[#345216] transition"
+            >
+              <Image src="/remove.png" alt="Delete Account" width={20} height={20} className="opacity-90" />
+              Delete Account
+            </Link>
+          </div>
         </div>
       </div>
     </div>

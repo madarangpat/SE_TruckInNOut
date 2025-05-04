@@ -300,7 +300,7 @@ const SalaryBreakdown = () => {
                 : "bg-[#668743] hover:bg-[#345216]"
             }`}
           >
-            Set Completed Trips
+            Find Completed Trips
           </button>
         </div>
 

@@ -7,9 +7,13 @@ import Image from "next/image";
 import PreviewReportG from "@/components/PreviewReportG";
 import { toast } from "sonner";
 
+// interface User {
+//   username: string;
+// }
+
 const ViewGross = () => {
   const router = useRouter();
-
+  // const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [grossStartDate, setGrossStartDate] = useState<Date | null>(null);
   const [grossEndDate, setGrossEndDate] = useState<Date | null>(null);
   const [tripData, setTripData] = useState([]);
@@ -17,6 +21,21 @@ const ViewGross = () => {
   const [showPreview, setShowPreview] = useState(false);
   const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
   const [totalsCalculated, setTotalsCalculated] = useState(false);
+
+  // useEffect(() => {
+  //   fetch(`${process.env.NEXT_PUBLIC_DOMAIN}/users/profile/`, {
+  //     credentials: "include", // if you use cookies for session
+  //   })
+  //     .then(res => res.json())
+  //     .then(data => {
+  //       setCurrentUser(data);
+  //     })
+  //     .catch(err => {
+  //       console.error("Failed to fetch current user:", err);
+  //       toast.error("Unable to fetch current user.");
+  //     });
+  // }, []);
+  
 
   // Fetch trips with salaries within selected date range
   useEffect(() => {
@@ -91,6 +110,7 @@ const ViewGross = () => {
     if (grossStartDate && grossEndDate) {
       const startDateFormatted = grossStartDate.toISOString().split("T")[0];
       const endDateFormatted = grossEndDate.toISOString().split("T")[0];
+      const username = localStorage.getItem("username");  // Get logged-in user
 
       // Construct URL for the gross payroll preview
       const url = `${process.env.NEXT_PUBLIC_DOMAIN}/generate-pdf/gross-preview/?start_date=${startDateFormatted}&end_date=${endDateFormatted}`;
@@ -191,6 +211,7 @@ const ViewGross = () => {
           <PreviewReportG
             start={grossStartDate?.toISOString().split("T")[0] || ""}
             end={grossEndDate?.toISOString().split("T")[0] || ""}
+            // employee={currentUser.username}
             onClose={() => setShowPreview(false)}
           />
         )}

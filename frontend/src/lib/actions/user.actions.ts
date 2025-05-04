@@ -110,4 +110,38 @@ async function uploadProfilePicture(formData: FormData) {
   return data; // Return parsed response
 }
 
-export { getUsers, getUserProfile, updateUserData, uploadProfilePicture };
+async function changePassword(currentPassword: string, newPassword: string) {
+  const session = await getSession();
+  const url = `${process.env.NEXT_PUBLIC_DOMAIN}/change-password/`;
+
+  const requestOptions: RequestInit = {
+    method: "POST",
+    cache: "no-store",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${session?.access}`,
+    },
+    body: JSON.stringify({
+      current_password: currentPassword,
+      new_password: newPassword,
+    }),
+  };
+
+  const res = await fetch(url, requestOptions);
+
+  const text = await res.text();
+  if (!res.ok) {
+    try {
+      const data = JSON.parse(text);
+      throw new Error(data.message);
+    } catch {
+      const data = JSON.parse(text);
+      throw new Error(data.message);
+    }
+  }
+
+  return JSON.parse(text);
+}
+
+
+export { getUsers, getUserProfile, updateUserData, uploadProfilePicture, changePassword };

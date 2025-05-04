@@ -52,7 +52,7 @@ const TripStatus = () => {
   }, []);
 
   const handleTripStatusChange = async (tripId: number, isChecked: boolean) => {
-    const newStatus = isChecked ? "Completed" : "Ongoing";
+    const newStatus = isChecked ? "Confirmed" : "Ongoing";
 
     try {
       setTrips((prevTrips) =>
@@ -150,7 +150,7 @@ const TripStatus = () => {
                       <input
                         type="checkbox"
                         id={`status-${trip.trip_id}`}
-                        checked={trip.trip_status === "Completed"}
+                        checked={trip.trip_status === "Confirmed"}
                         onChange={(e) => handleTripStatusChange(trip.trip_id, e.target.checked)}
                         className="px-3 py-1 rounded-md"
                       />

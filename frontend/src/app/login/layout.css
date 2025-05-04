@@ -148,16 +148,21 @@ button:focus-visible {
     font-size: 14.5px;
     text-align: center;
     padding-top: 5px;
-    padding-bottom: 50px;
 }
 
 .forgot-password a{
     color: #000;
     font-weight: 400;
-    padding-bottom: 50px;
     text-decoration: none;
 }
 
 .forgot-password a:hover{
     font-weight: bold;
 }
+
+.bigc-logo-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 2rem;
+  }
+  

@@ -4,7 +4,6 @@ import { toast } from "sonner";
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { useSearchParams, useRouter } from "next/navigation";
-import SettingsOverlayTwo from "@/components/SettingsOverlayTwo";
 import axios from "axios";
 
 const AddAccountPage = () => {
@@ -378,19 +377,16 @@ const AddAccountPage = () => {
 
           <div className="mt-6 col-span-2">
             <button
-              onClick={() => setShowSettings(true)}
+              type="button"
+              onClick={() => router.push("/dashboard/admin/accounts")}
               className="px-4 py-2 text-black/80 border border-black/40 rounded-lg hover:bg-gray-200 transition"
             >
-              ← Back to Settings
+              ← Back to Accounts
             </button>
           </div>
         </form>
 
       </div>
-
-      {showSettings && (
-        <SettingsOverlayTwo onClose={() => setShowSettings(false)} />
-      )}
     </div>
   );
 };

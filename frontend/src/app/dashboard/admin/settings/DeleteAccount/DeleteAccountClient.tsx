@@ -2,8 +2,8 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
-import SettingsOverlayTwo from "@/components/SettingsOverlayTwo";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 const DeleteAccountClient = ({ users }: { users: User[] }) => {
   const [showSettings, setShowSettings] = useState(false);
@@ -11,6 +11,7 @@ const DeleteAccountClient = ({ users }: { users: User[] }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [showOverlay, setShowOverlay] = useState(false);
   const [userList, setUserList] = useState(users);
+  const router = useRouter();
 
   const handleUserSelect = (user: User) => {
     setSelectedUser(user);
@@ -117,10 +118,11 @@ const DeleteAccountClient = ({ users }: { users: User[] }) => {
         {/* Back Button */}
         <div className="text-center">
           <button
-            onClick={() => setShowSettings(true)}
+            type="button"
+            onClick={() => router.push("/dashboard/admin/accounts")}
             className="px-4 py-2 text-black/80 border border-black/40 rounded-lg hover:bg-gray-200 transition"
           >
-            ← Back to Settings
+            ← Back to Accounts
           </button>
         </div>
       </div>
@@ -152,10 +154,6 @@ const DeleteAccountClient = ({ users }: { users: User[] }) => {
             </div>
           </div>
         </div>
-      )}
-
-      {showSettings && (
-        <SettingsOverlayTwo onClose={() => setShowSettings(false)} />
       )}
     </div>
   );

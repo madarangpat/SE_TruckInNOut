@@ -60,7 +60,10 @@ const PriorityQueue = () => {
             <span>{employee.name}</span>
             <span className="text-xs bg-black/25 text-white px-2 py-1 rounded-lg">
               ₱{" "}
-              {employee.base_salary?.toFixed(2)} BASE SALARY
+              {employee.base_salary?.toLocaleString("en-PH", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })} SALARY
             </span>
           </div>
         ))}

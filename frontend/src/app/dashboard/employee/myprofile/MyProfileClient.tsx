@@ -10,6 +10,7 @@ import {
   uploadProfilePicture,
 } from "@/lib/actions/user.actions";
 import { toast } from "sonner";
+import { changePassword } from "@/lib/actions/user.actions";
 
 const MyProfileClient = ({ user }: { user: User }) => {
   const router = useRouter();
@@ -27,6 +28,10 @@ const MyProfileClient = ({ user }: { user: User }) => {
   const hasChanges =
   employeeData.email !== user.email ||
   employeeData.cellphone_no !== user.cellphone_no;
+
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const isPasswordChanging = currentPassword && newPassword;
 
 
   const formFields = [
@@ -86,15 +91,25 @@ const MyProfileClient = ({ user }: { user: User }) => {
   const handleSaveChanges = async (event: React.FormEvent) => {
     event.preventDefault();
     try {
-      await updateUserData({
-        userId: employeeData.user_id.toString(),
-        email: employeeData.email,
-        cellphone_no: employeeData.cellphone_no,
-      });
-      toast.success("Profile updated successfully!");
+      if (hasChanges) {
+        await updateUserData({
+          userId: employeeData.user_id.toString(),
+          email: employeeData.email,
+          cellphone_no: employeeData.cellphone_no,
+        });
+        toast.success("Profile updated successfully!");
+      }
+  
+      if (isPasswordChanging) {
+        await changePassword(currentPassword, newPassword);
+        toast.success("Password changed successfully!");
+        setCurrentPassword("");
+        setNewPassword("");
+      }
+  
       setEditableField(null);
-    } catch (error) {
-      toast.error("Error updating profile:");
+    } catch (error: any) {
+      toast.error(error.message || "Error updating profile.");
     }
   };
   
@@ -196,7 +211,7 @@ const MyProfileClient = ({ user }: { user: User }) => {
             <button
               type="submit"
               disabled={!hasChanges}
-              className={`py-1 px-3 text-s rounded-lg ${
+              className={`w-32 py-2 px-4 rounded text-sm font-medium ${
                 hasChanges
                   ? "bg-[#668743] text-white hover:bg-[#345216]"
                   : "bg-gray-400 text-white cursor-not-allowed"
@@ -205,18 +220,27 @@ const MyProfileClient = ({ user }: { user: User }) => {
               ✓ Save Changes
             </button>
           </div>
+          <div className="flex justify-center mt-4">
+            <button
+              type="button"
+              onClick={() => router.push("/dashboard/employee/myprofile/ChangePassword")}
+              className="w-32 py-2 px-4 rounded text-sm font-medium bg-blue-600 text-white hover:bg-blue-800"
+            >
+              Change Password
+            </button>
+          </div>
         </form>
-
+        
         <div className="flex flex-col items-center space-y-2 mt-2">
           <button
             onClick={handleLogout}
-            className="flex items-center justify-center bg-red-600 text-white py-1 px-3 text-s rounded-lg hover:bg-red-800 w-32"
+            className="w-32 py-2 px-4 rounded text-sm font-medium bg-red-600 text-white hover:bg-red-800 flex items-center justify-center"
           >
             <Image
               src="/logoutt.png"
               alt="Logout"
-              width={25}
-              height={25}
+              width={20}
+              height={20}
               className="mr-2"
             />
             Logout

@@ -55,6 +55,11 @@ from django.utils.timezone import now
 from django.utils.dateparse import parse_date
 import logging
 from django.utils.dateparse import parse_datetime
+from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth.password_validation import validate_password
+from reportlab.platypus import Image as RLImage
+from django.conf import settings
+import os
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -771,7 +776,18 @@ def update_salary_deductions(request):
 #==============================================================================================================================
 @api_view(['GET'])
 @permission_classes([AllowAny])
+def format_currency(value):
+    try:
+        return "{:,.2f}".format(float(value))
+    except (TypeError, ValueError):
+        return "0.00"
+
 def generate_salary_breakdown_pdf(request):
+    def format_currency(value):
+        try:
+            return "{:,.2f}".format(float(value))
+        except (TypeError, ValueError):
+            return "0.00"
     username = request.GET.get("employee")
     start = request.GET.get("start_date")
     end = request.GET.get("end_date")
@@ -829,7 +845,14 @@ def generate_salary_breakdown_pdf(request):
     left_align = ParagraphStyle(name='LeftAlign', parent=styles['Normal'], alignment=TA_LEFT)
     left_heading = ParagraphStyle(name='LeftHeading', parent=styles['Heading4'], alignment=TA_LEFT)
     elements = []
+    
+    # Reference the correct image path
+    image_path = os.path.join(settings.BASE_DIR, 'api', 'static', 'images', 'bigc.png')
 
+    stamp = RLImage(image_path, width=180, height=50)  # Adjust size as needed
+    stamp.hAlign = 'RIGHT'
+    elements.append(stamp)
+    
     elements.append(Paragraph(f"<b>Salary Report for {username}</b>", left_align))
     elements.append(Paragraph(f"<b>Date Range:</b> {start} to {end}", left_align))
     elements.append(Spacer(1, 12))
@@ -877,11 +900,14 @@ def generate_salary_breakdown_pdf(request):
             str(trip.trip_id),
             str(getattr(trip, "num_of_drops", "N/A")),
             created_date,
-            f"{base_salary:.2f}",  # Use the updated salary reference
+            # f"{base_salary:.2f}",  # Use the updated salary reference
+            format_currency(base_salary),
             str(trip.multiplier),
-            f"{additionals:.2f}",  # Display additionals here
+            # f"{additionals:.2f}",  # Display additionals here
+            format_currency(additionals),
             final_drop,
-            f"{adjusted:.2f}"
+            # f"{adjusted:.2f}"
+            format_currency(adjusted)
         ])
 
     # Create the trip table and add it to the document
@@ -890,7 +916,8 @@ def generate_salary_breakdown_pdf(request):
         ('BACKGROUND', (0, 0), (-1, 0), colors.lightgreen),
         ('GRID', (0, 0), (-1, -1), 1, colors.black),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('ALIGN', (0, 0), (2, -1), 'CENTER'),
+        ('ALIGN', (3, 0), (-1, -1), 'RIGHT'),
     ]))
     elements.append(Paragraph("<b>TRIP TABLE</b>", left_heading))
     elements.append(trip_table)
@@ -916,14 +943,16 @@ def generate_salary_breakdown_pdf(request):
         monthly_deductions["Pag-IBIG Loan"] = sum(s["salary"].pagibig_loan or 0 for s in data if s["salary"])
 
     if monthly_deductions:
-        monthly_table_data = [["Monthly Deduction", "Amount"]] + [[k, f"{v:.2f}"] for k, v in monthly_deductions.items()]
+        # monthly_table_data = [["Monthly Deduction", "Amount"]] + [[k, f"{v:.2f}"] for k, v in monthly_deductions.items()]
+        monthly_table_data = [["Monthly Deduction", "Amount"]] + [[k, format_currency(v)] for k, v in monthly_deductions.items()]
         elements.append(Paragraph("<b>MONTHLY DEDUCTIONS</b>", left_heading))
         monthly_table = Table(monthly_table_data, hAlign='LEFT')
         monthly_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.lightcoral),
             ('GRID', (0, 0), (-1, -1), 1, colors.black),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
         ]))
         elements.append(monthly_table)
         elements.append(Spacer(1, 12))
@@ -936,14 +965,16 @@ def generate_salary_breakdown_pdf(request):
         "Charges": sum(s["salary"].charges for s in data if s["salary"]),
         "Others": sum(s["salary"].others for s in data if s["salary"]),
     }
-    weekly_table_data = [["Weekly Deduction", "Amount"]] + [[k, f"{v:.2f}"] for k, v in weekly_deductions.items()]
+    # weekly_table_data = [["Weekly Deduction", "Amount"]] + [[k, f"{v:.2f}"] for k, v in weekly_deductions.items()]
+    weekly_table_data = [["Weekly Deduction", "Amount"]] + [[k, format_currency(v)] for k, v in weekly_deductions.items()]
     elements.append(Paragraph("<b>WEEKLY DEDUCTIONS</b>", left_heading))
     weekly_table = Table(weekly_table_data, hAlign='LEFT')
     weekly_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.lightcoral),
         ('GRID', (0, 0), (-1, -1), 1, colors.black),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+        ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
     ]))
     elements.append(weekly_table)
     elements.append(Spacer(1, 12))
@@ -953,8 +984,11 @@ def generate_salary_breakdown_pdf(request):
     net_pay = gross_total - total_deductions  # Removed bonuses from the calculation
 
     # Updated table with larger font size and row height
+    # totals_table_data = [["Gross Salary", "Deductions", "Net Pay"],
+    #                     [f"{gross_total:.2f}", f"{total_deductions:.2f}", f"{net_pay:.2f}"]]
     totals_table_data = [["Gross Salary", "Deductions", "Net Pay"],
-                        [f"{gross_total:.2f}", f"{total_deductions:.2f}", f"{net_pay:.2f}"]]
+                     [format_currency(gross_total), format_currency(total_deductions), format_currency(net_pay)]]
+
 
     # Create Totals Table and adjust style
     totals_table = Table(totals_table_data, hAlign='LEFT', colWidths=[200, 200, 200])  # Adjust column widths
@@ -963,7 +997,8 @@ def generate_salary_breakdown_pdf(request):
         ('GRID', (0, 0), (-1, -1), 1, colors.black),  # Grid lines around all cells
         ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),  # Bold font for the entire table
         ('FONTSIZE', (0, 0), (-1, -1), 14),  # Increase font size
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),  # Center-align all content
+        ('ALIGN', (0, 1), (-1, 1), 'RIGHT'),  # ✅ Right-align all values in the totals row
+        ('ALIGN', (0, 0), (-1, 0), 'CENTER'), # (Optional) Center-align headers
         ('TOPPADDING', (0, 0), (-1, -1), 12),  # Add padding to the top of each row
         ('BOTTOMPADDING', (0, 0), (-1, -1), 12),  # Add padding to the bottom of each row
         ('LEFTPADDING', (0, 0), (-1, -1), 10),  # Add padding to the left side of each cell
@@ -974,7 +1009,13 @@ def generate_salary_breakdown_pdf(request):
     elements.append(Paragraph("<b>TOTALS</b>", left_heading))
     elements.append(totals_table)
     elements.append(Spacer(1, 12))  # Add space below the table
+    
+    # Footer: Date generated + who generated it
+    generated_at = datetime.now().strftime("%B %d, %Y at %I:%M %p")
 
+    footer_text = f"<i>Generated on {generated_at} by {username}</i>"
+    elements.append(Spacer(1, 24))
+    elements.append(Paragraph(footer_text, styles['Normal']))
 
     doc.build(elements)
     buffer.seek(0)
@@ -987,6 +1028,13 @@ def generate_salary_breakdown_pdf(request):
 def generate_gross_payroll_pdf(request):
     start_date = request.GET.get("start_date")
     end_date = request.GET.get("end_date")
+    username = request.GET.get("username", "Unknown User")
+    
+    def format_currency(value):
+        try:
+            return "{:,.2f}".format(float(value))
+        except (TypeError, ValueError):
+            return "0.00"
 
     if not start_date or not end_date:
         return HttpResponse("Missing start or end date", status=400)
@@ -1017,8 +1065,28 @@ def generate_gross_payroll_pdf(request):
     left_align = ParagraphStyle(name='LeftAlign', parent=normal, alignment=TA_LEFT, fontSize=9)
     left_heading = ParagraphStyle(name='LeftHeading', parent=styles['Heading4'], alignment=TA_LEFT, fontSize=10)
 
+    elements = []
+    
+    # Reference the correct image path
+    image_path = os.path.join(settings.BASE_DIR, 'api', 'static', 'images', 'bigc.png')
+
+    stamp = RLImage(image_path, width=180, height=50)  # Adjust size as needed
+    stamp.hAlign = 'RIGHT'
+    # elements.append(stamp)
+        
+    # elements = [
+    #     Paragraph("<b>BIG C TRUCKING SERVICES GROSS PAYROLL</b>", styles['Title']),
+    #     Spacer(1, 10),
+    #     Paragraph(f"<b>PAYROLL PERIOD:</b> {formatted_start} to {formatted_end}", left_align),
+    #     Paragraph(f"<b>TOTAL EMPLOYEES WITH TRIPS:</b> {existing_totals.count()}", left_align),
+    #     Spacer(1, 20)
+    # ]
+    
     elements = [
-        Paragraph("<b>BIG C TRUCKING SERVICES GROSS PAYROLL</b>", styles['Title']),
+        Table(
+            [[Paragraph("<b>BIG C TRUCKING SERVICES GROSS PAYROLL</b>", styles['Title']), stamp]],
+            colWidths=[doc.width * 0.7, doc.width * 0.3]
+        ),
         Spacer(1, 10),
         Paragraph(f"<b>PAYROLL PERIOD:</b> {formatted_start} to {formatted_end}", left_align),
         Paragraph(f"<b>TOTAL EMPLOYEES WITH TRIPS:</b> {existing_totals.count()}", left_align),
@@ -1028,24 +1096,26 @@ def generate_gross_payroll_pdf(request):
     def create_employee_table(totals):
         table_data = [
             ["DESCRIPTION", "AMOUNT"],
-            ["Bale", f"{totals.total_bale:.2f}"],
-            ["CASH ADVANCE", f"{totals.total_cash_advance:.2f}"],
-            ["CASH BOND", f"{totals.total_bond:.2f}"],
-            ["CHARGES", f"{totals.total_charges:.2f}"],
-            ["OTHERS", f"{totals.total_others:.2f}"],
-            ["SSS (including loan)", f"{(totals.total_sss + totals.total_sss_loan):.2f}"],
-            ["PHILHEALTH", f"{totals.total_philhealth:.2f}"],
-            ["PAG-IBIG (including loan)", f"{(totals.total_pagibig + totals.total_pagibig_loan):.2f}"],
-            ["BASE SALARY", f"{totals.total_base_salary:.2f}"],
-            ["ADDITIONALS", f"{totals.total_additionals:.2f}"],
-            ["OVERALL TOTAL", f"{totals.overall_total:.2f}"],
+            ["Bale", format_currency(totals.total_bale)],
+            ["CASH ADVANCE", format_currency(totals.total_cash_advance)],
+            ["CASH BOND", format_currency(totals.total_bond)],
+            ["CHARGES", format_currency(totals.total_charges)],
+            ["OTHERS", format_currency(totals.total_others)],
+            ["SSS (including loan)", format_currency(totals.total_sss + totals.total_sss_loan)],
+            ["PHILHEALTH", format_currency(totals.total_philhealth)],
+            ["PAG-IBIG (including loan)", format_currency(totals.total_pagibig + totals.total_pagibig_loan)],
+            ["BASE SALARY", format_currency(totals.total_base_salary)],
+            ["ADDITIONALS", format_currency(totals.total_additionals)],
+            ["OVERALL TOTAL", format_currency(totals.overall_total)],
         ]
         table = Table(table_data, colWidths=[130, 90])
         table.setStyle(TableStyle([ 
             ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('ALIGN', (0, 1), (0, -1), 'LEFT'),
+            ('ALIGN', (1, 1), (1, -1), 'RIGHT'),
+            ('ALIGN', (0, 0), (-1, 0), 'CENTER')
         ]))
         return table
 
@@ -1071,6 +1141,12 @@ def generate_gross_payroll_pdf(request):
             elements.append(row_table)
             elements.append(Spacer(1, 25))
             row_buffer = []
+    
+    # Footer
+    generated_at = datetime.now().strftime("%B %d, %Y at %I:%M %p")
+    footer_text = f"<i>Generated on {generated_at} by {username}</i>"
+    elements.append(Spacer(1, 24))
+    elements.append(Paragraph(footer_text, styles['Normal']))
 
     doc.build(elements)
     buffer.seek(0)
@@ -1676,6 +1752,7 @@ def get_employee_location(request, employee_id):
         return Response({"message": "Location not available"}, status=404)
     
 @api_view(['PATCH'])
+@permission_classes([AllowAny])
 def update_trip(request, trip_id):
     try:
         # Fetch the trip by ID
@@ -1694,3 +1771,26 @@ def update_trip(request, trip_id):
         # Provide error details to help debug the issue
         print("Validation errors:", serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def change_password(request):
+    user = request.user
+    current_password = request.data.get("current_password")
+    new_password = request.data.get("new_password")
+
+    if not user.check_password(current_password):
+        return Response({"message": "Current password is incorrect."}, status=status.HTTP_400_BAD_REQUEST)
+    
+    if current_password == new_password:
+        return Response({"message": "New password must be different from the current password."}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        validate_password(new_password, user=user)
+    except Exception as e:
+        return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    user.set_password(new_password)
+    user.save()
+    return Response({"message": "Password updated successfully."}, status=status.HTTP_200_OK)
+

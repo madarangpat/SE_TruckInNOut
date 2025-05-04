@@ -83,6 +83,14 @@ const LoginClient = () => {
           <Link href="/forgot-password">Forgot Password?</Link>
         </div>
       </form>
+      <div className="bigc-logo-container">
+        <Image
+          src="/bigc.png"
+          alt="Big-C Logo"
+          width={200} // adjust as needed
+          height={200}
+        />
+      </div>
     </div>
   );
 };

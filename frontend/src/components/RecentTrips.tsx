@@ -125,15 +125,23 @@ const RecentTrips = () => {
                     <p className="text-sm bg-white/50 text-black px-3 py-1 rounded-md mt-1 w-full">
                       <strong>Total Drops:</strong> {trip.num_of_drops || "—"}
                     </p>
-
                     <p className="text-sm bg-white/50 text-black px-3 py-1 rounded-md mt-1 w-full">
-                      <strong>Driver Salary:</strong> ₱{trip.driver_base_salary || "—"}
+                      <strong>Driver Salary:</strong>{" "}
+                      ₱{" "}
+                      {Number(trip.driver_base_salary ?? 0).toLocaleString("en-PH", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
                     </p>
 
                     <p className="text-sm bg-white/50 text-black px-3 py-1 rounded-md mt-1 w-full">
-                      <strong>Helper Salary:</strong> ₱{trip.helper_base_salary || "—"}
-                    </p>
-                    
+                      <strong>Helper Salary:</strong>{" "}
+                      ₱{" "}
+                      {Number(trip.helper_base_salary ?? 0).toLocaleString("en-PH", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </p>              
                   </div>
                 </div>
               </div>

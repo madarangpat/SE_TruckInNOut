@@ -2,8 +2,8 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
-import SettingsOverlayTwo from "@/components/SettingsOverlayTwo";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 const EmployeeDataClient = ({ users }: { users: User[] }) => {
   const [showSettings, setShowSettings] = useState(false);
@@ -11,6 +11,9 @@ const EmployeeDataClient = ({ users }: { users: User[] }) => {
   const [selectedProfileImage, setSelectedProfileImage] =
     useState("/tinoicon.png");
   const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  const router = useRouter();
+
 
   // Handle User Selection
   const [userData, setUserData] = useState<User | undefined>(undefined);
@@ -125,19 +128,14 @@ const EmployeeDataClient = ({ users }: { users: User[] }) => {
           {/* Back Button */}
           <div className="mt-6">
             <button
-              onClick={() => setShowSettings(true)}
+              onClick={() => router.push("/dashboard/admin/accounts")}
               className="px-4 py-2 text-black/80 border border-black/40 rounded-lg hover:bg-gray-200 transition"
             >
-              ← Back to Settings
+              ← Back to Accounts
             </button>
           </div>
         </div>
       </div>
-
-      {/* Display Overlay if showSettings is true */}
-      {showSettings && (
-        <SettingsOverlayTwo onClose={() => setShowSettings(false)} />
-      )}
     </div>
   );
 };

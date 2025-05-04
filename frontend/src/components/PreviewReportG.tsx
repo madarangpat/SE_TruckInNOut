@@ -38,7 +38,7 @@ const PreviewReportG: React.FC<Props> = ({ start, end, onClose }) => {
       }
     };
 
-    if (start && end) {
+    if ( start && end) {
       fetchPDF();
     }
   }, [start, end]);
