@@ -1150,8 +1150,10 @@ def generate_gross_payroll_pdf(request):
     
     # Footer
     generated_at = datetime.now().strftime("%B %d, %Y at %I:%M %p")
+    
     footer_text = f"<i>Generated on {generated_at} by {username}</i>"
-    elements.append(Spacer(1, 24))
+    
+    elements.append(Spacer(1, 6))
     elements.append(Paragraph(footer_text, styles['Normal']))
 
     doc.build(elements)
