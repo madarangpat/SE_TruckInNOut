@@ -304,13 +304,23 @@ const DeliveriesClient = ({
                           : "No address available"}
                       </p>
 
-                      <p className="text-sm bg-white/20 text-black px-3 py-1 rounded-md mt-1 w-full">
-                        <strong>Your Salary:</strong> {trip.driver_base_salary || "___"}
+                      <p className="text-sm bg-white/50 text-black px-3 py-1 rounded-md mt-1 w-full">
+                        <strong>Your Salary:</strong>{" "}
+                        ₱{" "}
+                        {Number(trip.driver_base_salary ?? 0).toLocaleString("en-PH", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
                       </p>
 
-                      <p className="text-sm bg-white/20 text-black px-3 py-1 rounded-md mt-1 w-full">
-                        <strong>Helper Salary:</strong> {trip.helper_base_salary || "___"}
-                      </p>
+                      <p className="text-sm bg-white/50 text-black px-3 py-1 rounded-md mt-1 w-full">
+                        <strong>Helper Salary:</strong>{" "}
+                        ₱{" "}
+                        {Number(trip.helper_base_salary ?? 0).toLocaleString("en-PH", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </p> 
                     </div>
                   </div>
                 </div>

@@ -1014,8 +1014,14 @@ def generate_salary_breakdown_pdf(request):
     generated_at = datetime.now().strftime("%B %d, %Y at %I:%M %p")
 
     footer_text = f"<i>Generated on {generated_at} by {username}</i>"
-    elements.append(Spacer(1, 24))
-    elements.append(Paragraph(footer_text, styles['Normal']))
+    
+    # elements.append(Spacer(1, 24))  # Add space before footer
+    # elements.append(Paragraph("<b>Footer</b>", left_heading))  # Add "Footer" title for clarity
+    elements.append(Spacer(1, 6))  # Space between Footer title and content
+    elements.append(Paragraph(footer_text, styles['Normal']))  # Add the footer text itself
+
+    # elements.append(Spacer(1, 24))
+    # elements.append(Paragraph(footer_text, styles['Normal']))
 
     doc.build(elements)
     buffer.seek(0)
