@@ -5,6 +5,7 @@ import axios from "axios";
 import Image from "next/image";
 import { toast } from "sonner";
 
+
 interface Trip {
   trip_id: number;
   trip_status: string;
