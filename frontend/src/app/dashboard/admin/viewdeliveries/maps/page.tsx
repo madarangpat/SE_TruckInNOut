@@ -57,14 +57,14 @@ const MapsPage = () => {
   const [originLat, setOriginLat] = useState<number | null>(null);
   const [originLng, setOriginLng] = useState<number | null>(null);
 
+  // New state for total distance and closest distance
+  const [totalDistance, setTotalDistance] = useState<number | null>(null);
+  const [closestDistance, setClosestDistance] = useState<number | null>(null);
+
   const remainingDrops = useMemo(() => {
     if (!trip?.completed) return 0;
   
-    // Log the structure of trip.completed to verify its format
-    console.log("trip.completed:", trip.completed);
-  
     const completedArray = Array.isArray(trip.completed[0]) ? trip.completed[0] : trip.completed;
-  
     return completedArray.filter((status) => status === false).length || 0;
   }, [trip]);
 
@@ -74,8 +74,7 @@ const MapsPage = () => {
         const res = await axios.get(`${process.env.NEXT_PUBLIC_DOMAIN}/trips/by-trip-id/${tripId}/`);
         setTrip(res.data);
         console.log("✅ Trip fetched by ID:", res.data);
-        const tripOrigin = res.data.trip_origin
-        console.log(tripOrigin)
+        const tripOrigin = res.data.trip_origin;
       
         // Step 1: Replace single quotes with double quotes for valid JSON format
         const formattedTripOrigin = tripOrigin.replace(/'/g, '"');
@@ -168,14 +167,30 @@ const MapsPage = () => {
     }
   }, [trip]);
 
-  const closestDistance = locations
-    .filter((loc) => !loc.completed)
-    .reduce((min, loc) => {
-      const dist = haversineDistance(liveUserLat, liveUserLng, loc.lat, loc.lng);
-      return dist < min ? dist : min;
-    }, Infinity);
+  // Calculate the total distance from origin to the last destination
+  useEffect(() => {
+    if (!locations.length || !originLat || !originLng) return;
 
-  const formattedDistance = closestDistance.toFixed(2);
+    // Get the last destination (if exists)
+    const lastDestination = locations[locations.length - 1];
+
+    // Calculate distance from origin to the last destination
+    const distance = haversineDistance(originLat, originLng, lastDestination.lat, lastDestination.lng);
+    setTotalDistance(distance);
+
+    // Calculate the closest distance to the user’s current location
+    const closest = locations
+      .filter((loc) => !loc.completed)
+      .reduce((min, loc) => {
+        const dist = haversineDistance(liveUserLat, liveUserLng, loc.lat, loc.lng);
+        return dist < min ? dist : min;
+      }, Infinity);
+    
+    setClosestDistance(closest);
+  }, [locations, originLat, originLng, liveUserLat, liveUserLng]);
+
+  const formattedDistance = totalDistance?.toFixed(2);
+  const formattedClosestDistance = closestDistance?.toFixed(2);
 
   return (
     <div className="min-h-screen flex flex-col items-center py-8 px-4 md:px-8">
@@ -214,10 +229,13 @@ const MapsPage = () => {
                   {trip.vehicle?.plate_number || "No Plate"})
                 </p>
                 <p className="text-sm bg-black/45 text-white px-2 py-1 rounded-md mt-1 w-full">
-                  <strong>TOTAL DROPS:</strong> {trip.clients?.length || "__________"} <span className="italic text-xs">Remaining: {remainingDrops}</span> 
+                  <strong>TOTAL DROPS:</strong> {trip.clients?.length || "__________"} <span className="italic text-xs">Remaining: {remainingDrops}</span>
                 </p>
                 <p className="text-sm bg-black/45 text-white px-2 py-1 rounded-md mt-1 w-full">
-                  <strong>DESTINATION:</strong> {formattedDistance} km
+                  <strong>DESTINATION:</strong> {formattedDistance ? `${formattedDistance} km` : "Calculating..."} 
+                  {formattedClosestDistance && (
+                    <span className="ml-2 italic text-xs">({formattedClosestDistance} km to closest drop off)</span>
+                  )}
                 </p>
                 <p className="text-sm bg-black/45 text-white px-2 py-1 rounded-md mt-1 w-full">
                   <strong>ORIGIN LOCATION:</strong> {originAddress}
@@ -242,8 +260,8 @@ const MapsPage = () => {
                   userLng={liveUserLng}
                   isAdmin={true}
                   onCityFetched={(city) => setcurrentCity(city)}
-		              originLat={originLat} 
-              	  originLng={originLng} 
+                  originLat={originLat} 
+                  originLng={originLng} 
                 />
               ) : (
                 <p className="text-red-400 p-4">⚠️ No valid destination coordinates found.</p>
@@ -259,4 +277,3 @@ const MapsPage = () => {
 };
 
 export default MapsPage;
-

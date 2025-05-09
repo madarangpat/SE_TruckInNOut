@@ -1012,18 +1012,14 @@ def generate_salary_breakdown_pdf(request):
     
     # Footer: Date generated + who generated it
     generated_at = datetime.now().strftime("%B %d, %Y at %I:%M %p")
-
-    footer_text = f"<i>Generated on {generated_at} by {username}</i>"
+    footer_text = f"Generated on {generated_at} by {username}"
     
-    # elements.append(Spacer(1, 24))  # Add space before footer
-    # elements.append(Paragraph("<b>Footer</b>", left_heading))  # Add "Footer" title for clarity
-    elements.append(Spacer(1, 6))  # Space between Footer title and content
-    elements.append(Paragraph(footer_text, styles['Normal']))  # Add the footer text itself
+    # Define footer to be used on every page
+    def footer(canvas, doc):
+        canvas.setFont("Helvetica-Oblique", 10)
+        canvas.drawString(30, 30, footer_text)  # Position the footer at the bottom of the page
 
-    # elements.append(Spacer(1, 24))
-    # elements.append(Paragraph(footer_text, styles['Normal']))
-
-    doc.build(elements)
+    doc.build(elements, onFirstPage=footer)
     buffer.seek(0)
     return HttpResponse(buffer, content_type='application/pdf', headers={
         'Content-Disposition': f'attachment; filename="{username}_salary_breakdown.pdf"'
@@ -1078,15 +1074,6 @@ def generate_gross_payroll_pdf(request):
 
     stamp = RLImage(image_path, width=180, height=50)  # Adjust size as needed
     stamp.hAlign = 'RIGHT'
-    # elements.append(stamp)
-        
-    # elements = [
-    #     Paragraph("<b>BIG C TRUCKING SERVICES GROSS PAYROLL</b>", styles['Title']),
-    #     Spacer(1, 10),
-    #     Paragraph(f"<b>PAYROLL PERIOD:</b> {formatted_start} to {formatted_end}", left_align),
-    #     Paragraph(f"<b>TOTAL EMPLOYEES WITH TRIPS:</b> {existing_totals.count()}", left_align),
-    #     Spacer(1, 20)
-    # ]
     
     elements = [
         Table(

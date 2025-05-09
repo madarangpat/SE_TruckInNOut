@@ -520,6 +520,19 @@ const CreateNewTripPage = () => {
                   setTripFormData({ ...tripFormData, clients: newClients });
                 }}
               />
+              {/* Remove Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  // Remove client at the current index
+                  const newClients = tripFormData.clients.filter((_, i) => i !== index);
+                  setTripFormData({ ...tripFormData, clients: newClients });
+                }}
+                className="text-red-500"
+                disabled={tripFormData.clients.length === 1} // Disable if there's only one client
+              >
+                <Image src="/remove.png" alt="Remove" width={20} height={20} />
+              </button>
             </div>
           ))}
         </div>
@@ -576,14 +589,20 @@ const CreateNewTripPage = () => {
         <input
           type="number"
           step="0.01"
+          min="0"
           placeholder="Additionals"
           className="input-field text-black rounded placeholder:text-sm"
           style={{ marginTop: "4px" }}
           value={tripFormData.additionals}
-          onChange={(e) =>
-            setTripFormData({ ...tripFormData, additionals: e.target.value })
-          }
+          onChange={(e) => {
+            const value = parseFloat(e.target.value);
+            // Check if the value is greater than or equal to 0 before updating state
+            if (!isNaN(value) && value >= 0) {
+              setTripFormData({ ...tripFormData, additionals: value.toString() });
+            }
+          }}
         />
+
 
         {/* Start Date & End Date */}
         <div className="flex gap-4 mb-4">
