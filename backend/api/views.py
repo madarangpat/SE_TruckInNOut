@@ -45,7 +45,7 @@ from datetime import datetime
 from django.db.models import Sum
 from rest_framework.decorators import api_view
 from django.utils.timezone import make_aware
-from django.db.models import Q
+from django.db.models import Q, F
 from api.models import Employee, EmployeeLocation
 from django.db import OperationalError
 from decimal import Decimal
@@ -1243,12 +1243,14 @@ def priority_queue_view(request):
 
         # Calculate total salary based on employee type
         if employee.user.employee_type == "Driver":
-            # Sum the base_salary for drivers
-            total_salary = sum([trip.driver_base_salary or 0 for trip in weekly_trips])
+            total_salary = weekly_trips.aggregate(
+                total_salary=Sum(F("driver_base_salary"))
+            )["total_salary"] or 0
             salary_field = "driver_base_salary"
         else:
-            # Sum the base_salary for helpers
-            total_salary = sum([trip.helper_base_salary or 0 for trip in weekly_trips])
+            total_salary = weekly_trips.aggregate(
+                total_salary=Sum(F("helper_base_salary"))
+            )["total_salary"] or 0
             salary_field = "helper_base_salary"
 
         # Add serialized data including the total salary
