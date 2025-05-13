@@ -37,7 +37,7 @@ const PreviewReportSB: React.FC<Props> = ({ employee, start, end, onClose }) => 
           start_date: startDateOnly,
           end_date: endDateOnly, // Only include if valid
         });
-  
+
         const url = `${process.env.NEXT_PUBLIC_DOMAIN}/generate-pdf/salary-breakdown/?${params}`;
         console.log(url); // Log the final URL to check its structure
   
