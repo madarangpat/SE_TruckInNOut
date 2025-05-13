@@ -16,7 +16,7 @@ RUN apk add --no-cache \
     python3-dev
 
 # Copy requirements and install dependencies with caching enabled
-COPY backend/requirements.txt /app/
+COPY requirements.txt /app/
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt gunicorn
