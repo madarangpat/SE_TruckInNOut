@@ -8,7 +8,6 @@ import "react-datepicker/dist/react-datepicker.css";
 import Image from "next/image";
 import PreviewReportSB from "@/components/PreviewReportSB";
 
-
 interface User {
   username: string;
   employee_type: string;
@@ -29,6 +28,14 @@ const SalaryBreakdown = () => {
 
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
+
+  // This function calculates the start date based on the end date (6 days before)
+  const calculateStartDate = (end: Date) => {
+    const date = new Date(end);
+    date.setDate(date.getDate() - 6); // Subtract 6 days from the end date to get the start date (previous Sunday)
+    return date;
+  };
+
   const [tripSalaries, setTripSalaries] = useState<any[]>([]);
 
   const [bale, setBale] = useState("");
@@ -43,9 +50,10 @@ const SalaryBreakdown = () => {
   const [showPreviewModal, setShowPreviewModal] = useState(false);
 
   const adjustForTimezone = (date: Date) => {
-    const offset = date.getTimezoneOffset(); // Returns the difference in minutes
-    date.setMinutes(date.getMinutes() - offset); // Adjust for the time zone offset
-    return date.toISOString().split('T')[0]; // Return only the date part in YYYY-MM-DD format
+    // Ensure the date is set to midnight local time
+    const localDate = new Date(date);
+    localDate.setHours(0, 0, 0, 0); // Set to midnight local time
+    return localDate.toLocaleDateString('en-CA'); // Return the date in 'YYYY-MM-DD' format (ISO 8601)
   };
 
   const [salaryData, setSalaryData] = useState<any>({
@@ -67,14 +75,14 @@ const SalaryBreakdown = () => {
       "Backspace", "Delete", "Tab", "Escape", "Enter", "ArrowLeft", "ArrowRight",
     ];
     if (allowedKeys.includes(e.key)) return;
-  
+
     if (e.key === "." && !e.currentTarget.value.includes(".")) return;
-  
+
     if (!/^[0-9.]$/.test(e.key)) {
       e.preventDefault();
     }
   };
-  
+
   const salaryPlaceholders: Record<string, string> = {
     sss_contribution: "SSS Contribution",
     philhealth_contribution: "PhilHealth Contribution",
@@ -106,28 +114,14 @@ const SalaryBreakdown = () => {
       pagibig_loan: "",
       sss_loan: "",
     });
-  };  
-  
+  };
+
   useEffect(() => {
-    if (selectedEmployee && startDate && endDate) {
-      const startDateOnly = adjustForTimezone(startDate).split('T')[0]; // Adjusted start date
-      const endDateOnly = adjustForTimezone(endDate).split('T')[0]; // Adjusted end date
-
-
-      const query = new URLSearchParams({
-        employee: selectedEmployee.user.username,
-        start_date: startDateOnly,
-        end_date: endDateOnly,
-      });
-
-      fetch(`${process.env.NEXT_PUBLIC_DOMAIN}/employee-trip-salaries/?${query}`)
-        .then((res) => res.json())
-        .then((data) => {
-          setTripSalaries(data);
-        })
-        .catch((err) => console.error("Failed to fetch trip-salary data:", err));
+    if (endDate) {
+      const newStartDate = calculateStartDate(endDate); // Calculate start date based on the end date
+      setStartDate(newStartDate); // Set the start date to 6 days before the end date (previous Sunday)
     }
-  }, [selectedEmployee, startDate, endDate]);
+  }, [endDate]);
 
   useEffect(() => {
     fetch(`${process.env.NEXT_PUBLIC_DOMAIN}/employees/`)
@@ -142,29 +136,18 @@ const SalaryBreakdown = () => {
       .catch((error) => console.error("Error fetching employees:", error));
   }, []);
 
-  // Fetch Salary data for the selected employee and date range
-  useEffect(() => {
-    if (selectedEmployee && startDate && endDate) {
-      const query = new URLSearchParams({
-        employee: selectedEmployee.user.username,
-        start_date: startDate.toISOString(),
-        end_date: endDate.toISOString(),
-      });
-    }
-  }, [selectedEmployee, startDate, endDate]);
-
-
   const handleApplySalaryConfigToTrips = async () => {
     if (!selectedEmployee || !startDate || !endDate || !completedTripsSet) {
-      toast.warning("Please complete all required fields and click 'Set Completed Trips' first.");
+      toast.warning("Please complete all required fields and click 'Find Completed Trips' first.");
       return;
     }
 
-    const startDateOnly = adjustForTimezone(startDate).split('T')[0]; // Adjusted start date
-    const endDateOnly = adjustForTimezone(endDate).split('T')[0]; // Adjusted end date
+    const startDateOnly = startDate ? startDate.toLocaleDateString('en-CA') : "";
+    const endDateOnly = endDate ? endDate.toLocaleDateString('en-CA') : "";
 
-    console.log("Sending Dates:", { startDateOnly, endDateOnly });
-  
+    console.log("Sending Dates:",{ startDateOnly, endDateOnly });
+
+
     try {
       // Use the same method as deductions to update the salary configurations
       await axios.post(`${process.env.NEXT_PUBLIC_DOMAIN}/update-salaries/`, {
@@ -177,7 +160,7 @@ const SalaryBreakdown = () => {
         pagibig_loan: parseFloat(salaryData.pagibig_loan) || 0,
         sss_loan: parseFloat(salaryData.sss_loan) || 0,
       });
-  
+
       toast.success("Salary configuration applied to each completed trip!");
       setSalaryConfigSet(true);
     } catch (err) {
@@ -185,7 +168,6 @@ const SalaryBreakdown = () => {
       toast.error("Something went wrong while saving salary config.");
     }
   };
-  
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-10 px-4 sm:px-6 lg:px-10 py-8">
@@ -234,25 +216,31 @@ const SalaryBreakdown = () => {
 
           <div className="flex gap-4 mb-4 items-end">
             <div className="w-1/2">
-              <label className="block text-sm text-black mb-1 font-bold">Start Date</label>
-              <DatePicker
-                selected={startDate}
-                onChange={(date) => setStartDate(date)}
-                dateFormat="MMMM d, yyyy"
-                placeholderText="Select start date"
-                className="w-full px-4 py-2 rounded-md shadow-md text-black cursor-pointer bg-white"
-              />
-            </div>
-
-            <div className="w-1/2">
               <label className="block text-sm text-black mb-1 font-bold">End Date</label>
               <DatePicker
                 selected={endDate}
                 onChange={(date) => setEndDate(date)}
                 dateFormat="MMMM d, yyyy"
                 placeholderText="Select end date"
-                minDate={startDate || undefined}
                 className="w-full px-4 py-2 rounded-md shadow-md text-black cursor-pointer bg-white"
+                filterDate={(date) => {
+                  const today = new Date();
+                  const isSaturday = date.getDay() === 6; // Check if it's a Saturday
+                  const isPastOrToday = date <= today; // Check if it's not in the future
+                  return isSaturday && isPastOrToday; // Only allow past Saturdays or today
+                }}
+              />
+            </div>
+
+            <div className="w-1/2">
+              <label className="block text-sm text-black mb-1 font-bold">Start Date (Automatic)</label>
+              <DatePicker
+                selected={startDate}
+                onChange={(date) => setStartDate(date)} // Optional if you want the user to change the start date as well
+                dateFormat="MMMM d, yyyy"
+                placeholderText="Start date (Auto)"
+                className="w-full px-4 py-2 rounded-md shadow-md text-black cursor-pointer bg-white"
+                disabled // Make it disabled since it's auto-calculated
               />
             </div>
 
@@ -262,17 +250,19 @@ const SalaryBreakdown = () => {
           </div>
           <button
             onClick={async () => {
-              if (!selectedEmployee || !startDate || !endDate) {
-                toast.warning("Please select an employee and date range.");
+              if (!selectedEmployee || !endDate) {
+                toast.warning("Please select an employee and end date.");
                 return;
               }
 
               try {
                 const query = new URLSearchParams({
                   employee: selectedEmployee.user.username,
-                  start_date: startDate.toISOString(),
-                  end_date: endDate.toISOString(),
+                  start_date: startDate ? startDate.toLocaleDateString('en-CA') : "",  // Format start date in 'YYYY-MM-DD' format
+                  end_date: endDate ? endDate.toLocaleDateString('en-CA') : "",        // Format end date in 'YYYY-MM-DD' format
                 });
+
+                console.log(query)
 
                 const res = await fetch(`${process.env.NEXT_PUBLIC_DOMAIN}/completed-trips/?${query}`);
                 if (!res.ok) throw new Error("Failed to fetch completed trips.");
@@ -293,9 +283,9 @@ const SalaryBreakdown = () => {
                 alert("Error while fetching completed trips.");
               }
             }}
-            disabled={!selectedEmployee || !startDate || !endDate}
+            disabled={!selectedEmployee || !endDate}
             className={`py-2 px-4 rounded-lg shadow text-white ${
-              !selectedEmployee || !startDate || !endDate
+              !selectedEmployee || !endDate
                 ? "bg-gray-400 cursor-not-allowed"
                 : "bg-[#668743] hover:bg-[#345216]"
             }`}
@@ -437,23 +427,23 @@ const SalaryBreakdown = () => {
 
         {/* PDF Export Section */}
         <button
-            onClick={handleClearAll}
-            className="mt-3 justify-start bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg shadow"
-          >
-            Clear All
+          onClick={handleClearAll}
+          className="mt-3 justify-start bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg shadow"
+        >
+          Clear All
         </button>
         <div className="mt-2 flex w-auto items-center justify-center flex-col gap-2">         
           <button
             onClick={() => {
-              if (!selectedEmployee || !startDate || !endDate || !salaryConfigSet) {
-                alert("Please select an employee and date range to preview the report.");
+              if (!selectedEmployee || !endDate || !startDate) {
+                alert("Please select an employee and end date to preview the report.");
                 return;
               }
               setShowPreviewModal(true);
             }}
-            disabled={!selectedEmployee || !startDate || !endDate || !salaryConfigSet}
+            disabled={!selectedEmployee || !endDate || !startDate}
             className={`mt-1 py-2 px-4 rounded-lg shadow ${
-              !selectedEmployee || !startDate || !endDate || !salaryConfigSet
+              !selectedEmployee || !endDate || !startDate
                 ? "bg-gray-400 cursor-not-allowed text-white"
                 : "bg-[#668743] hover:bg-[#345216] text-white"
             }`}
@@ -472,8 +462,8 @@ const SalaryBreakdown = () => {
                 <h2 className="text-lg font-semibold mb-4">Salary Breakdown Preview</h2>
                 <PreviewReportSB
                   employee={selectedEmployee?.user.username || ""}
-                  start={startDate ? startDate.toISOString().split('T')[0] : ""}
-                  end={endDate ? endDate.toISOString().split('T')[0] : ""}
+                  start={startDate ? startDate.toLocaleDateString('en-CA') : ""}
+                  end={endDate ? endDate.toLocaleDateString('en-CA') : ""}
                   onClose={() => setShowPreviewModal(false)}
                 />
               </div>

@@ -101,8 +101,8 @@ const TripsInProgress = () => {
                 <span className="mt-1 text-xs text-white/90 text-left leading-tight w-full">
                   <strong>{totalDrops}</strong> Drop{totalDrops !== 1 ? "s" : ""} <br />
                   Final Drop to <strong>{shortAddress}</strong> <br />
-                  by Driver: <strong>{driverName}</strong> <br />
-                  and Helper/s: <strong>{helpers}</strong>
+                  Driver: <strong>{driverName}</strong> <br />
+                  Helper/s: <strong>{helpers}</strong>
                 </span>
               </div>
             );

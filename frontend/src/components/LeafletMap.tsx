@@ -142,6 +142,7 @@ export default function LeafletMap({
         `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${process.env.NEXT_PUBLIC_GOOGLE_API_KEY}`
       );
       const data = await response.json();
+      console.log(data);
   
       const result = data.results?.[0];
       const formatted = result?.formatted_address ?? "Unknown Location";

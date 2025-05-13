@@ -60,6 +60,16 @@ from django.contrib.auth.password_validation import validate_password
 from reportlab.platypus import Image as RLImage
 from django.conf import settings
 import os
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfbase.pdfmetrics import registerFontFamily
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.enums import TA_LEFT
+
+# Register DejaVu Sans font
+font_path = os.path.join(settings.BASE_DIR, 'api', 'fonts', 'DejaVuSans.ttf')
+pdfmetrics.registerFont(TTFont('DejaVuSans', font_path))
+registerFontFamily('DejaVuSans', normal='DejaVuSans', bold='DejaVuSans', italic='DejaVuSans', boldItalic='DejaVuSans')
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -776,24 +786,19 @@ def update_salary_deductions(request):
 #==============================================================================================================================
 @api_view(['GET'])
 @permission_classes([AllowAny])
-def format_currency(value):
-    try:
-        return "{:,.2f}".format(float(value))
-    except (TypeError, ValueError):
-        return "0.00"
-
 def generate_salary_breakdown_pdf(request):
     def format_currency(value):
         try:
-            return "{:,.2f}".format(float(value))
+            return f"₱ {float(value):,.2f}"
         except (TypeError, ValueError):
             return "0.00"
     username = request.GET.get("employee")
     start = request.GET.get("start_date")
     end = request.GET.get("end_date")
+    logged_in_user = request.user.username
 
     # Log the received parameters for debugging
-    print(f"Received parameters: employee={username}, start_date={start}, end_date={end}")
+    print(f"Received parameters: employee={username}, start_date={start}, end_date={end}, logged in user={logged_in_user}")
 
     if not all([username, start, end]):
         return Response({"error": "Missing parameters"}, status=400)
@@ -816,7 +821,7 @@ def generate_salary_breakdown_pdf(request):
     if user_type == "staff":
         buffer = BytesIO()
         p = canvas.Canvas(buffer, pagesize=letter)
-        p.setFont("Helvetica-Bold", 16)
+        p.setFont("DejaVuSans", 16)
         p.drawString(100, 750, f"Payroll PDF Placeholder for Staff: {username}")
         p.drawString(100, 720, f"Date Range: {start} to {end}")
         p.showPage()
@@ -842,8 +847,8 @@ def generate_salary_breakdown_pdf(request):
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=landscape(letter), topMargin=30, leftMargin=30, rightMargin=30, bottomMargin=30)
     styles = getSampleStyleSheet()
-    left_align = ParagraphStyle(name='LeftAlign', parent=styles['Normal'], alignment=TA_LEFT)
-    left_heading = ParagraphStyle(name='LeftHeading', parent=styles['Heading4'], alignment=TA_LEFT)
+    left_align = ParagraphStyle(name='LeftAlign', parent=styles['Normal'], alignment=TA_LEFT, fontName='DejaVuSans')
+    left_heading = ParagraphStyle(name='LeftHeading', parent=styles['Heading4'], alignment=TA_LEFT, fontName='DejaVuSans')
     elements = []
     
     # Reference the correct image path
@@ -915,15 +920,13 @@ def generate_salary_breakdown_pdf(request):
     trip_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.lightgreen),
         ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTNAME', (0, 0), (-1, -1), 'DejaVuSans'),
         ('ALIGN', (0, 0), (2, -1), 'CENTER'),
         ('ALIGN', (3, 0), (-1, -1), 'RIGHT'),
     ]))
     elements.append(Paragraph("<b>TRIP TABLE</b>", left_heading))
     elements.append(trip_table)
     elements.append(Spacer(1, 12))
-
-    # Removed the Bonus Section as requested, additionals are now part of the Trip Table
 
     # Monthly deductions based on week of export date
     def get_week_of_month(d):
@@ -950,7 +953,7 @@ def generate_salary_breakdown_pdf(request):
         monthly_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.lightcoral),
             ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTNAME', (0, 0), (-1, -1), 'DejaVuSans'),
             ('ALIGN', (0, 0), (0, -1), 'LEFT'),
             ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
         ]))
@@ -972,7 +975,7 @@ def generate_salary_breakdown_pdf(request):
     weekly_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.lightcoral),
         ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTNAME', (0, 0), (-1, -1), 'DejaVuSans'),
         ('ALIGN', (0, 0), (0, -1), 'LEFT'),
         ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
     ]))
@@ -995,7 +998,7 @@ def generate_salary_breakdown_pdf(request):
     totals_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.lightyellow),  # Background color for header row
         ('GRID', (0, 0), (-1, -1), 1, colors.black),  # Grid lines around all cells
-        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),  # Bold font for the entire table
+        ('FONTNAME', (0, 0), (-1, -1), 'DejaVuSans'),  # Bold font for the entire table
         ('FONTSIZE', (0, 0), (-1, -1), 14),  # Increase font size
         ('ALIGN', (0, 1), (-1, 1), 'RIGHT'),  # ✅ Right-align all values in the totals row
         ('ALIGN', (0, 0), (-1, 0), 'CENTER'), # (Optional) Center-align headers
@@ -1012,7 +1015,7 @@ def generate_salary_breakdown_pdf(request):
     
     # Footer: Date generated + who generated it
     generated_at = datetime.now().strftime("%B %d, %Y at %I:%M %p")
-    footer_text = f"Generated on {generated_at} by {username}"
+    footer_text = f"Generated on {generated_at} by {logged_in_user}"
     
     # Define footer to be used on every page
     def footer(canvas, doc):
@@ -1030,11 +1033,11 @@ def generate_salary_breakdown_pdf(request):
 def generate_gross_payroll_pdf(request):
     start_date = request.GET.get("start_date")
     end_date = request.GET.get("end_date")
-    username = request.GET.get("username", "Unknown User")
+    logged_in_user = request.user.username
     
     def format_currency(value):
         try:
-            return "{:,.2f}".format(float(value))
+            return f"₱ {float(value):,.2f}"
         except (TypeError, ValueError):
             return "0.00"
 
@@ -1064,9 +1067,8 @@ def generate_gross_payroll_pdf(request):
     styles = getSampleStyleSheet()
     normal = styles['Normal']
     normal.fontSize = 8
-    left_align = ParagraphStyle(name='LeftAlign', parent=normal, alignment=TA_LEFT, fontSize=9)
-    left_heading = ParagraphStyle(name='LeftHeading', parent=styles['Heading4'], alignment=TA_LEFT, fontSize=10)
-
+    left_align = ParagraphStyle(name='LeftAlign', parent=styles['Normal'], alignment=TA_LEFT, fontName='DejaVuSans')
+    left_heading = ParagraphStyle(name='LeftHeading', parent=styles['Heading4'], alignment=TA_LEFT, fontName='DejaVuSans')
     elements = []
     
     # Reference the correct image path
@@ -1104,7 +1106,7 @@ def generate_gross_payroll_pdf(request):
         table = Table(table_data, colWidths=[130, 90])
         table.setStyle(TableStyle([ 
             ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTNAME', (0, 0), (-1, -1), 'DejaVuSans'),
             ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
             ('ALIGN', (0, 1), (0, -1), 'LEFT'),
             ('ALIGN', (1, 1), (1, -1), 'RIGHT'),
@@ -1138,7 +1140,7 @@ def generate_gross_payroll_pdf(request):
     # Footer
     generated_at = datetime.now().strftime("%B %d, %Y at %I:%M %p")
     
-    footer_text = f"<i>Generated on {generated_at} by {username}</i>"
+    footer_text = f"<i>Generated on {generated_at} by {logged_in_user}</i>"
     
     elements.append(Spacer(1, 6))
     elements.append(Paragraph(footer_text, styles['Normal']))

@@ -7,42 +7,39 @@ import Image from "next/image";
 import PreviewReportG from "@/components/PreviewReportG";
 import { toast } from "sonner";
 
-// interface User {
-//   username: string;
-// }
-
 const ViewGross = () => {
   const router = useRouter();
   // const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [grossStartDate, setGrossStartDate] = useState<Date | null>(null);
   const [grossEndDate, setGrossEndDate] = useState<Date | null>(null);
+
+  // This function calculates the start date based on the end date (6 days before)
+  const calculateStartDate = (end: Date) => {
+    const date = new Date(end);
+    date.setDate(date.getDate() - 6); // Subtract 6 days from the end date to get the start date (previous Sunday)
+    return date;
+  };
+
   const [tripData, setTripData] = useState([]);
   const [totalsId, setTotalsId] = useState<number | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
   const [totalsCalculated, setTotalsCalculated] = useState(false);
 
-  // useEffect(() => {
-  //   fetch(`${process.env.NEXT_PUBLIC_DOMAIN}/users/profile/`, {
-  //     credentials: "include", // if you use cookies for session
-  //   })
-  //     .then(res => res.json())
-  //     .then(data => {
-  //       setCurrentUser(data);
-  //     })
-  //     .catch(err => {
-  //       console.error("Failed to fetch current user:", err);
-  //       toast.error("Unable to fetch current user.");
-  //     });
-  // }, []);
-  
+  useEffect(() => {
+      if (grossEndDate) {
+        const newStartDate = calculateStartDate(grossEndDate); // Calculate start date based on the end date
+        setGrossStartDate(newStartDate); // Set the start date to 6 days before the end date (previous Sunday)
+      }
+    }, [grossEndDate]);
+
 
   // Fetch trips with salaries within selected date range
   useEffect(() => {
     if (grossStartDate && grossEndDate) {
       const query = new URLSearchParams({
-        start_date: grossStartDate.toISOString(),
-        end_date: grossEndDate.toISOString(),
+        start_date: grossStartDate.toLocaleDateString('en-CA'), // Format date as 'YYYY-MM-DD'
+        end_date: grossEndDate.toLocaleDateString('en-CA'),   // Format date as 'YYYY-MM-DD'
       });
 
       fetch(`${process.env.NEXT_PUBLIC_DOMAIN}/trips-by-date-range/?${query}`)
@@ -64,8 +61,8 @@ const ViewGross = () => {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                start_date: grossStartDate.toISOString().split("T")[0],
-                end_date: grossEndDate.toISOString().split("T")[0],
+                start_date: grossStartDate.toLocaleDateString('en-CA'), // Format date as 'YYYY-MM-DD'
+                end_date: grossEndDate.toLocaleDateString('en-CA'),   // Format date as 'YYYY-MM-DD'
             }),
         });
 
@@ -108,8 +105,8 @@ const ViewGross = () => {
 
   const handlePreviewGrossPayroll = () => {
     if (grossStartDate && grossEndDate) {
-      const startDateFormatted = grossStartDate.toISOString().split("T")[0];
-      const endDateFormatted = grossEndDate.toISOString().split("T")[0];
+      const startDateFormatted = grossStartDate.toLocaleDateString('en-CA'); // Format date as 'YYYY-MM-DD'
+      const endDateFormatted = grossEndDate.toLocaleDateString('en-CA');   // Format date as 'YYYY-MM-DD'
       const username = localStorage.getItem("username");  // Get logged-in user
 
       // Construct URL for the gross payroll preview
@@ -155,32 +152,39 @@ const ViewGross = () => {
 
         {/* Date Range */}
         <div className="flex gap-4 mb-6">
-          {/* Start Date */}
-          <div className="w-1/2">
-            <label className="block text-sm text-black mb-1 font-bold">Start Date</label>
-            <DatePicker
-              selected={grossStartDate}
-              onChange={setGrossStartDate}
-              dateFormat="MMMM d, yyyy"
-              placeholderText="Select start date"
-              className="w-full px-4 py-2 rounded-md shadow-md text-black bg-white"
-              calendarClassName="rounded-lg"
-            />
-          </div>
 
           {/* End Date */}
           <div className="w-1/2">
             <label className="block text-sm text-black mb-1 font-bold">End Date</label>
             <DatePicker
               selected={grossEndDate}
-              onChange={setGrossEndDate}
+              onChange={(date) => setGrossEndDate(date)}
               dateFormat="MMMM d, yyyy"
               placeholderText="Select end date"
-              minDate={grossStartDate || undefined}
               className="w-full px-4 py-2 rounded-md shadow-md text-black bg-white"
               calendarClassName="rounded-lg"
+              filterDate={(date) => {
+                const today = new Date();
+                const isSaturday = date.getDay() === 6; // Check if it's a Saturday
+                const isPastOrToday = date <= today; // Check if it's not in the future
+                return isSaturday && isPastOrToday; // Only allow past Saturdays or today
+              }}
             />
           </div>
+
+          {/* Start Date */}
+          <div className="w-1/2">
+            <label className="block text-sm text-black mb-1 font-bold">Start Date (Automatic)</label>
+            <DatePicker
+              selected={grossStartDate}
+              onChange={(date) => setGrossStartDate(date)}
+              dateFormat="MMMM d, yyyy"
+              placeholderText="Select start date"
+              className="w-full px-4 py-2 rounded-md shadow-md text-black bg-white"
+              calendarClassName="rounded-lg"
+              disabled // Make it disabled since it's auto-calculated
+            />
+          </div>  
 
           {/* Clear Button */}
           <button onClick={clearAll} className="mt-6">
@@ -209,8 +213,8 @@ const ViewGross = () => {
 
         {showPreview && (
           <PreviewReportG
-            start={grossStartDate?.toISOString().split("T")[0] || ""}
-            end={grossEndDate?.toISOString().split("T")[0] || ""}
+            start={grossStartDate ? grossStartDate.toLocaleDateString('en-CA') : ""}
+            end={grossEndDate ? grossEndDate.toLocaleDateString('en-CA') : ""}
             // employee={currentUser.username}
             onClose={() => setShowPreview(false)}
           />
