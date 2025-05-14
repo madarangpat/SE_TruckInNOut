@@ -1,5 +1,5 @@
 type BaseUser = {
-  id: string
+  id: string;
   username: string;
   role: "super_admin" | "admin" | "employee" | "";
   profile_image?: string;
@@ -64,5 +64,11 @@ type Employee = {
     username: string;
     profile_image: string | null;
     role: string;
-  }
-}
+  };
+};
+
+type EmployeeTripSalary = {
+  trip: Trip;
+  salary: SalConfig;
+};
+
