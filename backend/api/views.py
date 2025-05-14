@@ -1,95 +1,117 @@
+import json
+import logging
+import os
 import time
 from collections import defaultdict
-from datetime import datetime, timedelta
-from django.utils.dateformat import DateFormat
-from datetime import date
-from rest_framework import generics
+from datetime import date, datetime, timedelta
+from decimal import Decimal
+from io import BytesIO
+
 from django.conf import settings
-from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework_simplejwt.authentication import JWTAuthentication
-from .models import User, Administrator, Employee, Salary, Trip, Vehicle, PasswordReset, SalaryConfiguration, Total
-from .serializers import (
-    UserSerializer, AdministratorSerializer, EmployeeSerializer, OngoingTripSerializer,
-    SalarySerializer, TripSerializer, VehicleSerializer, TotalSerializer,
-    LoginSerializer, ResetPasswordRequestSerializer, ResetPasswordSerializer, SalaryConfigurationSerializer, UserProfileSerializer
-)
-from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework.response import Response
-from rest_framework import status, permissions
-from django.contrib.auth import get_user_model
-from django.contrib.auth.tokens import PasswordResetTokenGenerator
-from django.shortcuts import get_object_or_404
-from django.core.mail import send_mail
-from django.utils import timezone
-from django.http import HttpResponse
-from reportlab.pdfgen import canvas
-from io import BytesIO
-from rest_framework.views import APIView
-from rest_framework.generics import RetrieveAPIView 
-from django.http import JsonResponse
-from rest_framework.decorators import api_view, permission_classes
-from django.views.decorators.csrf import csrf_exempt
-from io import BytesIO
-from reportlab.lib.pagesizes import letter, landscape
-from reportlab.pdfgen import canvas
-from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet
-from rest_framework import viewsets
-from django.utils.dateparse import parse_datetime
-from reportlab.lib.enums import TA_LEFT
-from reportlab.lib.styles import ParagraphStyle
-from decimal import Decimal
-import json
-from datetime import datetime
-from django.db.models import Sum
-from rest_framework.decorators import api_view
-from django.utils.timezone import make_aware
-from django.db.models import Q, F
-from api.models import Employee, EmployeeLocation
-from django.db import OperationalError
-from decimal import Decimal
-from reportlab.platypus import KeepTogether, PageBreak
-from django.forms.models import model_to_dict
-from django.utils.timezone import now
-from django.utils.dateparse import parse_date
-import logging
-from django.utils.dateparse import parse_datetime
-from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth import get_user_model, update_session_auth_hash
 from django.contrib.auth.password_validation import validate_password
-from reportlab.platypus import Image as RLImage
-from django.conf import settings
-import os
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.pdfbase.pdfmetrics import registerFontFamily
-from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.core.mail import send_mail
+from django.db import OperationalError
+from django.db.models import F, Q, Sum
+from django.forms.models import model_to_dict
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from django.utils.dateformat import DateFormat
+from django.utils.dateparse import parse_date, parse_datetime
+from django.utils.timezone import make_aware, now
+from django.views.decorators.csrf import csrf_exempt
+from reportlab.lib import colors
 from reportlab.lib.enums import TA_LEFT
+from reportlab.lib.pagesizes import landscape, letter
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.pdfmetrics import registerFontFamily
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfgen import canvas
+from reportlab.platypus import Image as RLImage
+from reportlab.platypus import (
+    KeepTogether,
+    PageBreak,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
+)
+from rest_framework import generics, permissions, status, viewsets
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.generics import RetrieveAPIView
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework_simplejwt.views import TokenObtainPairView
+
+from api.models import Employee, EmployeeLocation
+
+from .models import (
+    Administrator,
+    Employee,
+    PasswordReset,
+    Salary,
+    SalaryConfiguration,
+    Total,
+    Trip,
+    User,
+    Vehicle,
+)
+from .serializers import (
+    AdministratorSerializer,
+    EmployeeSerializer,
+    LoginSerializer,
+    OngoingTripSerializer,
+    ResetPasswordRequestSerializer,
+    ResetPasswordSerializer,
+    SalaryConfigurationSerializer,
+    SalarySerializer,
+    TotalSerializer,
+    TripSerializer,
+    UserProfileSerializer,
+    UserSerializer,
+    VehicleSerializer,
+)
 
 # Register DejaVu Sans font
-font_path = os.path.join(settings.BASE_DIR, 'api', 'fonts', 'DejaVuSans.ttf')
-pdfmetrics.registerFont(TTFont('DejaVuSans', font_path))
-registerFontFamily('DejaVuSans', normal='DejaVuSans', bold='DejaVuSans', italic='DejaVuSans', boldItalic='DejaVuSans')
+font_path = os.path.join(settings.BASE_DIR, "api", "fonts", "DejaVuSans.ttf")
+pdfmetrics.registerFont(TTFont("DejaVuSans", font_path))
+registerFontFamily(
+    "DejaVuSans",
+    normal="DejaVuSans",
+    bold="DejaVuSans",
+    italic="DejaVuSans",
+    boldItalic="DejaVuSans",
+)
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
-#==================================================================================================================================================================================
-@api_view(['GET'])
+
+# ==================================================================================================================================================================================
+@api_view(["GET"])
 def get_all_salary_configurations(request):
     """
     Fetch all salary configurations.
     """
-    salary_configs = SalaryConfiguration.objects.all()  # Retrieve all salary configurations
+    salary_configs = (
+        SalaryConfiguration.objects.all()
+    )  # Retrieve all salary configurations
     serializer = SalaryConfigurationSerializer(salary_configs, many=True)
     return Response(serializer.data)
 
-#==================================================================================================================================================================================
+
+# ==================================================================================================================================================================================
 @csrf_exempt
 def update_salaries(request):
     if request.method != "POST":
         return JsonResponse({"error": "POST required"}, status=405)
-    
+
     def parse_float(value):
         try:
             return float(value)
@@ -115,7 +137,7 @@ def update_salaries(request):
         trips = Trip.objects.filter(
             employee__user__username=username,
             trip_status="Confirmed",
-            end_date__range=[start_date, end_date]
+            end_date__range=[start_date, end_date],
         )
 
         updated_salaries = 0
@@ -130,7 +152,7 @@ def update_salaries(request):
             else:
                 # In case there's another role or an unexpected case
                 base_salary = 0
-                
+
             salary = Salary.objects.filter(trip=trip).first()
             if salary:
                 salary.sss_contribution = sss_contribution
@@ -140,21 +162,26 @@ def update_salaries(request):
                 salary.pagibig_loan = pagibig_loan
 
                 # Calculate and update the adjusted salary
-                salary.adjusted_salary = (base_salary * trip.multiplier) + trip.additionals
+                salary.adjusted_salary = (
+                    base_salary * trip.multiplier
+                ) + trip.additionals
                 salary.save()
                 updated_salaries += 1
             else:
                 print(f"No Salary found for Trip {trip.id}")
 
-        return JsonResponse({
-            "message": f"✅ Updated {updated_salaries} Salary records."
-        }, status=200)
+        return JsonResponse(
+            {"message": f"✅ Updated {updated_salaries} Salary records."}, status=200
+        )
 
     except Exception as e:
         print(f"[ERROR] {e}")
-        return JsonResponse({"error": "Server error while updating salary."}, status=500)
-    
-#==================================================================================================================================================================================
+        return JsonResponse(
+            {"error": "Server error while updating salary."}, status=500
+        )
+
+
+# ==================================================================================================================================================================================
 @api_view(["PATCH"])
 @permission_classes([IsAuthenticated])
 @csrf_exempt
@@ -168,23 +195,29 @@ def update_user_profile(request, user_id):
             user.cellphone_no = data.get("cellphone_no", user.cellphone_no)
             user.save()
 
-            return JsonResponse({
-                "message": "User updated successfully",
-                "user": {
-                    "id": user.id,
-                    "email": user.email,
-                    "cellphone_no": user.cellphone_no,
-                    "username": user.username,
-                    "first_name": user.first_name,
-                    "last_name": user.last_name,
-                    "profile_image": user.profile_image.url if user.profile_image else None,
+            return JsonResponse(
+                {
+                    "message": "User updated successfully",
+                    "user": {
+                        "id": user.id,
+                        "email": user.email,
+                        "cellphone_no": user.cellphone_no,
+                        "username": user.username,
+                        "first_name": user.first_name,
+                        "last_name": user.last_name,
+                        "profile_image": (
+                            user.profile_image.url if user.profile_image else None
+                        ),
+                    },
                 }
-            })
+            )
         except User.DoesNotExist:
             return JsonResponse({"error": "User not found"}, status=404)
 
     return JsonResponse({"error": "Invalid request method"}, status=400)
-#==================================================================================================================================================================================
+
+
+# ==================================================================================================================================================================================
 # [Function]
 @api_view(["PATCH"])
 @permission_classes([IsAuthenticated])
@@ -195,11 +228,14 @@ def update_employee_profile(request):
 
     if serializer.is_valid():
         serializer.save()
-        return Response({"message": "Profile updated successfully!", "user": serializer.data})
+        return Response(
+            {"message": "Profile updated successfully!", "user": serializer.data}
+        )
 
     return Response(serializer.errors, status=400)
 
-#==================================================================================================================================================================================
+
+# ==================================================================================================================================================================================
 # ADD ACCOUNT FOR USER
 class RegisterUserView(APIView):
     permission_classes = [permissions.AllowAny]
@@ -210,9 +246,14 @@ class RegisterUserView(APIView):
         # ✅ Check if required fields are present
         for field in required_fields:
             if field not in request.data or not request.data[field]:
-                return Response({"error": f"{field} is required."}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {"error": f"{field} is required."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
-        profile_image = request.FILES.get("profile_image")  # ✅ Capture the uploaded image
+        profile_image = request.FILES.get(
+            "profile_image"
+        )  # ✅ Capture the uploaded image
 
         # ✅ Create user
         try:
@@ -222,21 +263,29 @@ class RegisterUserView(APIView):
                 email=request.data["email"],
                 role=request.data["role"],
                 employee_type=request.data.get("employee_type"),  # Corrected
-                first_name=request.data.get("firstName", ""),  # Use default value if not provided
-                last_name=request.data.get("lastName", ""),  # Use default value if not provided
-                cellphone_no=request.data.get("cellphone_no", ""), 
+                first_name=request.data.get(
+                    "firstName", ""
+                ),  # Use default value if not provided
+                last_name=request.data.get(
+                    "lastName", ""
+                ),  # Use default value if not provided
+                cellphone_no=request.data.get("cellphone_no", ""),
                 philhealth_no=request.data.get("philhealth_no", ""),
                 pag_ibig_no=request.data.get("pag_ibig_no", ""),
                 sss_no=request.data.get("sss_no", ""),
                 license_no=request.data.get("license_no", ""),
                 profile_image=profile_image,  # ✅ Save image with user
             )
-                
-            return Response({"message": "User created successfully."}, status=status.HTTP_201_CREATED)
+
+            return Response(
+                {"message": "User created successfully."},
+                status=status.HTTP_201_CREATED,
+            )
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        
-#==================================================================================================================================================================================
+
+
+# ==================================================================================================================================================================================
 # ADD Vehicle
 class RegisterVehicleView(APIView):
     permission_classes = [permissions.AllowAny]
@@ -255,36 +304,45 @@ class RegisterVehicleView(APIView):
         # Validation
         for field in required_fields:
             if field not in request.data or not request.data[field].strip():
-                return Response({"error": f"{field} is required."}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {"error": f"{field} is required."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
         try:
             vehicle = Vehicle.objects.create(
                 plate_number=request.data["plate_number"],
                 vehicle_type=request.data["vehicle_type"],
                 is_company_owned=is_company_owned,
-                subcon_name=request.data.get("subcon_name", None)
+                subcon_name=request.data.get("subcon_name", None),
             )
-            return Response({"message": "Vehicle created successfully."}, status=status.HTTP_201_CREATED)
+            return Response(
+                {"message": "Vehicle created successfully."},
+                status=status.HTTP_201_CREATED,
+            )
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)    
-#==================================================================================================================================================================================
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ==================================================================================================================================================================================
 # CUSTOM LOGIN VIEW (USES JWT AUTHENTICATION)
 class LoginView(TokenObtainPairView):
     serializer_class = LoginSerializer
 
-#==================================================================================================================================================================================
+
+# ==================================================================================================================================================================================
 class SendPasswordLinkView(generics.GenericAPIView):
     permission_classes = [AllowAny]
     serializer_class = ResetPasswordRequestSerializer
 
     def send_password_reset_email(self, user_email, reset_token):
         reset_link = f"{settings.FRONTEND_DOMAIN}/forgot-password/{reset_token}"
-        
+
         subject = "[PASSWORD RESET]"
         body = f"""
         Password Reset Link: {reset_link}
         """
-   
+
         send_mail(
             subject,
             body,
@@ -294,7 +352,7 @@ class SendPasswordLinkView(generics.GenericAPIView):
 
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
-        email = request.data['email']
+        email = request.data["email"]
 
         if not email:
             return Response({"error": "Email field is required."})
@@ -307,9 +365,13 @@ class SendPasswordLinkView(generics.GenericAPIView):
         reset.save()
 
         self.send_password_reset_email(user_email=email, reset_token=token)
-        return Response({"message": "Password reset link has been sent to your email."}, status=status.HTTP_200_OK)
+        return Response(
+            {"message": "Password reset link has been sent to your email."},
+            status=status.HTTP_200_OK,
+        )
 
-#==================================================================================================================================================================================
+
+# ==================================================================================================================================================================================
 # RESET PASSWORD VIEW
 class ResetPasswordView(generics.GenericAPIView):
     serializer_class = ResetPasswordSerializer
@@ -319,94 +381,107 @@ class ResetPasswordView(generics.GenericAPIView):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
-        
-        new_password = data['new_password']
-        confirm_password = data['confirm_password']
-        
+
+        new_password = data["new_password"]
+        confirm_password = data["confirm_password"]
+
         if new_password != confirm_password:
             return Response({"error": "Passwords do not match"}, status=400)
-        
+
         reset_obj = PasswordReset.objects.filter(token=token).first()
-        
-        if not reset_obj :
-            return Response({'error':'Session has expired or is invalid.'}, status=400)
-        
+
+        if not reset_obj:
+            return Response({"error": "Session has expired or is invalid."}, status=400)
+
         user = User.objects.filter(email=reset_obj.email).first()
-        
+
         if user:
-            user.set_password(request.data['new_password'])
+            user.set_password(request.data["new_password"])
             user.save()
-            
+
             reset_obj.delete()
-            
-            return Response({'success':'Password updated'})
-        else: 
-            return Response({'error':'No user found'}, status=404)
-        
-#==================================================================================================================================================================================
+
+            return Response({"success": "Password updated"})
+        else:
+            return Response({"error": "No user found"}, status=404)
+
+
+# ==================================================================================================================================================================================
 # Custom Permissions
 class IsAdminUser(IsAuthenticated):
     def has_permission(self, request, view):
-        return super().has_permission(request, view) and request.user.role == 'admin'
+        return super().has_permission(request, view) and request.user.role == "admin"
 
-#==================================================================================================================================================================================
+
+# ==================================================================================================================================================================================
 class IsEmployeeUser(IsAuthenticated):
     def has_permission(self, request, view):
-        return super().has_permission(request, view) and request.user.role == 'employee'
+        return super().has_permission(request, view) and request.user.role == "employee"
 
-#==================================================================================================================================================================================   
+
+# ==================================================================================================================================================================================
 class UserListView(generics.ListAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated]
 
-#==================================================================================================================================================================================
+
+# ==================================================================================================================================================================================
 class EmployeeCreateView(generics.CreateAPIView):
     queryset = Employee.objects.all()
     serializer_class = EmployeeSerializer
     permission_classes = [AllowAny]
 
-#==================================================================================================================================================================================
+
+# ==================================================================================================================================================================================
 # EMPLOYEE LIST ADMIN DASHBOARD
 class EmployeeListView(generics.ListAPIView):
     queryset = Employee.objects.all()
     serializer_class = EmployeeSerializer
     authentication_classes = [JWTAuthentication]
-    permission_classes = [AllowAny] # Will change to IsAuthenticated once token problem is fixed
+    permission_classes = [
+        AllowAny
+    ]  # Will change to IsAuthenticated once token problem is fixed
 
-#==================================================================================================================================================================================
+
+# ==================================================================================================================================================================================
 class EmployeeDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Employee.objects.all()
     serializer_class = EmployeeSerializer
     permission_classes = [IsAuthenticated]
 
-#==================================================================================================================================================================================
+
+# ==================================================================================================================================================================================
 # Administrator Views (Only Admins can manage Admins)
 class AdministratorListView(generics.ListCreateAPIView):
     queryset = Administrator.objects.all()
     serializer_class = AdministratorSerializer
     permission_classes = [IsAdminUser]
 
-#==================================================================================================================================================================================
+
+# ==================================================================================================================================================================================
 class AdministratorDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Administrator.objects.all()
     serializer_class = AdministratorSerializer
     permission_classes = [IsAdminUser]
 
-#==================================================================================================================================================================================
+
+# ==================================================================================================================================================================================
 # Salary Views
 class SalaryListView(generics.ListCreateAPIView):
     queryset = Salary.objects.all()
     serializer_class = SalarySerializer
     permission_classes = [IsAdminUser]
 
-#==================================================================================================================================================================================
+
+# ==================================================================================================================================================================================
 class SalaryDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Salary.objects.all()
     serializer_class = SalarySerializer
     permission_classes = [IsAdminUser]
 
-#==================================================================================================================================================================================
+
+# ==================================================================================================================================================================================
 class TripListView(generics.ListAPIView):
     serializer_class = TripSerializer
     permission_classes = [AllowAny]
@@ -414,12 +489,13 @@ class TripListView(generics.ListAPIView):
     def get_queryset(self):
         return Trip.objects.all()
 
-#==================================================================================================================================================================================
+
+# ==================================================================================================================================================================================
 class TripDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Trip.objects.all()
     serializer_class = TripSerializer
     permission_classes = [IsAuthenticated]
-    
+
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
         was_in_progress = instance.is_in_progress
@@ -427,7 +503,9 @@ class TripDetailView(generics.RetrieveUpdateDestroyAPIView):
         response = super().update(request, *args, **kwargs)
         instance.refresh_from_db()
 
-        print(f"Trip {instance.trip_id} status: was_in_progress={was_in_progress}, now={instance.is_in_progress}")
+        print(
+            f"Trip {instance.trip_id} status: was_in_progress={was_in_progress}, now={instance.is_in_progress}"
+        )
 
         if was_in_progress and not instance.is_in_progress:
             print("✅ Trip was just completed — computing salary now.")
@@ -436,7 +514,7 @@ class TripDetailView(generics.RetrieveUpdateDestroyAPIView):
             print("⚠️ Trip is already completed. No salary computation triggered.")
 
         return response
-    
+
     def compute_and_store_deductions(self, trip):
         from .models import Salary, SalaryConfiguration
 
@@ -464,25 +542,28 @@ class TripDetailView(generics.RetrieveUpdateDestroyAPIView):
                 "cash_bond": 0,
                 "charges": 0,
                 "others": 0,
-            }
+            },
         )
         print(f"✅ Salary record created/updated for Trip ID {trip.trip_id}")
-            
-#==================================================================================================================================================================================
+
+
+# ==================================================================================================================================================================================
 # Vehicle Views
 class VehicleListView(generics.ListCreateAPIView):
     queryset = Vehicle.objects.all()
     serializer_class = VehicleSerializer
     permission_classes = [AllowAny]
 
-#==================================================================================================================================================================================
+
+# ==================================================================================================================================================================================
 class VehicleDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Vehicle.objects.all()
     serializer_class = VehicleSerializer
     # permission_classes = [IsAuthenticated]
-    
-#==================================================================================================================================================================================
-#ADMIN SETTINGS EMPLOYEE DATA
+
+
+# ==================================================================================================================================================================================
+# ADMIN SETTINGS EMPLOYEE DATA
 class UserListView(APIView):
     permission_classes = [IsAuthenticated]  # ✅ Requires Authentication
 
@@ -490,14 +571,18 @@ class UserListView(APIView):
         users = User.objects.all()
         serializer = UserSerializer(users, many=True)
         return Response(serializer.data)
-    
-#==================================================================================================================================================================================
-#CREATE NEW TRIP DROPDOWN
+
+
+# ==================================================================================================================================================================================
+# CREATE NEW TRIP DROPDOWN
 def get_vehicles(request):
-    vehicles = list(Vehicle.objects.values("vehicle_id", "plate_number", "vehicle_type"))
+    vehicles = list(
+        Vehicle.objects.values("vehicle_id", "plate_number", "vehicle_type")
+    )
     return JsonResponse(vehicles, safe=False)
 
-@api_view(['GET'])
+
+@api_view(["GET"])
 @permission_classes([AllowAny])  # Adjust this as needed based on your permissions
 def get_employees(request):
     # Fetch employees with the necessary fields
@@ -507,7 +592,9 @@ def get_employees(request):
 
     # Get start (Sunday) and end (Saturday) of current week
     today = now().date()
-    start_of_week = today - timedelta(days=today.weekday() + 1 if today.weekday() < 6 else 6)
+    start_of_week = today - timedelta(
+        days=today.weekday() + 1 if today.weekday() < 6 else 6
+    )
     end_of_week = start_of_week + timedelta(days=6)
 
     # Loop through employees and get completed trip count for each
@@ -516,54 +603,81 @@ def get_employees(request):
         completed_trips_count = Trip.objects.filter(
             Q(employee=employee) | Q(helper=employee) | Q(helper2=employee),
             trip_status="Confirmed",  # Filter by trip_status="Confirmed"
-            end_date__date__range=(start_of_week, end_of_week)  # Filter by date range (current week)
+            end_date__date__range=(
+                start_of_week,
+                end_of_week,
+            ),  # Filter by date range (current week)
         ).count()
 
         # Serialize employee data
-        employee_data.append({
-            "employee_id": employee.employee_id,
-            "username": employee.user.username,
-            "employee_type": employee.user.employee_type,
-            "completed_trip_count": completed_trips_count,  # Add completed trip count here
-        })
+        employee_data.append(
+            {
+                "employee_id": employee.employee_id,
+                "username": employee.user.username,
+                "employee_type": employee.user.employee_type,
+                "completed_trip_count": completed_trips_count,  # Add completed trip count here
+            }
+        )
 
 
-#==================================================================================================================================================================================
-#SETTINGS EMPLOYEE DATA
+# ==================================================================================================================================================================================
+# SETTINGS EMPLOYEE DATA
 User = get_user_model()
+
 
 def get_users(request):
     users = User.objects.all().values(
-        'id', 'username', 'email', 'cellphone_no', 'philhealth_no',
-        'pag_ibig_no', 'sss_no', 'license_no', 'profile_image', 'is_staff', 'is_superuser'
+        "id",
+        "username",
+        "email",
+        "cellphone_no",
+        "philhealth_no",
+        "pag_ibig_no",
+        "sss_no",
+        "license_no",
+        "profile_image",
+        "is_staff",
+        "is_superuser",
     )
 
     users_list = [
         {
             **user,
-            'role': 'Super Admin' if user['is_superuser'] else 'Admin' if user['is_staff'] else 'Employee',
-            'profile_image': request.build_absolute_uri(user['profile_image']) if user['profile_image'] else None
+            "role": (
+                "Super Admin"
+                if user["is_superuser"]
+                else "Admin" if user["is_staff"] else "Employee"
+            ),
+            "profile_image": (
+                request.build_absolute_uri(user["profile_image"])
+                if user["profile_image"]
+                else None
+            ),
         }
         for user in users
     ]
 
-    return JsonResponse({'users': users_list})
-             
-#==================================================================================================================================================================================
-#SETTINGS DELETE ACCOUNT
+    return JsonResponse({"users": users_list})
+
+
+# ==================================================================================================================================================================================
+# SETTINGS DELETE ACCOUNT
 @csrf_exempt
 def delete_user_by_username(request, username):
     if request.method == "DELETE":
         try:
             user = User.objects.get(username=username)
             user.delete()
-            return JsonResponse({"message": f"User '{username}' deleted successfully!"}, status=200)
+            return JsonResponse(
+                {"message": f"User '{username}' deleted successfully!"}, status=200
+            )
         except User.DoesNotExist:
             return JsonResponse({"error": "User not found"}, status=404)
     return JsonResponse({"error": "Invalid request"}, status=400)
-    
-#==================================================================================================================================================================================
-#EMPLOYEE OWN VIEW PROFILE  
+
+
+# ==================================================================================================================================================================================
+# EMPLOYEE OWN VIEW PROFILE
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def get_employee_profile(request):
@@ -574,7 +688,8 @@ def get_employee_profile(request):
     except Employee.DoesNotExist:
         return Response({"detail": "Employee not found"}, status=404)
 
-#==================================================================================================================================================================================
+
+# ==================================================================================================================================================================================
 class UserProfileView(generics.RetrieveAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = UserSerializer
@@ -595,8 +710,9 @@ class UserProfileView(generics.RetrieveAPIView):
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
 
-#==================================================================================================================================================================================
-#USER UPDATE
+
+# ==================================================================================================================================================================================
+# USER UPDATE
 class UserUpdateView(generics.UpdateAPIView):
     queryset = User.objects.all()
     serializer_class = UserProfileSerializer
@@ -606,7 +722,7 @@ class UserUpdateView(generics.UpdateAPIView):
         return get_object_or_404(User, pk=self.request.user.pk)
 
     def update(self, request, *args, **kwargs):
-        partial = kwargs.pop('partial', False)
+        partial = kwargs.pop("partial", False)
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
@@ -616,10 +732,12 @@ class UserUpdateView(generics.UpdateAPIView):
     def perform_update(self, serializer):
         serializer.save()
 
-#==================================================================================================================================================================================
+
+# ==================================================================================================================================================================================
 # Reset password link validation
 class ValidateResetPasswordTokenView(APIView):
     permission_classes = [AllowAny]
+
     def post(self, request):
         token = request.data.get("token")
 
@@ -642,7 +760,8 @@ class ValidateResetPasswordTokenView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         return Response({"message": "Token is valid."}, status=status.HTTP_200_OK)
-  
+
+
 # =====================================================================================================
 # GET trips that are accepted but not yet completed (Ongoing Trips)
 @api_view(["GET"])
@@ -650,13 +769,13 @@ class ValidateResetPasswordTokenView(APIView):
 def get_ongoing_trips(request):
     try:
         employee = request.user.employee_profile
-        
+
         # Using Q for filtering
-        trips = Trip.objects.filter(
-            employee=employee
-        ).filter(
-            trip_status="Ongoing"
-        ).order_by("-start_date")
+        trips = (
+            Trip.objects.filter(employee=employee)
+            .filter(trip_status="Ongoing")
+            .order_by("-start_date")
+        )
 
         serializer = TripSerializer(trips, many=True)
         return Response(serializer.data)
@@ -664,12 +783,15 @@ def get_ongoing_trips(request):
     except Employee.DoesNotExist:
         return Response({"error": "No employee profile found."}, status=400)
 
+
 # =====================================================================================================
-class TripDetailAPIView (RetrieveAPIView):
+class TripDetailAPIView(RetrieveAPIView):
     queryset = Trip.objects.all()
-    serializer_class =TripSerializer
+    serializer_class = TripSerializer
     lookup_field = "trip_id"
     permission_classes = [AllowAny]
+
+
 # =====================================================================================================
 # GET trips that are accepted or completed
 @api_view(["GET"])
@@ -678,8 +800,7 @@ def get_recent_trips(request):
     try:
         employee = request.user.employee_profile
         trips = Trip.objects.filter(
-            employee=employee,
-            trip_status="Confirmed"
+            employee=employee, trip_status="Confirmed"
         ).order_by("-start_date")
 
         serializer = TripSerializer(trips, many=True)
@@ -687,8 +808,9 @@ def get_recent_trips(request):
     except Employee.DoesNotExist:
         return Response({"error": "No employee profile found."}, status=400)
 
+
 # =====================================================================================================
-#Get Unassigned Trips
+# Get Unassigned Trips
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def get_unassigned_trips(request):
@@ -699,8 +821,9 @@ def get_unassigned_trips(request):
     serializer = TripSerializer(trips, many=True)
     return Response(serializer.data)
 
+
 # =====================================================================================================
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([AllowAny])
 def employee_trip_salaries(request):
     username = request.GET.get("employee")
@@ -711,45 +834,47 @@ def employee_trip_salaries(request):
         return Response({"error": "Missing parameters"}, status=400)
 
     trips = Trip.objects.filter(
-        employee__user__username=username, 
+        employee__user__username=username,
         end_date__range=(start, end),
-        is_completed=True
+        is_completed=True,
     )
     data = []
 
     for trip in trips:
         salary = Salary.objects.filter(trip=trip).first()
-        data.append({
-            "trip": TripSerializer(trip).data,
-            "salary": SalarySerializer(salary).data if salary else None
-        })
+        data.append(
+            {
+                "trip": TripSerializer(trip).data,
+                "salary": SalarySerializer(salary).data if salary else None,
+            }
+        )
 
     return Response(data)
+
+
 # =====================================================================================================
 # Update salary deductions
-@api_view(['POST'])
+@api_view(["POST"])
 @permission_classes([AllowAny])
 def update_salary_deductions(request):
     print("✅ update_salary_deductions endpoint was hit")
     print("Incoming data:", request.data)
 
     data = request.data
-    username = data.get('username')
-    start_date = data.get('start_date')
-    end_date = data.get('end_date')
+    username = data.get("username")
+    start_date = data.get("start_date")
+    end_date = data.get("end_date")
 
     try:
         start = datetime.fromisoformat(start_date).date()
         end = datetime.fromisoformat(end_date).date()
-        
+
         user = User.objects.get(username=username)
         employee = Employee.objects.get(user=user)
         config = SalaryConfiguration.objects.first()
 
         trips = Trip.objects.filter(
-            employee=employee,
-            end_date__range=[start, end],
-            is_completed=True
+            employee=employee, end_date__range=[start, end], is_completed=True
         )
 
         for trip in trips:
@@ -775,16 +900,20 @@ def update_salary_deductions(request):
                     "cash_bond": data.get("cash_bond", 0),
                     "charges": data.get("charges", 0),
                     "others": data.get("others", 0),
-                }
+                },
             )
-        
-        return Response({"success": True, "message": "Salaries and deductions updated."})
+
+        return Response(
+            {"success": True, "message": "Salaries and deductions updated."}
+        )
 
     except Exception as e:
         print("Error updating salary:", e)
         return Response({"error": str(e)}, status=500)
-#==============================================================================================================================
-@api_view(['GET'])
+
+
+# ==============================================================================================================================
+@api_view(["GET"])
 @permission_classes([AllowAny])
 def generate_salary_breakdown_pdf(request):
     def format_currency(value):
@@ -792,13 +921,16 @@ def generate_salary_breakdown_pdf(request):
             return f"₱ {float(value):,.2f}"
         except (TypeError, ValueError):
             return "0.00"
+
     username = request.GET.get("employee")
     start = request.GET.get("start_date")
     end = request.GET.get("end_date")
     logged_in_user = request.user.username
 
     # Log the received parameters for debugging
-    print(f"Received parameters: employee={username}, start_date={start}, end_date={end}, logged in user={logged_in_user}")
+    print(
+        f"Received parameters: employee={username}, start_date={start}, end_date={end}, logged in user={logged_in_user}"
+    )
 
     if not all([username, start, end]):
         return Response({"error": "Missing parameters"}, status=400)
@@ -808,12 +940,16 @@ def generate_salary_breakdown_pdf(request):
         start_date = datetime.strptime(start, "%Y-%m-%d").date()
         end_date = datetime.strptime(end, "%Y-%m-%d").date()
     except ValueError:
-        return Response({"error": "Invalid date format. Expected YYYY-MM-DD."}, status=400)
+        return Response(
+            {"error": "Invalid date format. Expected YYYY-MM-DD."}, status=400
+        )
 
     try:
         # Retrieve the employee object
         employee = Employee.objects.select_related("user").get(user__username=username)
-        user_type = employee.user.employee_type.lower()  # Get employee type (driver/helper/staff)
+        user_type = (
+            employee.user.employee_type.lower()
+        )  # Get employee type (driver/helper/staff)
     except Employee.DoesNotExist:
         return Response({"error": "Employee not found"}, status=404)
 
@@ -827,43 +963,77 @@ def generate_salary_breakdown_pdf(request):
         p.showPage()
         p.save()
         buffer.seek(0)
-        return HttpResponse(buffer, content_type='application/pdf', headers={
-            'Content-Disposition': f'attachment; filename="{username}_staff_salary_breakdown.pdf"'
-        })
+        return HttpResponse(
+            buffer,
+            content_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="{username}_staff_salary_breakdown.pdf"'
+            },
+        )
 
     # Get trips for the employee within the date range and confirm the trip status
     trips = Trip.objects.filter(
         Q(employee=employee) | Q(helper=employee) | Q(helper2=employee),
         end_date__range=(start_date, end_date),
-        trip_status="Confirmed"  # Ensure that trip status is confirmed
+        trip_status="Confirmed",  # Ensure that trip status is confirmed
     )
 
     if not trips.exists():
-        return Response({"error": "No completed trips found in this range."}, status=400)
+        return Response(
+            {"error": "No completed trips found in this range."}, status=400
+        )
 
     data = [{"trip": t, "salary": Salary.objects.filter(trip=t).first()} for t in trips]
 
     # Generate the PDF document
     buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=landscape(letter), topMargin=30, leftMargin=30, rightMargin=30, bottomMargin=30)
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=landscape(letter),
+        topMargin=30,
+        leftMargin=30,
+        rightMargin=30,
+        bottomMargin=30,
+    )
     styles = getSampleStyleSheet()
-    left_align = ParagraphStyle(name='LeftAlign', parent=styles['Normal'], alignment=TA_LEFT, fontName='DejaVuSans')
-    left_heading = ParagraphStyle(name='LeftHeading', parent=styles['Heading4'], alignment=TA_LEFT, fontName='DejaVuSans')
+    left_align = ParagraphStyle(
+        name="LeftAlign",
+        parent=styles["Normal"],
+        alignment=TA_LEFT,
+        fontName="DejaVuSans",
+    )
+    left_heading = ParagraphStyle(
+        name="LeftHeading",
+        parent=styles["Heading4"],
+        alignment=TA_LEFT,
+        fontName="DejaVuSans",
+    )
     elements = []
-    
+
     # Reference the correct image path
-    image_path = os.path.join(settings.BASE_DIR, 'api', 'static', 'images', 'bigc.png')
+    image_path = os.path.join(settings.BASE_DIR, "api", "static", "images", "bigc.png")
 
     stamp = RLImage(image_path, width=180, height=50)  # Adjust size as needed
-    stamp.hAlign = 'RIGHT'
+    stamp.hAlign = "RIGHT"
     elements.append(stamp)
-    
+
     elements.append(Paragraph(f"<b>Salary Report for {username}</b>", left_align))
     elements.append(Paragraph(f"<b>Date Range:</b> {start} to {end}", left_align))
     elements.append(Spacer(1, 12))
 
     # Trip Table (Additionals moved here)
-    trip_table_data = [["Trip ID", "Total Drops", "Date Created", "Base Salary", "Multiplier", "Additionals", "Final Drop Made", "Adjusted Salary"]]
+    trip_table_data = [
+        [
+            "Trip ID",
+            "Total Drops",
+            "Date Created",
+            "Base Salary",
+            "Multiplier",
+            "Additionals",
+            "Final Drop Made",
+            "Adjusted Salary",
+        ]
+    ]
     gross_total = 0
 
     for record in data:
@@ -878,13 +1048,20 @@ def generate_salary_breakdown_pdf(request):
         elif user_type == "helper":
             base_salary = trip.helper_base_salary  # Use helper_base_salary for helpers
         else:
-            base_salary = trip.base_salary  # Default to base_salary if needed (adjust for your case)
+            base_salary = (
+                trip.base_salary
+            )  # Default to base_salary if needed (adjust for your case)
 
         adjusted = salary.adjusted_salary or 0
         gross_total += adjusted
 
         final_drop = "N/A"
-        if hasattr(trip, "addresses") and trip.addresses and hasattr(trip, "clients") and trip.clients:
+        if (
+            hasattr(trip, "addresses")
+            and trip.addresses
+            and hasattr(trip, "clients")
+            and trip.clients
+        ):
             last_address = trip.addresses[-1]
             city = "Unknown"
 
@@ -897,33 +1074,39 @@ def generate_salary_breakdown_pdf(request):
 
         # Get additionals for the trip
         additionals = getattr(trip, "additionals", 0)
-        
+
         created_date = trip.date_created.strftime("%Y-%m-%d")
 
         # Add data for the trip to the table
-        trip_table_data.append([
-            str(trip.trip_id),
-            str(getattr(trip, "num_of_drops", "N/A")),
-            created_date,
-            # f"{base_salary:.2f}",  # Use the updated salary reference
-            format_currency(base_salary),
-            str(trip.multiplier),
-            # f"{additionals:.2f}",  # Display additionals here
-            format_currency(additionals),
-            final_drop,
-            # f"{adjusted:.2f}"
-            format_currency(adjusted)
-        ])
+        trip_table_data.append(
+            [
+                str(trip.trip_id),
+                str(getattr(trip, "num_of_drops", "N/A")),
+                created_date,
+                # f"{base_salary:.2f}",  # Use the updated salary reference
+                format_currency(base_salary),
+                str(trip.multiplier),
+                # f"{additionals:.2f}",  # Display additionals here
+                format_currency(additionals),
+                final_drop,
+                # f"{adjusted:.2f}"
+                format_currency(adjusted),
+            ]
+        )
 
     # Create the trip table and add it to the document
-    trip_table = Table(trip_table_data, repeatRows=1, hAlign='LEFT')
-    trip_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgreen),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        ('FONTNAME', (0, 0), (-1, -1), 'DejaVuSans'),
-        ('ALIGN', (0, 0), (2, -1), 'CENTER'),
-        ('ALIGN', (3, 0), (-1, -1), 'RIGHT'),
-    ]))
+    trip_table = Table(trip_table_data, repeatRows=1, hAlign="LEFT")
+    trip_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.lightgreen),
+                ("GRID", (0, 0), (-1, -1), 1, colors.black),
+                ("FONTNAME", (0, 0), (-1, -1), "DejaVuSans"),
+                ("ALIGN", (0, 0), (2, -1), "CENTER"),
+                ("ALIGN", (3, 0), (-1, -1), "RIGHT"),
+            ]
+        )
+    )
     elements.append(Paragraph("<b>TRIP TABLE</b>", left_heading))
     elements.append(trip_table)
     elements.append(Spacer(1, 12))
@@ -936,27 +1119,43 @@ def generate_salary_breakdown_pdf(request):
     monthly_deductions = {}
 
     if week_index == 1:
-        monthly_deductions["Pag-IBIG Contribution"] = sum(s["salary"].pagibig_contribution or 0 for s in data if s["salary"])
+        monthly_deductions["Pag-IBIG Contribution"] = sum(
+            s["salary"].pagibig_contribution or 0 for s in data if s["salary"]
+        )
     elif week_index == 2:
-        monthly_deductions["PhilHealth Contribution"] = sum(s["salary"].philhealth_contribution or 0 for s in data if s["salary"])
+        monthly_deductions["PhilHealth Contribution"] = sum(
+            s["salary"].philhealth_contribution or 0 for s in data if s["salary"]
+        )
     elif week_index == 3:
-        monthly_deductions["SSS Contribution"] = sum(s["salary"].sss_contribution or 0 for s in data if s["salary"])
+        monthly_deductions["SSS Contribution"] = sum(
+            s["salary"].sss_contribution or 0 for s in data if s["salary"]
+        )
     elif week_index == 4:
-        monthly_deductions["SSS Loan"] = sum(s["salary"].sss_loan or 0 for s in data if s["salary"])
-        monthly_deductions["Pag-IBIG Loan"] = sum(s["salary"].pagibig_loan or 0 for s in data if s["salary"])
+        monthly_deductions["SSS Loan"] = sum(
+            s["salary"].sss_loan or 0 for s in data if s["salary"]
+        )
+        monthly_deductions["Pag-IBIG Loan"] = sum(
+            s["salary"].pagibig_loan or 0 for s in data if s["salary"]
+        )
 
     if monthly_deductions:
         # monthly_table_data = [["Monthly Deduction", "Amount"]] + [[k, f"{v:.2f}"] for k, v in monthly_deductions.items()]
-        monthly_table_data = [["Monthly Deduction", "Amount"]] + [[k, format_currency(v)] for k, v in monthly_deductions.items()]
+        monthly_table_data = [["Monthly Deduction", "Amount"]] + [
+            [k, format_currency(v)] for k, v in monthly_deductions.items()
+        ]
         elements.append(Paragraph("<b>MONTHLY DEDUCTIONS</b>", left_heading))
-        monthly_table = Table(monthly_table_data, hAlign='LEFT')
-        monthly_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.lightcoral),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('FONTNAME', (0, 0), (-1, -1), 'DejaVuSans'),
-            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
-            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
-        ]))
+        monthly_table = Table(monthly_table_data, hAlign="LEFT")
+        monthly_table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.lightcoral),
+                    ("GRID", (0, 0), (-1, -1), 1, colors.black),
+                    ("FONTNAME", (0, 0), (-1, -1), "DejaVuSans"),
+                    ("ALIGN", (0, 0), (0, -1), "LEFT"),
+                    ("ALIGN", (1, 0), (1, -1), "RIGHT"),
+                ]
+            )
+        )
         elements.append(monthly_table)
         elements.append(Spacer(1, 12))
 
@@ -969,72 +1168,140 @@ def generate_salary_breakdown_pdf(request):
         "Others": sum(s["salary"].others for s in data if s["salary"]),
     }
     # weekly_table_data = [["Weekly Deduction", "Amount"]] + [[k, f"{v:.2f}"] for k, v in weekly_deductions.items()]
-    weekly_table_data = [["Weekly Deduction", "Amount"]] + [[k, format_currency(v)] for k, v in weekly_deductions.items()]
+    weekly_table_data = [["Weekly Deduction", "Amount"]] + [
+        [k, format_currency(v)] for k, v in weekly_deductions.items()
+    ]
     elements.append(Paragraph("<b>WEEKLY DEDUCTIONS</b>", left_heading))
-    weekly_table = Table(weekly_table_data, hAlign='LEFT')
-    weekly_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.lightcoral),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        ('FONTNAME', (0, 0), (-1, -1), 'DejaVuSans'),
-        ('ALIGN', (0, 0), (0, -1), 'LEFT'),
-        ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
-    ]))
+    weekly_table = Table(weekly_table_data, hAlign="LEFT")
+    weekly_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.lightcoral),
+                ("GRID", (0, 0), (-1, -1), 1, colors.black),
+                ("FONTNAME", (0, 0), (-1, -1), "DejaVuSans"),
+                ("ALIGN", (0, 0), (0, -1), "LEFT"),
+                ("ALIGN", (1, 0), (1, -1), "RIGHT"),
+            ]
+        )
+    )
     elements.append(weekly_table)
     elements.append(Spacer(1, 12))
 
     # Totals Table
-    total_deductions = sum(monthly_deductions.values()) + sum(weekly_deductions.values())
+    total_deductions = sum(monthly_deductions.values()) + sum(
+        weekly_deductions.values()
+    )
     net_pay = gross_total - total_deductions  # Removed bonuses from the calculation
 
     # Updated table with larger font size and row height
     # totals_table_data = [["Gross Salary", "Deductions", "Net Pay"],
     #                     [f"{gross_total:.2f}", f"{total_deductions:.2f}", f"{net_pay:.2f}"]]
-    totals_table_data = [["Gross Salary", "Deductions", "Net Pay"],
-                     [format_currency(gross_total), format_currency(total_deductions), format_currency(net_pay)]]
-
+    totals_table_data = [
+        ["Gross Salary", "Deductions", "Net Pay"],
+        [
+            format_currency(gross_total),
+            format_currency(total_deductions),
+            format_currency(net_pay),
+        ],
+    ]
 
     # Create Totals Table and adjust style
-    totals_table = Table(totals_table_data, hAlign='LEFT', colWidths=[200, 200, 200])  # Adjust column widths
-    totals_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.lightyellow),  # Background color for header row
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),  # Grid lines around all cells
-        ('FONTNAME', (0, 0), (-1, -1), 'DejaVuSans'),  # Bold font for the entire table
-        ('FONTSIZE', (0, 0), (-1, -1), 14),  # Increase font size
-        ('ALIGN', (0, 1), (-1, 1), 'RIGHT'),  # ✅ Right-align all values in the totals row
-        ('ALIGN', (0, 0), (-1, 0), 'CENTER'), # (Optional) Center-align headers
-        ('TOPPADDING', (0, 0), (-1, -1), 12),  # Add padding to the top of each row
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),  # Add padding to the bottom of each row
-        ('LEFTPADDING', (0, 0), (-1, -1), 10),  # Add padding to the left side of each cell
-        ('RIGHTPADDING', (0, 0), (-1, -1), 10),  # Add padding to the right side of each cell
-    ]))
+    totals_table = Table(
+        totals_table_data, hAlign="LEFT", colWidths=[200, 200, 200]
+    )  # Adjust column widths
+    totals_table.setStyle(
+        TableStyle(
+            [
+                (
+                    "BACKGROUND",
+                    (0, 0),
+                    (-1, 0),
+                    colors.lightyellow,
+                ),  # Background color for header row
+                (
+                    "GRID",
+                    (0, 0),
+                    (-1, -1),
+                    1,
+                    colors.black,
+                ),  # Grid lines around all cells
+                (
+                    "FONTNAME",
+                    (0, 0),
+                    (-1, -1),
+                    "DejaVuSans",
+                ),  # Bold font for the entire table
+                ("FONTSIZE", (0, 0), (-1, -1), 14),  # Increase font size
+                (
+                    "ALIGN",
+                    (0, 1),
+                    (-1, 1),
+                    "RIGHT",
+                ),  # ✅ Right-align all values in the totals row
+                ("ALIGN", (0, 0), (-1, 0), "CENTER"),  # (Optional) Center-align headers
+                (
+                    "TOPPADDING",
+                    (0, 0),
+                    (-1, -1),
+                    12,
+                ),  # Add padding to the top of each row
+                (
+                    "BOTTOMPADDING",
+                    (0, 0),
+                    (-1, -1),
+                    12,
+                ),  # Add padding to the bottom of each row
+                (
+                    "LEFTPADDING",
+                    (0, 0),
+                    (-1, -1),
+                    10,
+                ),  # Add padding to the left side of each cell
+                (
+                    "RIGHTPADDING",
+                    (0, 0),
+                    (-1, -1),
+                    10,
+                ),  # Add padding to the right side of each cell
+            ]
+        )
+    )
 
     # Add the Totals Table to the document
     elements.append(Paragraph("<b>TOTALS</b>", left_heading))
     elements.append(totals_table)
     elements.append(Spacer(1, 12))  # Add space below the table
-    
+
     # Footer: Date generated + who generated it
     generated_at = datetime.now().strftime("%B %d, %Y at %I:%M %p")
     footer_text = f"Generated on {generated_at} by {logged_in_user}"
-    
+
     # Define footer to be used on every page
     def footer(canvas, doc):
         canvas.setFont("Helvetica-Oblique", 10)
-        canvas.drawString(30, 30, footer_text)  # Position the footer at the bottom of the page
+        canvas.drawString(
+            30, 30, footer_text
+        )  # Position the footer at the bottom of the page
 
     doc.build(elements, onFirstPage=footer)
     buffer.seek(0)
-    return HttpResponse(buffer, content_type='application/pdf', headers={
-        'Content-Disposition': f'attachment; filename="{username}_salary_breakdown.pdf"'
-    })
-#==================================================================================================================================================================================
-@api_view(['GET'])
+    return HttpResponse(
+        buffer,
+        content_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{username}_salary_breakdown.pdf"'
+        },
+    )
+
+
+# ==================================================================================================================================================================================
+@api_view(["GET"])
 @permission_classes([AllowAny])
 def generate_gross_payroll_pdf(request):
     start_date = request.GET.get("start_date")
     end_date = request.GET.get("end_date")
     logged_in_user = request.user.username
-    
+
     def format_currency(value):
         try:
             return f"₱ {float(value):,.2f}"
@@ -1053,39 +1320,66 @@ def generate_gross_payroll_pdf(request):
     # Check if totals already exist for this date range
     existing_totals = Total.objects.filter(start_date=start_date, end_date=end_date)
     if not existing_totals.exists():
-        return HttpResponse("No totals records found within this date range.", status=404)
+        return HttpResponse(
+            "No totals records found within this date range.", status=404
+        )
 
-    formatted_start = DateFormat(start_date).format('F d, Y')
-    formatted_end = DateFormat(end_date).format('F d, Y')
+    formatted_start = DateFormat(start_date).format("F d, Y")
+    formatted_end = DateFormat(end_date).format("F d, Y")
 
     buffer = BytesIO()
     doc = SimpleDocTemplate(
-        buffer, pagesize=landscape(letter),
-        topMargin=30, leftMargin=30, rightMargin=30, bottomMargin=30
+        buffer,
+        pagesize=landscape(letter),
+        topMargin=30,
+        leftMargin=30,
+        rightMargin=30,
+        bottomMargin=30,
     )
 
     styles = getSampleStyleSheet()
-    normal = styles['Normal']
+    normal = styles["Normal"]
     normal.fontSize = 8
-    left_align = ParagraphStyle(name='LeftAlign', parent=styles['Normal'], alignment=TA_LEFT, fontName='DejaVuSans')
-    left_heading = ParagraphStyle(name='LeftHeading', parent=styles['Heading4'], alignment=TA_LEFT, fontName='DejaVuSans')
+    left_align = ParagraphStyle(
+        name="LeftAlign",
+        parent=styles["Normal"],
+        alignment=TA_LEFT,
+        fontName="DejaVuSans",
+    )
+    left_heading = ParagraphStyle(
+        name="LeftHeading",
+        parent=styles["Heading4"],
+        alignment=TA_LEFT,
+        fontName="DejaVuSans",
+    )
     elements = []
-    
+
     # Reference the correct image path
-    image_path = os.path.join(settings.BASE_DIR, 'api', 'static', 'images', 'bigc.png')
+    image_path = os.path.join(settings.BASE_DIR, "api", "static", "images", "bigc.png")
 
     stamp = RLImage(image_path, width=180, height=50)  # Adjust size as needed
-    stamp.hAlign = 'RIGHT'
-    
+    stamp.hAlign = "RIGHT"
+
     elements = [
         Table(
-            [[Paragraph("<b>BIG C TRUCKING SERVICES GROSS PAYROLL</b>", styles['Title']), stamp]],
-            colWidths=[doc.width * 0.7, doc.width * 0.3]
+            [
+                [
+                    Paragraph(
+                        "<b>BIG C TRUCKING SERVICES GROSS PAYROLL</b>", styles["Title"]
+                    ),
+                    stamp,
+                ]
+            ],
+            colWidths=[doc.width * 0.7, doc.width * 0.3],
         ),
         Spacer(1, 10),
-        Paragraph(f"<b>PAYROLL PERIOD:</b> {formatted_start} to {formatted_end}", left_align),
-        Paragraph(f"<b>TOTAL EMPLOYEES WITH TRIPS:</b> {existing_totals.count()}", left_align),
-        Spacer(1, 20)
+        Paragraph(
+            f"<b>PAYROLL PERIOD:</b> {formatted_start} to {formatted_end}", left_align
+        ),
+        Paragraph(
+            f"<b>TOTAL EMPLOYEES WITH TRIPS:</b> {existing_totals.count()}", left_align
+        ),
+        Spacer(1, 20),
     ]
 
     def create_employee_table(totals):
@@ -1096,30 +1390,42 @@ def generate_gross_payroll_pdf(request):
             ["CASH BOND", format_currency(totals.total_bond)],
             ["CHARGES", format_currency(totals.total_charges)],
             ["OTHERS", format_currency(totals.total_others)],
-            ["SSS (including loan)", format_currency(totals.total_sss + totals.total_sss_loan)],
+            [
+                "SSS (including loan)",
+                format_currency(totals.total_sss + totals.total_sss_loan),
+            ],
             ["PHILHEALTH", format_currency(totals.total_philhealth)],
-            ["PAG-IBIG (including loan)", format_currency(totals.total_pagibig + totals.total_pagibig_loan)],
+            [
+                "PAG-IBIG (including loan)",
+                format_currency(totals.total_pagibig + totals.total_pagibig_loan),
+            ],
             ["BASE SALARY", format_currency(totals.total_base_salary)],
             ["ADDITIONALS", format_currency(totals.total_additionals)],
             ["OVERALL TOTAL", format_currency(totals.overall_total)],
         ]
         table = Table(table_data, colWidths=[130, 90])
-        table.setStyle(TableStyle([ 
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
-            ('FONTNAME', (0, 0), (-1, -1), 'DejaVuSans'),
-            ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
-            ('ALIGN', (0, 1), (0, -1), 'LEFT'),
-            ('ALIGN', (1, 1), (1, -1), 'RIGHT'),
-            ('ALIGN', (0, 0), (-1, 0), 'CENTER')
-        ]))
+        table.setStyle(
+            TableStyle(
+                [
+                    ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+                    ("FONTNAME", (0, 0), (-1, -1), "DejaVuSans"),
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+                    ("ALIGN", (0, 1), (0, -1), "LEFT"),
+                    ("ALIGN", (1, 1), (1, -1), "RIGHT"),
+                    ("ALIGN", (0, 0), (-1, 0), "CENTER"),
+                ]
+            )
+        )
         return table
 
     row_buffer = []
     for idx, totals in enumerate(existing_totals, 1):
         content = [
-            Paragraph(f"<b>EMPLOYEE:</b> {totals.employee.user.username.upper()}", left_align),
+            Paragraph(
+                f"<b>EMPLOYEE:</b> {totals.employee.user.username.upper()}", left_align
+            ),
             Spacer(1, 4),
-            create_employee_table(totals)
+            create_employee_table(totals),
         ]
         row_buffer.append(content)
 
@@ -1128,30 +1434,38 @@ def generate_gross_payroll_pdf(request):
                 row_buffer.append([])
 
             row_table = Table([row_buffer], colWidths=[doc.width / 3] * 3)
-            row_table.setStyle(TableStyle([ 
-                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                ('LEFTPADDING', (0, 0), (-1, -1), 10),
-                ('RIGHTPADDING', (0, 0), (-1, -1), 10),
-            ]))
+            row_table.setStyle(
+                TableStyle(
+                    [
+                        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                        ("LEFTPADDING", (0, 0), (-1, -1), 10),
+                        ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+                    ]
+                )
+            )
             elements.append(row_table)
             elements.append(Spacer(1, 25))
             row_buffer = []
-    
+
     # Footer
     generated_at = datetime.now().strftime("%B %d, %Y at %I:%M %p")
-    
+
     footer_text = f"<i>Generated on {generated_at} by {logged_in_user}</i>"
-    
+
     elements.append(Spacer(1, 6))
-    elements.append(Paragraph(footer_text, styles['Normal']))
+    elements.append(Paragraph(footer_text, styles["Normal"]))
 
     doc.build(elements)
     buffer.seek(0)
 
-    return HttpResponse(buffer, content_type='application/pdf', headers={
-        'Content-Disposition': 'attachment; filename="gross_payroll.pdf"'
-    })
-#==================================================================================================================================================================================
+    return HttpResponse(
+        buffer,
+        content_type="application/pdf",
+        headers={"Content-Disposition": 'attachment; filename="gross_payroll.pdf"'},
+    )
+
+
+# ==================================================================================================================================================================================
 # ADD TRIP [ADMIN SIDE]
 class RegisterTripView(APIView):
     permission_classes = [permissions.AllowAny]
@@ -1160,14 +1474,14 @@ class RegisterTripView(APIView):
         try:
             vehicle = Vehicle.objects.get(pk=request.data["vehicle_id"])
             employee = Employee.objects.get(pk=request.data["employee_id"])
-            
+
             helper = None
             if request.data.get("helper_id"):
                 helper = Employee.objects.get(pk=request.data["helper_id"])
             helper2 = None
             if request.data.get("helper2_id"):
                 helper2 = Employee.objects.get(pk=request.data["helper2_id"])
-                
+
             trip_origin = request.data.get("origin", "")
             if not trip_origin:
                 trip_origin = None
@@ -1177,7 +1491,6 @@ class RegisterTripView(APIView):
                 employee=employee,
                 helper=helper,
                 helper2=helper2,
-                
                 # Pass the new array fields here
                 addresses=request.data.get("addresses", []),
                 clients=request.data.get("clients", []),
@@ -1196,20 +1509,28 @@ class RegisterTripView(APIView):
                 end_date=request.data.get("end_date"),
                 trip_origin=request.data.get("origin"),
                 trip_description=request.data.get("trip_description"),
-                
-                is_completed=False
+                is_completed=False,
             )
 
-            return Response({"message": "Trip created successfully."}, status=status.HTTP_201_CREATED)
+            return Response(
+                {"message": "Trip created successfully."},
+                status=status.HTTP_201_CREATED,
+            )
 
         except Vehicle.DoesNotExist:
-            return Response({"error": "Vehicle not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"error": "Vehicle not found."}, status=status.HTTP_404_NOT_FOUND
+            )
         except Employee.DoesNotExist:
-            return Response({"error": "Employee or Helper not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"error": "Employee or Helper not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        
-#==================================================================================================================================================================================
+
+
+# ==================================================================================================================================================================================
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def priority_queue_view(request):
@@ -1228,11 +1549,8 @@ def priority_queue_view(request):
     for employee in employees:
         # Find trips where this employee is either the driver or helper and ended this week
         weekly_trips = Trip.objects.filter(
-            end_date__range=(start_of_week_dt, end_of_week_dt),
-            trip_status="Confirmed"
-        ).filter(
-            Q(employee=employee) | Q(helper=employee) | Q(helper2=employee)
-        )
+            end_date__range=(start_of_week_dt, end_of_week_dt), trip_status="Confirmed"
+        ).filter(Q(employee=employee) | Q(helper=employee) | Q(helper2=employee))
 
         # If no trips are found for this employee, skip further processing
         if not weekly_trips:
@@ -1240,20 +1558,28 @@ def priority_queue_view(request):
 
         # Calculate total salary based on employee type
         if employee.user.employee_type == "Driver":
-            total_salary = weekly_trips.aggregate(
-                total_salary=Sum(F("driver_base_salary"))
-            )["total_salary"] or 0
+            total_salary = (
+                weekly_trips.aggregate(total_salary=Sum(F("driver_base_salary")))[
+                    "total_salary"
+                ]
+                or 0
+            )
             salary_field = "driver_base_salary"
         else:
-            total_salary = weekly_trips.aggregate(
-                total_salary=Sum(F("helper_base_salary"))
-            )["total_salary"] or 0
+            total_salary = (
+                weekly_trips.aggregate(total_salary=Sum(F("helper_base_salary")))[
+                    "total_salary"
+                ]
+                or 0
+            )
             salary_field = "helper_base_salary"
 
         # Add serialized data including the total salary
         serialized = EmployeeSerializer(employee).data
         serialized["base_salary"] = total_salary
-        serialized["salary_field"] = salary_field  # Field to identify the type of salary
+        serialized["salary_field"] = (
+            salary_field  # Field to identify the type of salary
+        )
         employee_data.append(serialized)
 
     # Sort employees by total base salary (ascending, prioritize lower earners)
@@ -1262,7 +1588,7 @@ def priority_queue_view(request):
     return Response(sorted_employees)
 
 
-#==================================================================================================================================================================================
+# ==================================================================================================================================================================================
 # DELETE VEHICLES
 @csrf_exempt
 def delete_vehicle_by_plate(request, plate_number):
@@ -1270,39 +1596,48 @@ def delete_vehicle_by_plate(request, plate_number):
         try:
             vehicle = Vehicle.objects.get(plate_number=plate_number)
             vehicle.delete()
-            return JsonResponse({"message": f"Vehicle '{plate_number}' deleted successfully!"}, status=200)
+            return JsonResponse(
+                {"message": f"Vehicle '{plate_number}' deleted successfully!"},
+                status=200,
+            )
         except Vehicle.DoesNotExist:
             return JsonResponse({"error": "Vehicle not found"}, status=404)
     return JsonResponse({"error": "Invalid request method"}, status=400)
 
-#=========================================================================================================================================================
+
+# =========================================================================================================================================================
 class TotalViewSet(viewsets.ModelViewSet):
     queryset = Total.objects.all()
     serializer_class = TotalSerializer
-    
-#==================================================================================================================================================================================
-#==================================================================================================================================================================================
-#=========================================================================================================================================================
-@api_view(['POST'])
+
+
+# ==================================================================================================================================================================================
+# ==================================================================================================================================================================================
+# =========================================================================================================================================================
+@api_view(["POST"])
 @permission_classes([AllowAny])
 def calculate_totals(request):
-    start_date = request.data.get('start_date')
-    end_date = request.data.get('end_date')
+    start_date = request.data.get("start_date")
+    end_date = request.data.get("end_date")
 
     if not start_date or not end_date:
-        return Response({'error': 'Start and end dates are required.'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"error": "Start and end dates are required."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     try:
         start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
         end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
     except ValueError:
-        return Response({'error': 'Invalid date format.'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"error": "Invalid date format."}, status=status.HTTP_400_BAD_REQUEST
+        )
 
     # Fetch trips with status 'Confirmed' within the date range
     trips = Trip.objects.filter(
-        trip_status="Confirmed",
-        end_date__range=(start_date, end_date)
-    ).select_related('employee', 'helper', 'helper2')
+        trip_status="Confirmed", end_date__range=(start_date, end_date)
+    ).select_related("employee", "helper", "helper2")
 
     user_to_trips = defaultdict(list)
 
@@ -1322,50 +1657,86 @@ def calculate_totals(request):
         salaries = Salary.objects.filter(trip__in=trips_for_user)
 
         totals = {
-            'total_bale': salaries.aggregate(total=Sum('bale'))['total'] or 0,
-            'total_cash_advance': salaries.aggregate(total=Sum('cash_advance'))['total'] or 0,
-            'total_bond': salaries.aggregate(total=Sum('cash_bond'))['total'] or 0,
-            'total_sss': salaries.aggregate(total=Sum('sss_contribution'))['total'] or 0,
-            'total_sss_loan': salaries.aggregate(total=Sum('sss_loan'))['total'] or 0,
-            'total_philhealth': salaries.aggregate(total=Sum('philhealth_contribution'))['total'] or 0,
-            'total_pagibig': salaries.aggregate(total=Sum('pagibig_contribution'))['total'] or 0,
-            'total_pagibig_loan': salaries.aggregate(total=Sum('pagibig_loan'))['total'] or 0,
-            'total_others': salaries.aggregate(total=Sum('others'))['total'] or 0,
-            'total_charges': salaries.aggregate(total=Sum('charges'))['total'] or 0,
-            'total_additionals': sum([t.additionals for t in trips_for_user if t.additionals]) or 0,
+            "total_bale": salaries.aggregate(total=Sum("bale"))["total"] or 0,
+            "total_cash_advance": salaries.aggregate(total=Sum("cash_advance"))["total"]
+            or 0,
+            "total_bond": salaries.aggregate(total=Sum("cash_bond"))["total"] or 0,
+            "total_sss": salaries.aggregate(total=Sum("sss_contribution"))["total"]
+            or 0,
+            "total_sss_loan": salaries.aggregate(total=Sum("sss_loan"))["total"] or 0,
+            "total_philhealth": salaries.aggregate(
+                total=Sum("philhealth_contribution")
+            )["total"]
+            or 0,
+            "total_pagibig": salaries.aggregate(total=Sum("pagibig_contribution"))[
+                "total"
+            ]
+            or 0,
+            "total_pagibig_loan": salaries.aggregate(total=Sum("pagibig_loan"))["total"]
+            or 0,
+            "total_others": salaries.aggregate(total=Sum("others"))["total"] or 0,
+            "total_charges": salaries.aggregate(total=Sum("charges"))["total"] or 0,
+            "total_additionals": sum(
+                [t.additionals for t in trips_for_user if t.additionals]
+            )
+            or 0,
         }
 
         # Depending on whether the user is an employee (driver) or helper, assign the respective base salary
         if any(trip.employee_id == user_id for trip in trips_for_user):
-            driver_base_salary = sum([t.driver_base_salary for t in trips_for_user if t.driver_base_salary]) or 0
-            totals['total_base_salary'] = driver_base_salary
+            driver_base_salary = (
+                sum(
+                    [
+                        t.driver_base_salary
+                        for t in trips_for_user
+                        if t.driver_base_salary
+                    ]
+                )
+                or 0
+            )
+            totals["total_base_salary"] = driver_base_salary
         else:
-            helper_base_salary = sum([t.helper_base_salary for t in trips_for_user if t.helper_base_salary]) or 0
-            totals['total_base_salary'] = helper_base_salary
+            helper_base_salary = (
+                sum(
+                    [
+                        t.helper_base_salary
+                        for t in trips_for_user
+                        if t.helper_base_salary
+                    ]
+                )
+                or 0
+            )
+            totals["total_base_salary"] = helper_base_salary
 
-        totals['overall_total'] = sum(totals.values())
+        totals["overall_total"] = sum(totals.values())
 
         # Create a new total record in the database
         record = Total.objects.create(
             start_date=start_date,
             end_date=end_date,
             employee_id=user_id,  # This works for both employee and helpers
-            **totals
+            **totals,
         )
 
-        created_records.append({
-            'user_id': user_id,
-            'totals_id': record.totals_id,
-            'overall_total': totals['overall_total']
-        })
+        created_records.append(
+            {
+                "user_id": user_id,
+                "totals_id": record.totals_id,
+                "overall_total": totals["overall_total"],
+            }
+        )
 
-    return Response({
-        'message': f"✅ Created totals for {len(created_records)} user(s) (including helpers).",
-        'records': created_records
-    }, status=status.HTTP_201_CREATED)
-    
-#========================================================================================================================
-@api_view(['GET'])
+    return Response(
+        {
+            "message": f"✅ Created totals for {len(created_records)} user(s) (including helpers).",
+            "records": created_records,
+        },
+        status=status.HTTP_201_CREATED,
+    )
+
+
+# ========================================================================================================================
+@api_view(["GET"])
 @permission_classes([AllowAny])
 def get_completed_trips_salaries(request):
     start_date = request.GET.get("start_date")
@@ -1384,49 +1755,73 @@ def get_completed_trips_salaries(request):
     serializer = TripSerializer(trips, many=True)
     return Response(serializer.data)
 
-@api_view(['GET'])
+
+@api_view(["GET"])
 @permission_classes([AllowAny])
 def trips_by_date_range(request):
-    start_date = request.GET.get('start_date')
-    end_date = request.GET.get('end_date')
+    start_date = request.GET.get("start_date")
+    end_date = request.GET.get("end_date")
 
     if not start_date or not end_date:
-        return Response({'error': 'Start and end date required.'}, status=400)
+        return Response({"error": "Start and end date required."}, status=400)
 
     try:
-        start_date = datetime.fromisoformat(start_date.replace('Z', '+00:00')).date()
-        end_date = datetime.fromisoformat(end_date.replace('Z', '+00:00')).date()
+        start_date = datetime.fromisoformat(start_date.replace("Z", "+00:00")).date()
+        end_date = datetime.fromisoformat(end_date.replace("Z", "+00:00")).date()
     except ValueError:
-        return Response({'error': 'Invalid date format.'}, status=400)
+        return Response({"error": "Invalid date format."}, status=400)
 
-    trips = Trip.objects.filter(end_date__range=(start_date, end_date), trips_status="Confirmed")
+    trips = Trip.objects.filter(
+        end_date__range=(start_date, end_date), trip_status="Confirmed"
+    )
 
     data = []
     for trip in trips:
-        salary = Salary.objects.filter(trip=trip).first()  # get the corresponding salary
-        data.append({
-            'id': trip.trip_id,
-            'driver': trip.employee.user.username if trip.employee and trip.employee.user else '',
-            'helper': trip.helper.user.username if trip.helper and trip.helper.user else '',
-            'helper2': trip.helper2.user.username if trip.helper2 and trip.helper2.user else '',
-            'base_salary': float(trip.base_salary or 0),
-            'additionals': float(trip.additionals or 0),
-            'end_date': trip.end_date,
-            'salary': {
-                'bale': float(salary.bale) if salary else 0,
-                'cash_advance': float(salary.cash_advance) if salary else 0,
-                'cash_bond': float(salary.cash_bond) if salary else 0,
-                'charges': float(salary.charges) if salary else 0,
-                'others': float(salary.others) if salary else 0,
-                'sss_contribution': float(salary.sss_contribution) if salary else 0,
-                'sss_loan': float(salary.sss_loan) if salary else 0,
-                'philhealth_contribution': float(salary.philhealth_contribution) if salary else 0,
-                'pagibig_contribution': float(salary.pagibig_contribution) if salary else 0,
-                'pagibig_loan': float(salary.pagibig_loan) if salary else 0,
+        salary = Salary.objects.filter(
+            trip=trip
+        ).first()  # get the corresponding salary
+        data.append(
+            {
+                "id": trip.trip_id,
+                "driver": (
+                    trip.employee.user.username
+                    if trip.employee and trip.employee.user
+                    else ""
+                ),
+                "helper": (
+                    trip.helper.user.username
+                    if trip.helper and trip.helper.user
+                    else ""
+                ),
+                "helper2": (
+                    trip.helper2.user.username
+                    if trip.helper2 and trip.helper2.user
+                    else ""
+                ),
+                "base_salary": float(trip.base_salary or 0),
+                "additionals": float(trip.additionals or 0),
+                "end_date": trip.end_date,
+                "salary": {
+                    "bale": float(salary.bale) if salary else 0,
+                    "cash_advance": float(salary.cash_advance) if salary else 0,
+                    "cash_bond": float(salary.cash_bond) if salary else 0,
+                    "charges": float(salary.charges) if salary else 0,
+                    "others": float(salary.others) if salary else 0,
+                    "sss_contribution": float(salary.sss_contribution) if salary else 0,
+                    "sss_loan": float(salary.sss_loan) if salary else 0,
+                    "philhealth_contribution": (
+                        float(salary.philhealth_contribution) if salary else 0
+                    ),
+                    "pagibig_contribution": (
+                        float(salary.pagibig_contribution) if salary else 0
+                    ),
+                    "pagibig_loan": float(salary.pagibig_loan) if salary else 0,
+                },
             }
-        })
+        )
 
     return Response(data, status=200)
+
 
 def completed_trips_view(request):
     employee_username = request.GET.get("employee")
@@ -1445,23 +1840,26 @@ def completed_trips_view(request):
     trips = Trip.objects.filter(
         employee__user__username=employee_username,
         trip_status="Confirmed",
-        end_date__range=[start_date, end_date]
+        end_date__range=[start_date, end_date],
     )
 
     trip_data = []
     for trip in trips:
         salary = Salary.objects.filter(trip=trip).first()
-        trip_data.append({
-            "trip_id": trip.pk,
-            "end_date": trip.end_date,
-            "bale": salary.bale if salary else 0,
-            "cash_advance": salary.cash_advance if salary else 0,
-            "cash_bond": salary.cash_bond if salary else 0,
-            "charges": salary.charges if salary else 0,
-            "others": salary.others if salary else 0,
-        })
+        trip_data.append(
+            {
+                "trip_id": trip.pk,
+                "end_date": trip.end_date,
+                "bale": salary.bale if salary else 0,
+                "cash_advance": salary.cash_advance if salary else 0,
+                "cash_bond": salary.cash_bond if salary else 0,
+                "charges": salary.charges if salary else 0,
+                "others": salary.others if salary else 0,
+            }
+        )
 
     return JsonResponse(trip_data, safe=False)
+
 
 @csrf_exempt
 def distribute_deductions(request):
@@ -1485,13 +1883,13 @@ def distribute_deductions(request):
         cash_bond = parse_float(data.get("cash_bond"))
         charges = parse_float(data.get("charges"))
         others = parse_float(data.get("others"))
-        
+
         others_description = data.get("others_description", "")
 
         trips = Trip.objects.filter(
             employee__user__username=username,
             trip_status="Confirmed",
-            end_date__range=[start_date, end_date]
+            end_date__range=[start_date, end_date],
         )
 
         print(f"Updating Salary records for {trips.count()} trip(s)")
@@ -1516,8 +1914,9 @@ def distribute_deductions(request):
     except Exception as e:
         print(f"❌ ERROR: {e}")
         return JsonResponse({"error": "Unexpected error occurred."}, status=500)
-    
-@api_view(['POST'])
+
+
+@api_view(["POST"])
 @permission_classes([AllowAny])
 def set_payment_status(request):
     employee_id = request.data.get("employee_id")
@@ -1534,7 +1933,8 @@ def set_payment_status(request):
     except Employee.DoesNotExist:
         return Response({"error": "Employee not found."}, status=404)
 
-@api_view(['PUT'])
+
+@api_view(["PUT"])
 @permission_classes([IsAuthenticated])
 def update_user_data(request, pk):
     user = request.user
@@ -1547,25 +1947,24 @@ def update_user_data(request, pk):
         return Response(serializer.data)
     return Response(serializer.errors, status=400)
 
-@api_view(['GET'])
+
+@api_view(["GET"])
 @permission_classes([AllowAny])
 def get_user_trip_data(request):
-    user_id = request.GET.get('user_id')
-    start = request.GET.get('start_date')
-    end = request.GET.get('end_date')
+    user_id = request.GET.get("user_id")
+    start = request.GET.get("start_date")
+    end = request.GET.get("end_date")
 
     if not all([user_id, start, end]):
-        return Response({'error': 'Missing parameters'}, status=400)
+        return Response({"error": "Missing parameters"}, status=400)
 
     try:
         employee = Employee.objects.select_related("user").get(user__id=user_id)
     except Employee.DoesNotExist:
-        return Response({'error': 'Employee not found'}, status=404)
+        return Response({"error": "Employee not found"}, status=404)
 
     trips = Trip.objects.filter(
-        employee=employee,
-        is_completed=True,
-        end_date__range=[start, end]
+        employee=employee, is_completed=True, end_date__range=[start, end]
     )
 
     results = []
@@ -1574,15 +1973,18 @@ def get_user_trip_data(request):
         salary = Salary.objects.filter(trip=trip).first()
         total = Total.objects.filter(trip=trip).first()
 
-        results.append({
-            "trip": model_to_dict(trip),
-            "salary": model_to_dict(salary) if salary else None,
-            "total": model_to_dict(total) if total else None,
-        })
+        results.append(
+            {
+                "trip": model_to_dict(trip),
+                "salary": model_to_dict(salary) if salary else None,
+                "total": model_to_dict(total) if total else None,
+            }
+        )
 
     return Response(results)
 
-@api_view(['GET'])
+
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def current_user_employee(request):
     try:
@@ -1591,8 +1993,9 @@ def current_user_employee(request):
         return Response(serializer.data)
     except Exception as e:
         return Response({"error": str(e)}, status=500)
-    
-@api_view(['POST'])
+
+
+@api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def update_completed_status(request):
     trip_id = request.data.get("trip_id")
@@ -1608,20 +2011,27 @@ def update_completed_status(request):
         return Response({"success": "Trip completion updated"})
     except Trip.DoesNotExist:
         return Response({"error": "Trip not found"}, status=404)
-    
-@api_view(['PATCH'])
-@permission_classes([AllowAny])  # Change this to IsAdminUser if you want to restrict access
+
+
+@api_view(["PATCH"])
+@permission_classes(
+    [AllowAny]
+)  # Change this to IsAdminUser if you want to restrict access
 def reset_completed_trip_counts(request):
     today = datetime.now().date()
 
     if today.weekday() != 5:  # 5 = Saturday
-        return Response({"message": "This operation is only allowed on Saturdays."}, status=400)
+        return Response(
+            {"message": "This operation is only allowed on Saturdays."}, status=400
+        )
 
     Employee.objects.update(completed_trip_count=0)
-    return Response({"message": "✅ Completed trip counts have been reset for all employees."})
+    return Response(
+        {"message": "✅ Completed trip counts have been reset for all employees."}
+    )
 
 
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([AllowAny])
 def ongoing_trips(request):
     ongoing = Trip.objects.filter(trip_status="Ongoing")
@@ -1640,7 +2050,8 @@ def get_salary_config(request):
 # EMPLOYEE LOCATION FETCHING
 MAX_RETRIES = 3
 
-@api_view(['POST'])
+
+@api_view(["POST"])
 @permission_classes([AllowAny])
 def update_employee_location(request):
     # Extract data from the request
@@ -1650,7 +2061,9 @@ def update_employee_location(request):
     timestamp = request.data.get("timestamp")
 
     # Log the incoming data
-    print(f"Received data: employee_id={employee_id}, latitude={latitude}, longitude={longitude}, timestamp={timestamp}")
+    print(
+        f"Received data: employee_id={employee_id}, latitude={latitude}, longitude={longitude}, timestamp={timestamp}"
+    )
 
     # Check if required fields are present
     if not all([employee_id, latitude, longitude]):
@@ -1658,7 +2071,7 @@ def update_employee_location(request):
 
     # If timestamp is not provided, use the current time in Manila timezone
     if not timestamp:
-        timestamp = datetime.now().astimezone(timezone('Asia/Manila')).isoformat()
+        timestamp = datetime.now().astimezone(timezone("Asia/Manila")).isoformat()
 
     # Try to update location with retries in case of database lock
     for attempt in range(MAX_RETRIES):
@@ -1672,21 +2085,25 @@ def update_employee_location(request):
                 defaults={
                     "latitude": latitude,
                     "longitude": longitude,
-                    "timestamp": timestamp
-                }
+                    "timestamp": timestamp,
+                },
             )
 
             # Log the successful location update
-            print(f"Location updated: {location.latitude}, {location.longitude} with timestamp {timestamp}")
+            print(
+                f"Location updated: {location.latitude}, {location.longitude} with timestamp {timestamp}"
+            )
 
             # Return a success response
-            return Response({
-                "message": "Location updated successfully",
-                "created": created,
-                "latitude": location.latitude,
-                "longitude": location.longitude,
-                "timestamp": timestamp
-            })
+            return Response(
+                {
+                    "message": "Location updated successfully",
+                    "created": created,
+                    "latitude": location.latitude,
+                    "longitude": location.longitude,
+                    "timestamp": timestamp,
+                }
+            )
 
         except OperationalError as e:
             # Handle database lock error and retry if needed
@@ -1705,22 +2122,25 @@ def update_employee_location(request):
             return Response({"message": str(e)}, status=500)
 
 
-#==================================================================================================================================================================================
+# ==================================================================================================================================================================================
 # EMPLOYEE LOCATION UPDATE
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([AllowAny])  # You can adjust this if needed
 def get_employee_location(request, employee_id):
     try:
         location = EmployeeLocation.objects.get(employee__employee_id=employee_id)
-        return Response({
-            "latitude": location.latitude,
-            "longitude": location.longitude,
-            "timestamp": location.timestamp
-        })
+        return Response(
+            {
+                "latitude": location.latitude,
+                "longitude": location.longitude,
+                "timestamp": location.timestamp,
+            }
+        )
     except EmployeeLocation.DoesNotExist:
         return Response({"message": "Location not available"}, status=404)
-    
-@api_view(['PATCH'])
+
+
+@api_view(["PATCH"])
 @permission_classes([AllowAny])
 def update_trip(request, trip_id):
     try:
@@ -1728,7 +2148,7 @@ def update_trip(request, trip_id):
         trip = Trip.objects.get(trip_id=trip_id)
     except Trip.DoesNotExist:
         # Handle case where the trip is not found
-        return Response({'detail': 'Trip not found'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"detail": "Trip not found"}, status=status.HTTP_404_NOT_FOUND)
 
     # Validate the incoming data with partial=True to allow partial updates
     serializer = TripSerializer(trip, data=request.data, partial=True)
@@ -1740,8 +2160,9 @@ def update_trip(request, trip_id):
         # Provide error details to help debug the issue
         print("Validation errors:", serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-@api_view(['POST'])
+
+
+@api_view(["POST"])
 @permission_classes([AllowAny])
 def change_password(request):
     user = request.user
@@ -1749,10 +2170,16 @@ def change_password(request):
     new_password = request.data.get("new_password")
 
     if not user.check_password(current_password):
-        return Response({"message": "Current password is incorrect."}, status=status.HTTP_400_BAD_REQUEST)
-    
+        return Response(
+            {"message": "Current password is incorrect."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
     if current_password == new_password:
-        return Response({"message": "New password must be different from the current password."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"message": "New password must be different from the current password."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     try:
         validate_password(new_password, user=user)
@@ -1761,5 +2188,6 @@ def change_password(request):
 
     user.set_password(new_password)
     user.save()
-    return Response({"message": "Password updated successfully."}, status=status.HTTP_200_OK)
-
+    return Response(
+        {"message": "Password updated successfully."}, status=status.HTTP_200_OK
+    )
