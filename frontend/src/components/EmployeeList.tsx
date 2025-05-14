@@ -9,6 +9,7 @@ interface Employee {
   id: number;
   name: string;
   employee_type: string;
+  username: string;
 }
 
 const EmployeeList = () => {
@@ -23,8 +24,9 @@ const EmployeeList = () => {
 
         const formattedEmployees = response.data.map((emp: any) => ({
           id: emp.employee_id,
-          name: `${emp.user?.first_name || ""} ${emp.user?.last_name || ""} (${emp.user?.employee_type || "N/A"})`,
+          name: `${emp.user?.first_name || ""} ${emp.user?.last_name || ""}`,
           employee_type: emp.user?.employee_type || "N/A",
+          username: emp.user?.username || "No Username", // Add username field
         }));
 
         setEmployees(formattedEmployees);
@@ -71,9 +73,9 @@ const EmployeeList = () => {
               className="flex justify-start items-center p-2 border-b border-gray-600 text-sm md:text-base w-full"
             >
               <div className="flex flex-col w-full">
-                <span className="text-sm md:text-lg">{employee.name.split(" (")[0]}</span>
+                <span className="text-sm md:text-lg">{employee.name}</span>
                 <span className="text-xs text-white/70 text-left">
-                  {employee.name.split(" (")[1]?.replace(")", "") || "No Type"}
+                  {employee.employee_type} | {employee.username} {/* Display username here */}
                 </span>
               </div>
             </div>
