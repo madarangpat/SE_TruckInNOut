@@ -66,8 +66,3 @@ const SalaryBreakdownPDF: React.FC<Props> = ({ employeeUsername, startDate, endD
 };
 
 export default SalaryBreakdownPDF;
-
-
-
-
-

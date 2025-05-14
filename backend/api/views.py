@@ -1281,59 +1281,7 @@ class TotalViewSet(viewsets.ModelViewSet):
     serializer_class = TotalSerializer
     
 #==================================================================================================================================================================================
-# EMPLOYEE LOCATION FETCHING
-MAX_RETRIES = 3
-
-@api_view(['POST'])
-@permission_classes([AllowAny])  # Optional, remove if not using auth
-def update_employee_location(request):
-    employee_id = request.data.get("employee_id")
-    latitude = request.data.get("latitude")
-    longitude = request.data.get("longitude")
-
-    if not all([employee_id, latitude, longitude]):
-        return Response({"message": "Missing fields"}, status=400)
-
-    for attempt in range(MAX_RETRIES):
-        try:
-            employee = Employee.objects.get(pk=employee_id)
-            location, created = EmployeeLocation.objects.update_or_create(
-                employee=employee,
-                defaults={"latitude": latitude, "longitude": longitude}
-            )
-
-            return Response({
-                "message": "Location updated successfully",
-                "created": created,
-                "latitude": location.latitude,
-                "longitude": location.longitude,
-            })
-        except OperationalError as e:
-            if "database is locked" in str(e) and attempt < MAX_RETRIES - 1:
-                print("🔁 DB is locked, retrying in 0.5s...")
-                time.sleep(0.5)
-                continue
-            print("❌ Final DB error:", e)
-            return Response({"message": str(e)}, status=500)
-        except Employee.DoesNotExist:
-            return Response({"message": "Employee not found"}, status=404)
-        except Exception as e:
-            print("❌ Error in update-location view:", str(e))
-            return Response({"message": str(e)}, status=500)
-
 #==================================================================================================================================================================================
-# EMPLOYEE LOCATION UPDATE
-@api_view(['GET'])
-@permission_classes([AllowAny])  # You can adjust this if needed
-def get_employee_location(request, employee_id):
-    try:
-        location = EmployeeLocation.objects.get(employee__employee_id=employee_id)
-        return Response({
-            "latitude": location.latitude,
-            "longitude": location.longitude
-        })
-    except EmployeeLocation.DoesNotExist:
-        return Response({"message": "Location not available"}, status=404)
 #=========================================================================================================================================================
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -1690,10 +1638,12 @@ def get_salary_config(request):
 
 
 # EMPLOYEE LOCATION FETCHING
-@api_view(["POST"])
+MAX_RETRIES = 3
+
+@api_view(['POST'])
 @permission_classes([AllowAny])
 def update_employee_location(request):
-    print(f"Received data: ")
+    # Extract data from the request
     employee_id = request.data.get("employee_id")
     latitude = request.data.get("latitude")
     longitude = request.data.get("longitude")
@@ -1702,38 +1652,58 @@ def update_employee_location(request):
     # Log the incoming data
     print(f"Received data: employee_id={employee_id}, latitude={latitude}, longitude={longitude}, timestamp={timestamp}")
 
+    # Check if required fields are present
     if not all([employee_id, latitude, longitude]):
         return Response({"message": "Missing fields"}, status=400)
 
-    try:
-        employee = Employee.objects.get(pk=employee_id)
+    # If timestamp is not provided, use the current time in Manila timezone
+    if not timestamp:
+        timestamp = datetime.now().astimezone(timezone('Asia/Manila')).isoformat()
 
-        if not timestamp:
-            timestamp = datetime.now().astimezone(timezone('Asia/Manila')).isoformat()
+    # Try to update location with retries in case of database lock
+    for attempt in range(MAX_RETRIES):
+        try:
+            # Try to fetch the employee from the database
+            employee = Employee.objects.get(pk=employee_id)
 
-        location, created = EmployeeLocation.objects.update_or_create(
-            employee=employee,
-            defaults={
-                "latitude": latitude,
-                "longitude": longitude,
+            # Update or create the employee location entry
+            location, created = EmployeeLocation.objects.update_or_create(
+                employee=employee,
+                defaults={
+                    "latitude": latitude,
+                    "longitude": longitude,
+                    "timestamp": timestamp
+                }
+            )
+
+            # Log the successful location update
+            print(f"Location updated: {location.latitude}, {location.longitude} with timestamp {timestamp}")
+
+            # Return a success response
+            return Response({
+                "message": "Location updated successfully",
+                "created": created,
+                "latitude": location.latitude,
+                "longitude": location.longitude,
                 "timestamp": timestamp
-            }
-        )
+            })
 
-        print(f"Location updated: {location.latitude}, {location.longitude} with timestamp {timestamp}")
+        except OperationalError as e:
+            # Handle database lock error and retry if needed
+            if "database is locked" in str(e) and attempt < MAX_RETRIES - 1:
+                print("🔁 DB is locked, retrying in 0.5s...")
+                time.sleep(0.5)  # Retry after a short delay
+                continue
+            print("❌ Final DB error:", e)
+            return Response({"message": str(e)}, status=500)
+        except Employee.DoesNotExist:
+            # Handle case when the employee is not found
+            return Response({"message": "Employee not found"}, status=404)
+        except Exception as e:
+            # Handle other errors
+            print(f"❌ Error in update-location view: {str(e)}")
+            return Response({"message": str(e)}, status=500)
 
-        return Response({
-            "message": "Location updated successfully WHY WONT THIS CHANGE",
-            "created": created,
-            "latitude": location.latitude,
-            "longitude": location.longitude,
-            "timestamp": timestamp
-        })
-    except Employee.DoesNotExist:
-        return Response({"message": "Employee not found"}, status=404)
-    except Exception as e:
-        print(f"Error: {str(e)}")
-        return Response({"message": str(e)}, status=500)
 
 #==================================================================================================================================================================================
 # EMPLOYEE LOCATION UPDATE
