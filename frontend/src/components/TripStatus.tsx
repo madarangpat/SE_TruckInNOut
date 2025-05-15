@@ -26,6 +26,7 @@ interface Trip {
   helper2: { username: string } | null;
   addresses: string[];
   clients: string[];
+  completed: boolean[];
 }
 
 const TripStatus = () => {
@@ -36,10 +37,10 @@ const TripStatus = () => {
     const fetchTrips = async () => {
       try {
         const res = await axios.get(`${process.env.NEXT_PUBLIC_DOMAIN}/trips/`);
-        const unconfirmedTrips = res.data.filter(
-          (trip: Trip) => trip.trip_status !== "Confirmed"
+        const forVerification = res.data.filter((trip: Trip) =>
+          trip.completed.every((status: boolean) => status === true)
         );
-        setTrips(unconfirmedTrips);
+        setTrips(forVerification);
       } catch (err) {
         console.error("Failed to fetch trips to verify:", err);
         toast.error("Failed to load trips to verify.");

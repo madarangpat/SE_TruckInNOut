@@ -582,13 +582,20 @@ const CreateNewTripPage = () => {
         <input
           type="number"
           step="0.01"
-          placeholder="Helper Base Salary"
+          min="0.00"
+          placeholder="Helper Base Salary (must be greater than 0)"
           className="input-field text-black rounded placeholder:text-sm"
           style={{ marginTop: "4px" }}
           value={tripFormData.helper_base_salary}
           onChange={(e) =>
             setTripFormData({ ...tripFormData, helper_base_salary: e.target.value })
           }
+          onKeyDown={(e) => {
+          // Prevent entering negative values by blocking the minus and 'e' keys
+          if (e.key === '-' || e.key === 'e') {
+            e.preventDefault();
+          }
+        }}
         />
 
         {/* Additionals */}

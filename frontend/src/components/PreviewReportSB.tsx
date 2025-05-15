@@ -81,8 +81,8 @@ const PreviewReportSB: React.FC<Props> = ({ employee, start, end, onClose }) => 
               className="w-full h-full"
             />
           ) : (
-            <div className="text-center mt-20 text-red-500">
-              Failed to load PDF preview.
+            <div className="text-center mt-20 text-white">
+              <p>No completed trips found for the selected date range.</p>
             </div>
           )}
         </div>

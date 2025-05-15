@@ -82,7 +82,7 @@ const AddressAutoComplete = ({ onSelect }: AddressAutoCompleteProps) => {
         const response = await fetch(
           `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
             description
-          )}&key=GOOGLE_API_KEY`
+          )}&key=NEXT_PUBLIC_GOOGLE_API_KEY`
         );
         const data = await response.json();
         if (data.status === "OK") {

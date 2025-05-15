@@ -6,6 +6,7 @@ from collections import defaultdict
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from io import BytesIO
+from tkinter import CENTER
 
 from django.conf import settings
 from django.contrib.auth import get_user_model, update_session_auth_hash
@@ -953,24 +954,6 @@ def generate_salary_breakdown_pdf(request):
     except Employee.DoesNotExist:
         return Response({"error": "Employee not found"}, status=404)
 
-    # For staff - placeholder PDF content
-    if user_type == "staff":
-        buffer = BytesIO()
-        p = canvas.Canvas(buffer, pagesize=letter)
-        p.setFont("DejaVuSans", 16)
-        p.drawString(100, 750, f"Payroll PDF Placeholder for Staff: {username}")
-        p.drawString(100, 720, f"Date Range: {start} to {end}")
-        p.showPage()
-        p.save()
-        buffer.seek(0)
-        return HttpResponse(
-            buffer,
-            content_type="application/pdf",
-            headers={
-                "Content-Disposition": f'attachment; filename="{username}_staff_salary_breakdown.pdf"'
-            },
-        )
-
     # Get trips for the employee within the date range and confirm the trip status
     trips = Trip.objects.filter(
         Q(employee=employee) | Q(helper=employee) | Q(helper2=employee),
@@ -996,6 +979,8 @@ def generate_salary_breakdown_pdf(request):
         bottomMargin=30,
     )
     styles = getSampleStyleSheet()
+    normal = styles["Normal"]
+    normal.fontSize = 8
     left_align = ParagraphStyle(
         name="LeftAlign",
         parent=styles["Normal"],
@@ -1009,16 +994,41 @@ def generate_salary_breakdown_pdf(request):
         fontName="DejaVuSans",
     )
     elements = []
-
-    # Reference the correct image path
+      
+    # Reference the correct image path for the logo
     image_path = os.path.join(settings.BASE_DIR, "api", "static", "images", "bigc.png")
-
     stamp = RLImage(image_path, width=180, height=50)  # Adjust size as needed
     stamp.hAlign = "RIGHT"
-    elements.append(stamp)
 
-    elements.append(Paragraph(f"<b>Salary Report for {username}</b>", left_align))
-    elements.append(Paragraph(f"<b>Date Range:</b> {start} to {end}", left_align))
+    # Add the BIG C TRUCKING SERVICES header and the logo
+    elements.append(
+        Table(
+            [
+                [
+                    Paragraph(
+                        "<b>BIG C TRUCKING SERVICES</b>", styles["Title"]
+                    ),  # Make header bold and larger
+                    stamp,
+                ]
+            ],
+            colWidths=[doc.width * 1.1, doc.width * 0.65],
+        )
+    )
+    elements.append(Spacer(1, 10))
+
+    # Format date range
+    formatted_start = DateFormat(start_date).format("F d, Y")
+    formatted_end = DateFormat(end_date).format("F d, Y")
+
+    # Add the Date Range formatted text
+    elements.append(
+        Paragraph(
+            f"<b>Salary Report for {username}</b>", left_align
+        )
+    )
+    elements.append(
+        Paragraph(f"<b>Date Range:</b> {formatted_start} to {formatted_end}", left_align)
+    )
     elements.append(Spacer(1, 12))
 
     # Trip Table (Additionals moved here)
@@ -1356,7 +1366,6 @@ def generate_gross_payroll_pdf(request):
 
     # Reference the correct image path
     image_path = os.path.join(settings.BASE_DIR, "api", "static", "images", "bigc.png")
-
     stamp = RLImage(image_path, width=180, height=50)  # Adjust size as needed
     stamp.hAlign = "RIGHT"
 
@@ -1365,19 +1374,19 @@ def generate_gross_payroll_pdf(request):
             [
                 [
                     Paragraph(
-                        "<b>BIG C TRUCKING SERVICES GROSS PAYROLL</b>", styles["Title"]
+                        "<b>BIG C TRUCKING SERVICES GROSS</b>", styles["Title"]
                     ),
                     stamp,
                 ]
             ],
-            colWidths=[doc.width * 0.7, doc.width * 0.3],
+            colWidths=[doc.width * 1.1, doc.width * 0.56],
         ),
         Spacer(1, 10),
         Paragraph(
             f"<b>PAYROLL PERIOD:</b> {formatted_start} to {formatted_end}", left_align
         ),
         Paragraph(
-            f"<b>TOTAL EMPLOYEES WITH TRIPS:</b> {existing_totals.count()}", left_align
+            f"<b>NUMBER OF EMPLOYEES WITH TRIPS:</b> {existing_totals.count()}", left_align
         ),
         Spacer(1, 20),
     ]
@@ -1420,10 +1429,13 @@ def generate_gross_payroll_pdf(request):
 
     row_buffer = []
     for idx, totals in enumerate(existing_totals, 1):
+        completed_trips = Trip.objects.filter(employee=totals.employee, trip_status="Confirmed").count()
         content = [
             Paragraph(
                 f"<b>EMPLOYEE:</b> {totals.employee.user.username.upper()}", left_align
             ),
+            Spacer(1, 4),
+            Paragraph(f"<b>TRIPS COMPLETED:</b> {completed_trips}", left_align),  # New line for trips count
             Spacer(1, 4),
             create_employee_table(totals),
         ]

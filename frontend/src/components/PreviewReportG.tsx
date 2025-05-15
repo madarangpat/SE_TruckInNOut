@@ -59,8 +59,8 @@ const PreviewReportG: React.FC<Props> = ({ start, end, onClose }) => {
           ) : pdfUrl ? (
             <iframe src={pdfUrl} title="Gross Payroll Preview" className="w-full h-full" />
           ) : (
-            <div className="text-center mt-20 text-red-500">
-              Failed to load PDF preview.
+            <div className="text-center mt-20 text-white">
+              <p>No completed trips found for the selected date range.</p>
             </div>
           )}
         </div>
