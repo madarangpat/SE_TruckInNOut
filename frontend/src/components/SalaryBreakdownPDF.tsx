@@ -1,6 +1,9 @@
 "use client";
+import { getEmployeeTripSalaries } from "@/lib/actions/employee.actions";
+import { generateSalaryBreakdownPdf } from "@/lib/actions/pdf.actions";
+import { useQuery } from "@tanstack/react-query";
 import React from "react";
-import axios from "axios";
+import { toast } from "sonner";
 
 interface Props {
   employeeUsername?: string;
@@ -9,7 +12,12 @@ interface Props {
   endDate: Date | null;
 }
 
-const SalaryBreakdownPDF: React.FC<Props> = ({ employeeUsername, startDate, endDate, employee_type }) => {
+const SalaryBreakdownPDF: React.FC<Props> = ({
+  employeeUsername,
+  startDate,
+  endDate,
+  employee_type,
+}) => {
   const handleDownload = async () => {
     if (!employeeUsername || !startDate || !endDate) {
       alert("Please select an employee and date range.");
@@ -21,27 +29,40 @@ const SalaryBreakdownPDF: React.FC<Props> = ({ employeeUsername, startDate, endD
         employee: employeeUsername,
         start_date: startDate.toISOString().split("T")[0],
         end_date: endDate.toISOString().split("T")[0],
-      });
+      }).toString();
 
       // Fetch all trips
-      const response = await axios.get(`${process.env.NEXT_PUBLIC_DOMAIN}/employee-trip-salaries/?${params}`);
-      const allTrips = response.data;
+      const { data } = useQuery({
+        queryKey: ["employee-trip-salaries"],
+        queryFn: async () => {
+          const employeeTripSalaries = await getEmployeeTripSalaries(params);
+          const completedTrips = employeeTripSalaries.filter(
+            (record: EmployeeTripSalary) => record.trip.is_completed,
+          );
+          return { completedTrips };
+        },
+      });
 
       // Filter only completed trips
-      const completedTrips = allTrips.filter((record: any) => record.trip.is_completed === true);
 
-      if (completedTrips.length === 0) {
-        alert("Cannot generate PDF. No completed trips in the selected range.");
+      if (data?.completedTrips.length === 0) {
+        toast.error(
+          "Cannot generate PDF. No completed trips in the selected range.",
+        );
         return;
       }
 
       // 3. Download PDF
-      const pdfResponse = await axios.get(
-        `${process.env.NEXT_PUBLIC_DOMAIN}/generate-pdf/salary-breakdown/?${params}`,
-        { responseType: "blob" }
-      );
+      const { data: pdfBlob } = useQuery<Blob, Error>({
+        queryKey: ["generate-salary-breakdown-pdf", params],
+        queryFn: async () => await generateSalaryBreakdownPdf(params),
+      });
 
-      const blob = new Blob([pdfResponse.data], { type: "application/pdf" });
+      if (!pdfBlob) {
+        toast.error("No PDF data received");
+      }
+
+      const blob = new Blob([pdfBlob!], { type: "application/pdf" });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
