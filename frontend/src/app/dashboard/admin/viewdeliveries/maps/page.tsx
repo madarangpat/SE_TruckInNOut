@@ -232,7 +232,7 @@ const MapsPage = () => {
                   <strong>TOTAL DROPS:</strong> {trip.clients?.length || "__________"} <span className="italic text-xs">Remaining: {remainingDrops}</span>
                 </p>
                 <p className="text-sm bg-black/45 text-white px-2 py-1 rounded-md mt-1 w-full">
-                  <strong>DESTINATION:</strong> {formattedDistance ? `${formattedDistance} km` : "Calculating..."} 
+                  <strong>TOTAL DESTINATION:</strong> {formattedDistance ? `${formattedDistance} km` : "Calculating..."} 
                   {formattedClosestDistance && (
                     <span className="ml-2 italic text-xs">({formattedClosestDistance} km to closest drop off)</span>
                   )}
