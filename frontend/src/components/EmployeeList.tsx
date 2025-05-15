@@ -73,9 +73,9 @@ const EmployeeList = () => {
               className="flex justify-start items-center p-2 border-b border-gray-600 text-sm md:text-base w-full"
             >
               <div className="flex flex-col w-full">
-                <span className="text-sm md:text-lg">{employee.name}</span>
+                <span className="text-sm md:text-lg">{employee.username}</span>
                 <span className="text-xs text-white/70 text-left">
-                  {employee.employee_type} | {employee.username} {/* Display username here */}
+                  {employee.employee_type} {/* Display username here */}
                 </span>
               </div>
             </div>
