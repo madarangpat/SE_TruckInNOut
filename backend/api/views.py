@@ -6,7 +6,6 @@ from collections import defaultdict
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from io import BytesIO
-from tkinter import CENTER
 
 from django.conf import settings
 from django.contrib.auth import get_user_model, update_session_auth_hash
