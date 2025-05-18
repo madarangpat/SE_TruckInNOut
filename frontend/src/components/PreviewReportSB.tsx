@@ -72,7 +72,7 @@ const PreviewReportSB: React.FC<Props> = ({
     if (employee && start && end) {
       fetchPDF();
     }
-  }, [employee, start, end]);
+  }, [employee, start, end, session.access]);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">

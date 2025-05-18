@@ -38,7 +38,7 @@ const TripStatus = () => {
       try {
         const res = await axios.get(`${process.env.NEXT_PUBLIC_DOMAIN}/trips/`);
         const forVerification = res.data.filter((trip: Trip) =>
-          trip.completed.every((status: boolean) => status === true)
+          trip.completed.every((status: boolean) => status === true) && trip.trip_status === "Ongoing"
         );
         setTrips(forVerification);
       } catch (err) {

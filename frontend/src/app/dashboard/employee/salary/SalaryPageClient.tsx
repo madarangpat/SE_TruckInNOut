@@ -4,11 +4,12 @@ import { useRouter } from "next/navigation";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import Image from "next/image";
-import PreviewReportSB from "@/components/PreviewReportSB";
+import EmployeeSalaryPreview from "@/components/EmployeeSalaryPreview";
 
 const SalaryPageClient = ({ user }: { user: User }) => {
   const username = user?.username;
   const router = useRouter();
+
 
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
@@ -92,8 +93,8 @@ const SalaryPageClient = ({ user }: { user: User }) => {
 
         {/* PDF Preview Modal */}
         {showPreviewModal && (
-          <PreviewReportSB
-            employee={username}
+          <EmployeeSalaryPreview
+            employee={username || ""}
             start={formattedStart}
             end={formattedEnd}
             onClose={() => setShowPreviewModal(false)}

@@ -2204,3 +2204,341 @@ def change_password(request):
     return Response(
         {"message": "Password updated successfully."}, status=status.HTTP_200_OK
     )
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def generate_salary_breakdown_pdf_emp(request):
+    def format_currency(value):
+        try:
+            return f"₱ {float(value):,.2f}"
+        except (TypeError, ValueError):
+            return "₱ 0.00"
+
+    # Extract query parameters
+    username = request.GET.get("employee")
+    start = request.GET.get("start_date")
+    end = request.GET.get("end_date")
+    
+    # Ensure employee and date range are provided
+    if not all([username, start, end]):
+        return Response({"error": "Missing parameters"}, status=400)
+
+    try:
+        start_date = datetime.strptime(start, "%Y-%m-%d").date()
+        end_date = datetime.strptime(end, "%Y-%m-%d").date()
+    except ValueError:
+        return Response({"error": "Invalid date format. Expected YYYY-MM-DD."}, status=400)
+
+    # Retrieve the employee based on the username
+    try:
+        employee = Employee.objects.select_related("user").get(user__username=username)
+    except Employee.DoesNotExist:
+        return Response({"error": "Employee not found"}, status=404)
+
+    # Retrieve trips for the employee within the given date range
+    trips = Trip.objects.filter(
+        Q(employee=employee) | Q(helper=employee) | Q(helper2=employee),
+        end_date__range=(start_date, end_date),
+        trip_status="Confirmed"  # Ensure the trip is confirmed
+    )
+
+    if not trips.exists():
+        return Response({"error": "No completed trips found in this range."}, status=400)
+
+    data = [{"trip": t, "salary": Salary.objects.filter(trip=t).first()} for t in trips]
+
+    # Create PDF document
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=landscape(letter),
+        topMargin=30,
+        leftMargin=30,
+        rightMargin=30,
+        bottomMargin=30,
+    )
+
+    styles = getSampleStyleSheet()
+    normal = styles["Normal"]
+    normal.fontSize = 8
+    left_align = ParagraphStyle(
+        name="LeftAlign",
+        parent=styles["Normal"],
+        alignment=TA_LEFT, 
+        fontName="DejaVuSans",
+    )
+    left_heading = ParagraphStyle(
+        name="LeftHeading",
+        parent=styles["Heading4"],
+        alignment=TA_LEFT,
+        fontName="DejaVuSans",
+    )
+    elements = []
+
+    # Add the header with logo
+    image_path = os.path.join(settings.BASE_DIR, "api", "static", "images", "bigc.png")
+    stamp = RLImage(image_path, width=180, height=50)
+    stamp.hAlign = "RIGHT"
+
+    elements.append(
+        Table(
+            [
+                [
+                    Paragraph("<b>BIG C TRUCKING SERVICES</b>", styles["Title"]),
+                    stamp,
+                ]
+            ],
+            colWidths=[doc.width * 1.1, doc.width * 0.65],
+        )
+    )
+    elements.append(Spacer(1, 10))
+
+    # Add the employee and date range information
+    formatted_start = start_date.strftime("%B %d, %Y")
+    formatted_end = end_date.strftime("%B %d, %Y")
+
+    elements.append(Paragraph(f"<b>Salary Report for {username}</b>", left_align))
+    elements.append(
+        Paragraph(f"<b>Date Range:</b> {formatted_start} to {formatted_end}", left_align)
+    )
+    elements.append(Spacer(1, 12))
+
+    # Add the trip data table
+    trip_table_data = [
+        [
+            "Trip ID", 
+            "Total Drops", 
+            "Date Created", 
+            "Base Salary", 
+            "Multiplier", 
+            "Additionals", 
+            "Final Drop Made", 
+            "Adjusted Salary"]
+    ]
+    gross_total = 0
+    
+    for record in data:
+        trip = record["trip"]
+        salary = record["salary"]
+        if not salary:
+            continue
+        
+        # Determine salary details based on employee type (driver, helper, etc.)
+        if employee.user.employee_type.lower() == "driver":
+            base_salary = trip.driver_base_salary
+        elif employee.user.employee_type.lower() == "helper":
+            base_salary = trip.helper_base_salary
+        else:
+            base_salary = trip.base_salary
+        
+        adjusted = salary.adjusted_salary or 0
+        gross_total += adjusted
+        
+        final_drop = "N/A"
+        if hasattr(trip, "addresses") and trip.addresses:
+            last_address = trip.addresses[-1]
+            city = "Unknown"
+            if isinstance(last_address, str):
+                parts = [p.strip() for p in last_address.split(",")]
+                if len(parts) >= 4:
+                    city = parts[2]
+            final_drop = f"{city} (Client: {trip.clients[-1]})"
+
+        additionals = getattr(trip, "additionals", 0)
+        created_date = trip.date_created.strftime("%Y-%m-%d")
+
+        trip_table_data.append(
+            [
+                str(trip.trip_id),
+                str(getattr(trip, "num_of_drops", "N/A")),
+                created_date,
+                format_currency(base_salary),
+                str(trip.multiplier),
+                format_currency(additionals),
+                final_drop,
+                format_currency(adjusted),
+            ]
+        )
+
+    trip_table = Table(trip_table_data, repeatRows=1, hAlign="LEFT")
+    trip_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.lightgreen),
+                ("GRID", (0, 0), (-1, -1), 1, colors.black),
+                ("FONTNAME", (0, 0), (-1, -1), "DejaVuSans"),
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("ALIGN", (3, 0), (-1, -1), "RIGHT"),
+            ]
+        )
+    )
+    elements.append(Paragraph("<b>TRIP TABLE</b>", left_align))
+    elements.append(trip_table)
+    elements.append(Spacer(1, 12))
+    
+    # Monthly deductions based on week of export date
+    def get_week_of_month(d):
+        return ((d.day - 1) // 7) + 1
+
+    week_index = get_week_of_month(date.today())
+    monthly_deductions = {}
+
+    if week_index == 1:
+        monthly_deductions["Pag-IBIG Contribution"] = sum(
+            s["salary"].pagibig_contribution or 0 for s in data if s["salary"]
+        )
+    elif week_index == 2:
+        monthly_deductions["PhilHealth Contribution"] = sum(
+            s["salary"].philhealth_contribution or 0 for s in data if s["salary"]
+        )
+    elif week_index == 3:
+        monthly_deductions["SSS Contribution"] = sum(
+            s["salary"].sss_contribution or 0 for s in data if s["salary"]
+        )
+    elif week_index == 4:
+        monthly_deductions["SSS Loan"] = sum(
+            s["salary"].sss_loan or 0 for s in data if s["salary"]
+        )
+        monthly_deductions["Pag-IBIG Loan"] = sum(
+            s["salary"].pagibig_loan or 0 for s in data if s["salary"]
+        )
+
+    if monthly_deductions:
+        # monthly_table_data = [["Monthly Deduction", "Amount"]] + [[k, f"{v:.2f}"] for k, v in monthly_deductions.items()]
+        monthly_table_data = [["Monthly Deduction", "Amount"]] + [
+            [k, format_currency(v)] for k, v in monthly_deductions.items()
+        ]
+        elements.append(Paragraph("<b>MONTHLY DEDUCTIONS</b>", left_heading))
+        monthly_table = Table(monthly_table_data, hAlign="LEFT")
+        monthly_table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.lightcoral),
+                    ("GRID", (0, 0), (-1, -1), 1, colors.black),
+                    ("FONTNAME", (0, 0), (-1, -1), "DejaVuSans"),
+                    ("ALIGN", (0, 0), (0, -1), "LEFT"),
+                    ("ALIGN", (1, 0), (1, -1), "RIGHT"),
+                ]
+            )
+        )
+        elements.append(monthly_table)
+        elements.append(Spacer(1, 12))
+
+    # Weekly Deductions
+    weekly_deductions = {
+        "Bale": sum(s["salary"].bale for s in data if s["salary"]),
+        "Cash Advance": sum(s["salary"].cash_advance for s in data if s["salary"]),
+        "Cash Bond": sum(s["salary"].cash_bond for s in data if s["salary"]),
+        "Charges": sum(s["salary"].charges for s in data if s["salary"]),
+        "Others": sum(s["salary"].others for s in data if s["salary"]),
+    }
+    # weekly_table_data = [["Weekly Deduction", "Amount"]] + [[k, f"{v:.2f}"] for k, v in weekly_deductions.items()]
+    weekly_table_data = [["Weekly Deduction", "Amount"]] + [
+        [k, format_currency(v)] for k, v in weekly_deductions.items()
+    ]
+    elements.append(Paragraph("<b>WEEKLY DEDUCTIONS</b>", left_heading))
+    weekly_table = Table(weekly_table_data, hAlign="LEFT")
+    weekly_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.lightcoral),
+                ("GRID", (0, 0), (-1, -1), 1, colors.black),
+                ("FONTNAME", (0, 0), (-1, -1), "DejaVuSans"),
+                ("ALIGN", (0, 0), (0, -1), "LEFT"),
+                ("ALIGN", (1, 0), (1, -1), "RIGHT"),
+            ]
+        )
+    )
+    elements.append(weekly_table)
+    elements.append(Spacer(1, 12))
+
+    # Add total calculations and footer
+    total_deductions = gross_total  # Example, you can adjust deduction calculations as needed
+    net_pay = gross_total - total_deductions
+
+    totals_table_data = [
+        ["Gross Salary", "Deductions", "Net Pay"],
+        [format_currency(gross_total), format_currency(total_deductions), format_currency(net_pay)],
+    ]
+
+    totals_table = Table(
+        totals_table_data, hAlign="LEFT", colWidths=[200, 200, 200]        
+    )
+    totals_table.setStyle(
+        TableStyle(
+            [
+                (
+                    "BACKGROUND",
+                    (0, 0),
+                    (-1, 0),
+                    colors.lightyellow,
+                ),  # Background color for header row
+                (
+                    "GRID",
+                    (0, 0),
+                    (-1, -1),
+                    1,
+                    colors.black,
+                ),  # Grid lines around all cells
+                (
+                    "FONTNAME",
+                    (0, 0),
+                    (-1, -1),
+                    "DejaVuSans",
+                ),  # Bold font for the entire table
+                ("FONTSIZE", (0, 0), (-1, -1), 14),  # Increase font size
+                (
+                    "ALIGN",
+                    (0, 1),
+                    (-1, 1),
+                    "RIGHT",
+                ),  # ✅ Right-align all values in the totals row
+                ("ALIGN", (0, 0), (-1, 0), "CENTER"),  # (Optional) Center-align headers
+                (
+                    "TOPPADDING",
+                    (0, 0),
+                    (-1, -1),
+                    12,
+                ),  # Add padding to the top of each row
+                (
+                    "BOTTOMPADDING",
+                    (0, 0),
+                    (-1, -1),
+                    12,
+                ),  # Add padding to the bottom of each row
+                (
+                    "LEFTPADDING",
+                    (0, 0),
+                    (-1, -1),
+                    10,
+                ),  # Add padding to the left side of each cell
+                (
+                    "RIGHTPADDING",
+                    (0, 0),
+                    (-1, -1),
+                    10,
+                ),  # Add padding to the right side of each cell
+            ]
+        )
+    )
+    elements.append(Paragraph("<b>TOTALS</b>", left_heading))
+    elements.append(totals_table)
+    elements.append(Spacer(1, 12))
+
+    # Footer: Date generated + employee
+    generated_at = datetime.now().strftime("%B %d, %Y at %I:%M %p")
+    footer_text = f"Generated on {generated_at} by {username}"
+
+    # Footer function to add it to every page
+    def footer(canvas, doc):
+        canvas.setFont("Helvetica-Oblique", 10)
+        canvas.drawString(30, 30, footer_text)
+
+    doc.build(elements, onFirstPage=footer)
+
+    buffer.seek(0)
+    return HttpResponse(
+        buffer,
+        content_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{username}_salary_breakdown.pdf"'},
+    )

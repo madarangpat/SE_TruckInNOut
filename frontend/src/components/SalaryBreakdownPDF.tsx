@@ -18,62 +18,59 @@ const SalaryBreakdownPDF: React.FC<Props> = ({
   endDate,
   employee_type,
 }) => {
-  const handleDownload = async () => {
+  // Fetch all trips only once when the component renders
+  const params = new URLSearchParams({
+    employee: employeeUsername || "",
+    start_date: startDate?.toISOString().split("T")[0] || "",
+    end_date: endDate?.toISOString().split("T")[0] || "",
+  }).toString();
+
+  const { data: tripData, error: tripError } = useQuery({
+    queryKey: ["employee-trip-salaries", params],
+    queryFn: async () => {
+      const employeeTripSalaries = await getEmployeeTripSalaries(params);
+      const completedTrips = employeeTripSalaries.filter(
+        (record: EmployeeTripSalary) => record.trip.is_completed
+      );
+      return { completedTrips };
+    },
+  });
+
+  const { data: pdfBlob, error: pdfError } = useQuery<Blob, Error>({
+    queryKey: ["generate-salary-breakdown-pdf", params],
+    queryFn: async () => await generateSalaryBreakdownPdf(params),
+    enabled: !!tripData?.completedTrips.length,  // Only run if there are completed trips
+  });
+
+  const handleDownload = () => {
     if (!employeeUsername || !startDate || !endDate) {
       alert("Please select an employee and date range.");
       return;
     }
 
-    try {
-      const params = new URLSearchParams({
-        employee: employeeUsername,
-        start_date: startDate.toISOString().split("T")[0],
-        end_date: endDate.toISOString().split("T")[0],
-      }).toString();
-
-      // Fetch all trips
-      const { data } = useQuery({
-        queryKey: ["employee-trip-salaries"],
-        queryFn: async () => {
-          const employeeTripSalaries = await getEmployeeTripSalaries(params);
-          const completedTrips = employeeTripSalaries.filter(
-            (record: EmployeeTripSalary) => record.trip.is_completed,
-          );
-          return { completedTrips };
-        },
-      });
-
-      // Filter only completed trips
-
-      if (data?.completedTrips.length === 0) {
-        toast.error(
-          "Cannot generate PDF. No completed trips in the selected range.",
-        );
-        return;
-      }
-
-      // 3. Download PDF
-      const { data: pdfBlob } = useQuery<Blob, Error>({
-        queryKey: ["generate-salary-breakdown-pdf", params],
-        queryFn: async () => await generateSalaryBreakdownPdf(params),
-      });
-
-      if (!pdfBlob) {
-        toast.error("No PDF data received");
-      }
-
-      const blob = new Blob([pdfBlob!], { type: "application/pdf" });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", `${employeeUsername}_salary_breakdown.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    } catch (error) {
-      console.error("PDF generation error:", error);
-      alert("An error occurred while generating the PDF.");
+    if (tripError || pdfError) {
+      toast.error("An error occurred while generating the data.");
+      return;
     }
+
+    if (tripData?.completedTrips.length === 0) {
+      toast.error("Cannot generate PDF. No completed trips in the selected range.");
+      return;
+    }
+
+    if (!pdfBlob) {
+      toast.error("No PDF data received");
+      return;
+    }
+
+    const blob = new Blob([pdfBlob], { type: "application/pdf" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `${employeeUsername}_salary_breakdown.pdf`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
   };
 
   return (

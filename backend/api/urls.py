@@ -65,6 +65,7 @@ from .views import (
     update_trip,
     update_user_data,
     update_user_profile,
+    generate_salary_breakdown_pdf_emp,
 )
 
 urlpatterns = [
@@ -197,4 +198,5 @@ urlpatterns = [
     path("salary-config/", get_salary_config, name="salary-config"),
     path("update/trips/<int:trip_id>/", update_trip, name="update_trip"),
     path("change-password/", change_password, name="change-password"),
+    path('generate-pdf/salary-breakdown-emp/', generate_salary_breakdown_pdf_emp, name='generate_salary_breakdown_pdf_emp'),
 ]
