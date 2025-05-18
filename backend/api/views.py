@@ -915,7 +915,7 @@ def update_salary_deductions(request):
 
 # ==============================================================================================================================
 @api_view(["GET"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def generate_salary_breakdown_pdf(request):
     def format_currency(value):
         try:
@@ -994,7 +994,7 @@ def generate_salary_breakdown_pdf(request):
         fontName="DejaVuSans",
     )
     elements = []
-      
+
     # Reference the correct image path for the logo
     image_path = os.path.join(settings.BASE_DIR, "api", "static", "images", "bigc.png")
     stamp = RLImage(image_path, width=180, height=50)  # Adjust size as needed
@@ -1021,13 +1021,11 @@ def generate_salary_breakdown_pdf(request):
     formatted_end = DateFormat(end_date).format("F d, Y")
 
     # Add the Date Range formatted text
+    elements.append(Paragraph(f"<b>Salary Report for {username}</b>", left_align))
     elements.append(
         Paragraph(
-            f"<b>Salary Report for {username}</b>", left_align
+            f"<b>Date Range:</b> {formatted_start} to {formatted_end}", left_align
         )
-    )
-    elements.append(
-        Paragraph(f"<b>Date Range:</b> {formatted_start} to {formatted_end}", left_align)
     )
     elements.append(Spacer(1, 12))
 
@@ -1306,7 +1304,7 @@ def generate_salary_breakdown_pdf(request):
 
 # ==================================================================================================================================================================================
 @api_view(["GET"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def generate_gross_payroll_pdf(request):
     start_date = request.GET.get("start_date")
     end_date = request.GET.get("end_date")
@@ -1373,9 +1371,7 @@ def generate_gross_payroll_pdf(request):
         Table(
             [
                 [
-                    Paragraph(
-                        "<b>BIG C TRUCKING SERVICES GROSS</b>", styles["Title"]
-                    ),
+                    Paragraph("<b>BIG C TRUCKING SERVICES GROSS</b>", styles["Title"]),
                     stamp,
                 ]
             ],
@@ -1386,7 +1382,8 @@ def generate_gross_payroll_pdf(request):
             f"<b>PAYROLL PERIOD:</b> {formatted_start} to {formatted_end}", left_align
         ),
         Paragraph(
-            f"<b>NUMBER OF EMPLOYEES WITH TRIPS:</b> {existing_totals.count()}", left_align
+            f"<b>NUMBER OF EMPLOYEES WITH TRIPS:</b> {existing_totals.count()}",
+            left_align,
         ),
         Spacer(1, 20),
     ]
@@ -1429,13 +1426,17 @@ def generate_gross_payroll_pdf(request):
 
     row_buffer = []
     for idx, totals in enumerate(existing_totals, 1):
-        completed_trips = Trip.objects.filter(employee=totals.employee, trip_status="Confirmed").count()
+        completed_trips = Trip.objects.filter(
+            employee=totals.employee, trip_status="Confirmed"
+        ).count()
         content = [
             Paragraph(
                 f"<b>EMPLOYEE:</b> {totals.employee.user.username.upper()}", left_align
             ),
             Spacer(1, 4),
-            Paragraph(f"<b>TRIPS COMPLETED:</b> {completed_trips}", left_align),  # New line for trips count
+            Paragraph(
+                f"<b>TRIPS COMPLETED:</b> {completed_trips}", left_align
+            ),  # New line for trips count
             Spacer(1, 4),
             create_employee_table(totals),
         ]

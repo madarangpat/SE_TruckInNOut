@@ -1,15 +1,24 @@
 "use client";
+
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
+import { SessionStore } from "@/auth/session";
 
 interface Props {
   employee: string;
+  session: SessionStore;
   start: string;
   end: string;
   onClose: () => void;
 }
 
-const PreviewReportSB: React.FC<Props> = ({ employee, start, end, onClose }) => {
+const PreviewReportSB: React.FC<Props> = ({
+  employee,
+  session,
+  start,
+  end,
+  onClose,
+}) => {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -21,16 +30,16 @@ const PreviewReportSB: React.FC<Props> = ({ employee, start, end, onClose }) => 
           console.error("Missing required parameters");
           return; // Exit if required parameters are missing
         }
-  
+
         const startDateOnly = start.split("T")[0]; // Format the start date
         const endDateOnly = end ? end.split("T")[0] : ""; // Ensure end is valid, fallback to "" if not
-  
+
         // If endDate is empty, we may want to either skip it or set a default
         if (!endDateOnly) {
           console.error("End date is missing or invalid");
           return; // Exit if end date is invalid
         }
-  
+
         // Create query parameters
         const params = new URLSearchParams({
           employee,
@@ -40,10 +49,15 @@ const PreviewReportSB: React.FC<Props> = ({ employee, start, end, onClose }) => 
 
         const url = `${process.env.NEXT_PUBLIC_DOMAIN}/generate-pdf/salary-breakdown/?${params}`;
         console.log(url); // Log the final URL to check its structure
-  
-        const response = await fetch(url, { method: "GET" });
+
+        const response = await fetch(url, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${session.access}`,
+          },
+        });
         if (!response.ok) throw new Error("Failed to fetch PDF preview");
-  
+
         const blob = await response.blob();
         const urlBlob = URL.createObjectURL(blob);
         setPdfUrl(urlBlob);
@@ -54,12 +68,11 @@ const PreviewReportSB: React.FC<Props> = ({ employee, start, end, onClose }) => 
         setLoading(false);
       }
     };
-  
+
     if (employee && start && end) {
       fetchPDF();
     }
   }, [employee, start, end]);
-  
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
@@ -73,7 +86,9 @@ const PreviewReportSB: React.FC<Props> = ({ employee, start, end, onClose }) => 
 
         <div className="h-full w-full pt-12">
           {loading ? (
-            <div className="text-center mt-20 text-lg">Loading PDF preview...</div>
+            <div className="text-center mt-20 text-lg">
+              Loading PDF preview...
+            </div>
           ) : pdfUrl ? (
             <iframe
               src={pdfUrl}

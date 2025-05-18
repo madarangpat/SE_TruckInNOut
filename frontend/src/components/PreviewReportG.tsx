@@ -1,14 +1,16 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
+import { SessionStore } from "@/auth/session";
 
 interface Props {
+  session: SessionStore;
   start: string;
   end: string;
   onClose: () => void;
 }
 
-const PreviewReportG: React.FC<Props> = ({ start, end, onClose }) => {
+const PreviewReportG: React.FC<Props> = ({ session, start, end, onClose }) => {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -19,12 +21,17 @@ const PreviewReportG: React.FC<Props> = ({ start, end, onClose }) => {
           start_date: start,
           end_date: end,
         });
+        const pdfApi = `${process.env.NEXT_PUBLIC_DOMAIN}/generate-pdf/gross-salary-breakdown/?${params}`;
 
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_DOMAIN}/generate-pdf/gross-preview/?${params}`
-        );
+        const response = await fetch(pdfApi, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${session.access}`,
+          },
+        });
 
-        if (!response.ok) throw new Error("Failed to fetch gross payroll PDF preview");
+        if (!response.ok)
+          throw new Error("Failed to fetch gross payroll PDF preview");
 
         // Fetch the PDF as a Blob
         const blob = await response.blob();
@@ -38,7 +45,7 @@ const PreviewReportG: React.FC<Props> = ({ start, end, onClose }) => {
       }
     };
 
-    if ( start && end) {
+    if (start && end) {
       fetchPDF();
     }
   }, [start, end]);
@@ -55,9 +62,15 @@ const PreviewReportG: React.FC<Props> = ({ start, end, onClose }) => {
 
         <div className="h-full w-full pt-12">
           {loading ? (
-            <div className="text-center mt-20 text-lg">Loading PDF preview...</div>
+            <div className="text-center mt-20 text-lg">
+              Loading PDF preview...
+            </div>
           ) : pdfUrl ? (
-            <iframe src={pdfUrl} title="Gross Payroll Preview" className="w-full h-full" />
+            <iframe
+              src={pdfUrl}
+              title="Gross Payroll Preview"
+              className="w-full h-full"
+            />
           ) : (
             <div className="text-center mt-20 text-white">
               <p>No completed trips found for the selected date range.</p>
