@@ -7,6 +7,12 @@ export type SessionPayload = {
   refresh: string;
 };
 
+export type SessionStore = {
+  access: string;
+  refresh: string;
+  user: User;
+};
+
 export function createSession(sessionPayload: SessionPayload) {
   // Creates the session, expiry of token in here is the same with the
   // backend
@@ -43,7 +49,7 @@ export function getSession() {
   if (!access || !refresh) return null;
 
   const user = jwtDecode(access) as User;
-  return { access, refresh, user };
+  return { access, refresh, user } as SessionStore;
 }
 
 export function deleteSession() {
