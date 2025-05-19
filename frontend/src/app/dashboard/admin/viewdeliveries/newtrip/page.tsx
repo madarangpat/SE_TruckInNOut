@@ -315,7 +315,7 @@ const CreateNewTripPage = () => {
   useEffect(() => {
     const delay = setTimeout(async () => {
       try {
-        const apiKey = process.env.GOOGLE_API_KEY;
+        const apiKey = process.env.NEXT_PUBLIC_GOOGLE_API_KEY;
 
         const updatedDestinations = await Promise.all(
           tripDestinations.map(async (dest) => {
@@ -326,7 +326,6 @@ const CreateNewTripPage = () => {
             );
 
             const data = await response.json();
-            console.log("Auto-geocode Google response:", data);
 
             if (!data.results || data.results.length === 0) return dest;
 
@@ -403,7 +402,8 @@ const CreateNewTripPage = () => {
           <div className="flex">
             <AddressAutoComplete
                 onSelect={({ address, lat, lng }) => {
-                  setTripOrigin({address : address, lat : lat, lng : lng})
+                  console.log("Selected address: ", address);
+                  setTripOrigin({address, lat, lng})
                 }}
               />
           </div>
@@ -542,7 +542,7 @@ const CreateNewTripPage = () => {
         <input
           type="number"
           step="0.01"
-          min="0.01"
+          min="1.00"
           placeholder="Multiplier (must be greater than 0)"
           className="input-field text-black rounded placeholder:text-sm"
           style={{ marginTop: "4px" }}

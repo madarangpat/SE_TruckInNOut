@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent } from "react";
+import { useState, useEffect, ChangeEvent } from "react";
 import usePlacesAutocomplete from "use-places-autocomplete";
 import useOnclickOutside from "react-cool-onclickoutside";
 
@@ -10,9 +10,25 @@ interface AddressAutoCompleteProps {
     lat: number;
     lng: number;
   }) => void;
+  fieldId?: string; // Add an optional ID to differentiate between instances
 }
 
-const AddressAutoComplete = ({ onSelect }: AddressAutoCompleteProps) => {
+const AddressAutoComplete = ({ onSelect, fieldId = "default" }: AddressAutoCompleteProps) => {
+  const [isGoogleLoaded, setIsGoogleLoaded] = useState(false);
+
+  // Check if Google Maps API is loaded
+  useEffect(() => {
+    const checkGoogleMapsLoaded = () => {
+      if (window.google && window.google.maps) {
+        setIsGoogleLoaded(true);
+      } else {
+        setTimeout(checkGoogleMapsLoaded, 100);
+      }
+    };
+    
+    checkGoogleMapsLoaded();
+  }, []);
+
   const {
     ready,
     value,
@@ -20,11 +36,12 @@ const AddressAutoComplete = ({ onSelect }: AddressAutoCompleteProps) => {
     setValue,
     clearSuggestions,
   } = usePlacesAutocomplete({
-    callbackName: "initAddressAutocomplete",
+    callbackName: `initAddressAutocomplete_${fieldId}`, // Make callback name unique
     requestOptions: {
       componentRestrictions: { country: "ph" }, // PHILIPPINES ONLY
     },
     debounce: 800,
+    initOnMount: isGoogleLoaded, // Only initialize when Google is loaded
   });
 
   const ref = useOnclickOutside(() => {
@@ -33,9 +50,9 @@ const AddressAutoComplete = ({ onSelect }: AddressAutoCompleteProps) => {
 
   const handleInput = (e: ChangeEvent<HTMLInputElement>) => {
     const input = e.target.value;
-    setValue(input)
+    setValue(input);
     
-    if (input.length < 10){
+    if (input.length < 10) {
       clearSuggestions();
     }
   };
@@ -47,6 +64,11 @@ const AddressAutoComplete = ({ onSelect }: AddressAutoCompleteProps) => {
     description: string;
     place_id?: string;
   }): Promise<{ address: string; lat: number; lng: number } | null> => {
+    if (!isGoogleLoaded) {
+      console.error("Google Maps API not loaded");
+      return null;
+    }
+    
     if (place_id) {
       // Use Places API (preferred)
       const service = new google.maps.places.PlacesService(
@@ -79,10 +101,11 @@ const AddressAutoComplete = ({ onSelect }: AddressAutoCompleteProps) => {
     } else {
       // Fallback: use Geocoding API
       try {
+        const apiKey = process.env.NEXT_PUBLIC_GOOGLE_API_KEY;
         const response = await fetch(
           `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
             description
-          )}&key=NEXT_PUBLIC_GOOGLE_API_KEY`
+          )}&key=${apiKey}`
         );
         const data = await response.json();
         if (data.status === "OK") {
@@ -142,10 +165,10 @@ const AddressAutoComplete = ({ onSelect }: AddressAutoCompleteProps) => {
         value={value}
         onChange={handleInput}
         disabled={!ready}
-        placeholder="Enter an address"
+        placeholder={ready ? "Enter an address" : "Loading..."}
         className="w-full p-2 border rounded"
       />
-      {status === "OK" && value.length >=10 && (
+      {status === "OK" && value.length >= 10 && (
         <ul className="absolute z-10 w-full bg-white border rounded mt-1">
           {renderSuggestions()}
         </ul>
