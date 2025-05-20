@@ -231,51 +231,71 @@ const SalaryBreakdownClient = ({ session }: { session: SessionStore }) => {
           <div className="flex gap-4 mb-4 items-end">
             <div className="w-1/2">
               <label className="block text-sm text-black mb-1 font-bold">
-                End Date
+                Start Date
               </label>
               <DatePicker
-                selected={endDate}
-                onChange={(date) => setEndDate(date)}
+                selected={startDate}
+                onChange={(date) => {
+                  if (date) {
+                    const today = new Date();
+                    const calculatedEnd = new Date(date);
+                    calculatedEnd.setDate(calculatedEnd.getDate() + 6); // Saturday + 6 = Friday
+
+                    // Check if calculated end date is in the future
+                    if (calculatedEnd > today) {
+                      toast.warning("End date exceeds today. Please select an earlier Saturday.");
+                      setStartDate(null);
+                      setEndDate(null);
+                      return;
+                    }
+
+                    setStartDate(date);
+                    setEndDate(calculatedEnd);
+                  }
+                }}
                 dateFormat="MMMM d, yyyy"
-                placeholderText="Select end date"
+                placeholderText="Select start date"
                 className="w-full px-4 py-2 rounded-md shadow-md text-black cursor-pointer bg-white"
                 filterDate={(date) => {
                   const today = new Date();
-                  const isSaturday = date.getDay() === 6; // Check if it's a Saturday
-                  const isPastOrToday = date <= today; // Check if it's not in the future
-                  return isSaturday && isPastOrToday; // Only allow past Saturdays or today
+                  const isSaturday = date.getDay() === 6; // 6 = Saturday
+                  const isPastOrToday = date <= today;
+                  return isSaturday && isPastOrToday;
                 }}
               />
             </div>
 
             <div className="w-1/2">
               <label className="block text-sm text-black mb-1 font-bold">
-                Start Date (Automatic)
+                End Date
               </label>
               <DatePicker
-                selected={startDate}
-                onChange={(date) => setStartDate(date)} // Optional if you want the user to change the start date as well
+                selected={endDate}
+                onChange={() => {}}
                 dateFormat="MMMM d, yyyy"
-                placeholderText="Start date (Auto)"
-                className="w-full px-4 py-2 rounded-md shadow-md text-black cursor-pointer bg-white"
-                disabled // Make it disabled since it's auto-calculated
+                className="w-full px-4 py-2 rounded-md shadow-md text-black bg-gray-100 cursor-not-allowed"
+                disabled
+                placeholderText="End date (Auto)"
               />
             </div>
 
-            <button
-              onClick={() => {
-                setStartDate(null);
-                setEndDate(null);
-              }}
-            >
-              <Image
-                src="/Trash.png"
-                alt="Clear Dates"
-                width={30}
-                height={30}
-              />
-            </button>
+            <div className="flex items-end pb-1">
+              <button
+                onClick={() => {
+                  setStartDate(null);
+                  setEndDate(null);
+                }}
+                 className={`py-2 px-4 rounded-lg shadow text-white ${
+                  !startDate && !endDate
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-[#668743] hover:bg-[#345216]"
+                }`}
+              >
+                Clear
+              </button>
+            </div>
           </div>
+
           <button
             onClick={async () => {
               if (!selectedEmployee || !endDate) {

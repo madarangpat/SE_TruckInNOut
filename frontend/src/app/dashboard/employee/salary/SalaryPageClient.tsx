@@ -3,34 +3,19 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import Image from "next/image";
 import EmployeeSalaryPreview from "@/components/EmployeeSalaryPreview";
+import { toast } from "sonner";
 
 const SalaryPageClient = ({ user }: { user: User }) => {
   const username = user?.username;
   const router = useRouter();
 
-
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
 
-  // This function calculates the start date based on the end date (6 days before)
-  const calculateStartDate = (end: Date) => {
-    const date = new Date(end);
-    date.setDate(date.getDate() - 6); // Subtract 6 days from the end date to get the start date (previous Sunday)
-    return date;
-  };
-
-  const formattedStart = startDate ? startDate.toLocaleDateString('en-CA') : "";
-  const formattedEnd = endDate ? endDate.toLocaleDateString('en-CA') : "";
-
-  useEffect(() => {
-      if (endDate) {
-        const newStartDate = calculateStartDate(endDate); // Calculate start date based on the end date
-        setStartDate(newStartDate); // Set the start date to 6 days before the end date (previous Sunday)
-      }
-    }, [endDate]);
+  const formattedStart = startDate ? startDate.toLocaleDateString("en-CA") : "";
+  const formattedEnd = endDate ? endDate.toLocaleDateString("en-CA") : "";
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-10 px-4 sm:px-6 lg:px-10 py-8">
@@ -42,38 +27,68 @@ const SalaryPageClient = ({ user }: { user: User }) => {
         {/* Date Pickers Section */}
         <div className="flex gap-4 mb-4 items-end">
           <div className="w-1/2">
-            <label className="block text-sm text-black mb-1 font-bold">End Date</label>
+            <label className="block text-sm text-black mb-1 font-bold">Start Date</label>
             <DatePicker
-              selected={endDate}
-              onChange={(date) => setEndDate(date)}
+              selected={startDate}
+              onChange={(date) => {
+                if (date) {
+                  const today = new Date();
+                  const calculatedEnd = new Date(date);
+                  calculatedEnd.setDate(calculatedEnd.getDate() + 6);
+
+                  if (calculatedEnd > today) {
+                    toast.warning(
+                      "End date exceeds today. Please select an earlier Saturday."
+                    );
+                    setStartDate(null);
+                    setEndDate(null);
+                    return;
+                  }
+
+                  setStartDate(date);
+                  setEndDate(calculatedEnd);
+                }
+              }}
               dateFormat="MMMM d, yyyy"
-              placeholderText="Select end date"
+              placeholderText="Select start date"
               className="w-full px-4 py-2 rounded-md shadow-md text-black cursor-pointer bg-white"
               filterDate={(date) => {
                 const today = new Date();
-                const isSaturday = date.getDay() === 6; // Check if it's a Saturday
-                const isPastOrToday = date <= today; // Check if it's not in the future
-                return isSaturday && isPastOrToday; // Only allow past Saturdays or today
+                const isSaturday = date.getDay() === 6;
+                const isPastOrToday = date <= today;
+                return isSaturday && isPastOrToday;
               }}
             />
           </div>
 
           <div className="w-1/2">
-            <label className="block text-sm text-black mb-1 font-bold">Start Date (Automatic)</label>
+            <label className="block text-sm text-black mb-1 font-bold">End Date (Auto)</label>
             <DatePicker
-              selected={startDate}
-              onChange={(date) => setStartDate(date)}
+              selected={endDate}
+              onChange={() => {}}
               dateFormat="MMMM d, yyyy"
-              placeholderText="Start date (Auto)"
-              className="w-full px-4 py-2 rounded-md shadow-md text-black cursor-pointer bg-white"
+              placeholderText="End date (Auto)"
+              className="w-full px-4 py-2 rounded-md shadow-md text-black bg-gray-100 cursor-not-allowed"
               disabled
             />
           </div>
 
-          {/* Trash Bin Icon */}
-          <button onClick={() => { setStartDate(null); setEndDate(null); }}>
-            <Image src="/Trash.png" alt="Clear Dates" width={30} height={30} />
-          </button>
+          {/* Clear Button */}
+          <div className="pb-1">
+            <button
+              onClick={() => {
+                setStartDate(null);
+                setEndDate(null);
+              }}
+              className={`py-2 px-4 rounded-lg shadow text-white ${
+                !startDate && !endDate
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-[#668743] hover:bg-[#345216]"
+              }`}
+            >
+              Clear
+            </button>
+          </div>
         </div>
 
         {/* Preview Button */}

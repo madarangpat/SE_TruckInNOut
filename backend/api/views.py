@@ -976,15 +976,19 @@ def generate_salary_breakdown_pdf(request):
         leftMargin=30,
         rightMargin=30,
         bottomMargin=30,
+        title=f"Salary Report - {username}",  # Set the PDF document title
+        author="Big C Trucking Services",     # Set the author
+        subject=f"Salary breakdown for {username} from {start_date} to {end_date}",  # Set subject
+        creator="Big C Trucking Services"  # Set creator
     )
     styles = getSampleStyleSheet()
     normal = styles["Normal"]
-    normal.fontSize = 8
+    normal.fontSize = 16
     left_align = ParagraphStyle(
         name="LeftAlign",
         parent=styles["Normal"],
         alignment=TA_LEFT,
-        fontName="DejaVuSans",
+        fontName="Helvetica-Bold",
     )
     left_heading = ParagraphStyle(
         name="LeftHeading",
@@ -1021,6 +1025,7 @@ def generate_salary_breakdown_pdf(request):
 
     # Add the Date Range formatted text
     elements.append(Paragraph(f"<b>Salary Report for {username}</b>", left_align))
+    elements.append(Spacer(1, 6))
     elements.append(
         Paragraph(
             f"<b>Date Range:</b> {formatted_start} to {formatted_end}", left_align
@@ -1285,7 +1290,7 @@ def generate_salary_breakdown_pdf(request):
 
     # Define footer to be used on every page
     def footer(canvas, doc):
-        canvas.setFont("Helvetica-Oblique", 10)
+        canvas.setFont("Helvetica-Oblique", 16)
         canvas.drawString(
             30, 30, footer_text
         )  # Position the footer at the bottom of the page
@@ -1342,22 +1347,27 @@ def generate_gross_payroll_pdf(request):
         leftMargin=30,
         rightMargin=30,
         bottomMargin=30,
+        title=f"Gross Salary Report_{start_date}_{end_date}",  # Set the PDF document title
+        author="Big C Trucking Services",     # Set the author
+        subject=f"Gross Salary Report from {start_date} to {end_date}",  # Set subject
+        creator="Big C Trucking Services"  # Set creator
     )
 
     styles = getSampleStyleSheet()
     normal = styles["Normal"]
-    normal.fontSize = 8
+    normal.fontSize = 16
     left_align = ParagraphStyle(
         name="LeftAlign",
         parent=styles["Normal"],
         alignment=TA_LEFT,
-        fontName="DejaVuSans",
+        fontName="Helvetica-Bold",
     )
     left_heading = ParagraphStyle(
         name="LeftHeading",
         parent=styles["Heading4"],
         alignment=TA_LEFT,
-        fontName="DejaVuSans",
+        fontName="Helvetica-Bold",
+        fontSize=10,
     )
     elements = []
 
@@ -1380,6 +1390,7 @@ def generate_gross_payroll_pdf(request):
         Paragraph(
             f"<b>PAYROLL PERIOD:</b> {formatted_start} to {formatted_end}", left_align
         ),
+        Spacer(1, 6),
         Paragraph(
             f"<b>NUMBER OF EMPLOYEES WITH TRIPS:</b> {existing_totals.count()}",
             left_align,
@@ -1430,13 +1441,8 @@ def generate_gross_payroll_pdf(request):
         ).count()
         content = [
             Paragraph(
-                f"<b>EMPLOYEE:</b> {totals.employee.user.username.upper()}", left_align
+                f"<b>EMPLOYEE:</b> {totals.employee.user.username.upper()} | TRIPS: {completed_trips}", left_heading
             ),
-            Spacer(1, 4),
-            Paragraph(
-                f"<b>TRIPS COMPLETED:</b> {completed_trips}", left_align
-            ),  # New line for trips count
-            Spacer(1, 4),
             create_employee_table(totals),
         ]
         row_buffer.append(content)
@@ -2255,16 +2261,20 @@ def generate_salary_breakdown_pdf_emp(request):
         leftMargin=30,
         rightMargin=30,
         bottomMargin=30,
+        title=f"Salary Report - {username}",  # Set the PDF document title
+        author="Big C Trucking Services",     # Set the author
+        subject=f"Salary breakdown for {username} from {start_date} to {end_date}",  # Set subject
+        creator="Big C Trucking"  # Set creator
     )
 
     styles = getSampleStyleSheet()
     normal = styles["Normal"]
-    normal.fontSize = 8
+    normal.fontSize = 15
     left_align = ParagraphStyle(
         name="LeftAlign",
         parent=styles["Normal"],
         alignment=TA_LEFT, 
-        fontName="DejaVuSans",
+        fontName="Helvetica-Bold",
     )
     left_heading = ParagraphStyle(
         name="LeftHeading",
@@ -2297,6 +2307,7 @@ def generate_salary_breakdown_pdf_emp(request):
     formatted_end = end_date.strftime("%B %d, %Y")
 
     elements.append(Paragraph(f"<b>Salary Report for {username}</b>", left_align))
+    elements.append(Spacer(1, 6))
     elements.append(
         Paragraph(f"<b>Date Range:</b> {formatted_start} to {formatted_end}", left_align)
     )
@@ -2371,7 +2382,7 @@ def generate_salary_breakdown_pdf_emp(request):
             ]
         )
     )
-    elements.append(Paragraph("<b>TRIP TABLE</b>", left_align))
+    elements.append(Paragraph("<b>TRIP TABLE</b>", left_heading))
     elements.append(trip_table)
     elements.append(Spacer(1, 12))
     
@@ -2530,14 +2541,25 @@ def generate_salary_breakdown_pdf_emp(request):
 
     # Footer function to add it to every page
     def footer(canvas, doc):
-        canvas.setFont("Helvetica-Oblique", 10)
+        canvas.setFont("Helvetica-Oblique", 16)
         canvas.drawString(30, 30, footer_text)
 
     doc.build(elements, onFirstPage=footer)
 
     buffer.seek(0)
+    
+    employee_name = employee.user.get_full_name() or username  # Use full name if available, fall back to username
+    start_date_str = start_date.strftime("%Y%m%d")
+    end_date_str = end_date.strftime("%Y%m%d")
+    filename = f"Salary_Report_{employee_name}_{start_date_str}_to_{end_date_str}.pdf"
+    
+    filename = filename.replace(" ", "_").replace("/", "-").replace("\\", "-").replace(":", "-")
+    
     return HttpResponse(
         buffer,
         content_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="{username}_salary_breakdown.pdf"'},
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Content-Disposition": f'attachment; filename="{filename}"; filename*=UTF-8\'\'{filename}'
+            }
     )
