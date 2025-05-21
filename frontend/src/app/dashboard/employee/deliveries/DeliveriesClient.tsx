@@ -8,7 +8,19 @@ import { updateCompletedStatus } from "@/lib/actions/deliveries.actions";
 type DeliveriesClientProps = {
   recentTrips: Trip[];
   ongoingTrips: Trip[];
-};
+  employeename: {
+    employee_id: number;
+    completed_trip_count?: number;
+    payment_status?: string;
+    name?: string;
+    user: {
+      id: number;
+      username: string;
+      profile_image: string | null;
+      role: string;
+    };
+  } | null;
+}
 
 type Trip = {
   trip_id: number;
@@ -40,7 +52,7 @@ type Trip = {
   } | null;
 };
 
-const DeliveriesClient = ({
+const DeliveriesClient = ({ employeename,
   
   recentTrips,
   ongoingTrips: initialOngoingTrips,
@@ -88,7 +100,7 @@ const DeliveriesClient = ({
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 bg-gray-300 rounded-full overflow-hidden">
             <Image
-              src={employee?.user.profile_image || "/accounts.png"}
+              src={employeename?.user.profile_image || "/accounts.png"}
               alt="Profile"
               width={70}
               height={70}
@@ -98,7 +110,7 @@ const DeliveriesClient = ({
           <div>
             <p className="text-lg text-black/60">Welcome back,</p>
             <h1 className="text-2xl font-semibold text-black/80">
-              {employee?.user.username || "Loading..."}
+              {employeename?.user.username || "Loading..."}
             </h1>
           </div>
         </div>

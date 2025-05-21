@@ -115,37 +115,6 @@ const ViewGross = ({ session }: { session: SessionStore }) => {
     setTotalsCalculated(false);
   };
 
-  // const handlePreviewGrossPayroll = () => {
-  //   if (grossStartDate && grossEndDate) {
-  //     const startDateFormatted = grossStartDate.toLocaleDateString("en-CA"); // Format date as 'YYYY-MM-DD'
-  //     const endDateFormatted = grossEndDate.toLocaleDateString("en-CA"); // Format date as 'YYYY-MM-DD'
-  //     const username = localStorage.getItem("username"); // Get logged-in user
-  //
-  //     // Construct URL for the gross payroll preview
-  //     const url = `${process.env.NEXT_PUBLIC_DOMAIN}/generate-pdf/gross-preview/?start_date=${startDateFormatted}&end_date=${endDateFormatted}`;
-  //
-  //     fetch(url)
-  //       .then((res) => {
-  //         if (res.ok) {
-  //           return res.blob(); // Fetch the PDF as a Blob
-  //         }
-  //         throw new Error("Failed to fetch PDF");
-  //       })
-  //       .then((blob) => {
-  //         // Create a URL for the blob to display in the modal
-  //         const pdfURL = window.URL.createObjectURL(blob);
-  //
-  //         // Set the URL for the modal to display the PDF
-  //         setShowPreview(true);
-  //         setPreviewPdfUrl(pdfURL); // You can define a new state for the PDF URL
-  //       })
-  //       .catch((err) => {
-  //         console.error("Error fetching gross payroll preview:", err);
-  //         toast.error("Failed to generate PDF preview.");
-  //       });
-  //   }
-  // };
-
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-10 px-4 sm:px-6 lg:px-10 py-8">
       <div className="wrapper w-full max-w-2xl p-6 sm:p-8 rounded-2xl shadow-lg bg-black/20">
@@ -168,47 +137,6 @@ const ViewGross = ({ session }: { session: SessionStore }) => {
         <h1 className="text-center text-3xl font-semibold text-black/50 mb-6 tracking-[0.1em]">
           GROSS PAYROLL
         </h1>
-
-        {/* <div className="flex gap-4 mb-6">
-          <div className="w-1/2">
-            <label className="block text-sm text-black mb-1 font-bold">
-              End Date
-            </label>
-            <DatePicker
-              selected={grossEndDate}
-              onChange={(date) => setGrossEndDate(date)}
-              dateFormat="MMMM d, yyyy"
-              placeholderText="Select end date"
-              className="w-full px-4 py-2 rounded-md shadow-md text-black bg-white"
-              calendarClassName="rounded-lg"
-              filterDate={(date) => {
-                const today = new Date();
-                const isSaturday = date.getDay() === 6; // Check if it's a Saturday
-                const isPastOrToday = date <= today; // Check if it's not in the future
-                return isSaturday && isPastOrToday; // Only allow past Saturdays or today
-              }}
-            />
-          </div>
-
-          <div className="w-1/2">
-            <label className="block text-sm text-black mb-1 font-bold">
-              Start Date (Automatic)
-            </label>
-            <DatePicker
-              selected={grossStartDate}
-              onChange={(date) => setGrossStartDate(date)}
-              dateFormat="MMMM d, yyyy"
-              placeholderText="Select start date"
-              className="w-full px-4 py-2 rounded-md shadow-md text-black bg-white"
-              calendarClassName="rounded-lg"
-              disabled // Make it disabled since it's auto-calculated
-            />
-          </div>
-
-          <button onClick={clearAll} className="mt-6">
-            <Image src="/Trash.png" alt="Clear Dates" width={30} height={30} />
-          </button>
-        </div> */}
 
         <div className="flex gap-4 mb-6 items-end">
           {/* Start Date Picker */}

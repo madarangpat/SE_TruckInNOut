@@ -8,7 +8,7 @@ from decimal import Decimal
 from io import BytesIO
 
 from django.conf import settings
-from django.contrib.auth import get_user_model, update_session_auth_hash
+from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.core.mail import send_mail
@@ -19,8 +19,8 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.dateformat import DateFormat
-from django.utils.dateparse import parse_date, parse_datetime
-from django.utils.timezone import make_aware, now
+from django.utils.dateparse import parse_datetime
+from django.utils.timezone import  now
 from django.views.decorators.csrf import csrf_exempt
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_LEFT
@@ -29,11 +29,8 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.pdfmetrics import registerFontFamily
 from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.pdfgen import canvas
 from reportlab.platypus import Image as RLImage
 from reportlab.platypus import (
-    KeepTogether,
-    PageBreak,
     Paragraph,
     SimpleDocTemplate,
     Spacer,
@@ -926,6 +923,16 @@ def generate_salary_breakdown_pdf(request):
     start = request.GET.get("start_date")
     end = request.GET.get("end_date")
     logged_in_user = request.user.username
+    
+    def create_table(data, style, hAlign="CENTER"):
+        table = Table(data, repeatRows=1, hAlign=hAlign, splitByRow=True)
+        table.setStyle(style)
+        return table
+    
+    def create_table_totals(data, style, hAlign="LEFT"):
+        table = Table(data, repeatRows=1, hAlign=hAlign, splitByRow=True, colWidths=[200, 200, 200])
+        table.setStyle(style)
+        return table
 
     # Log the received parameters for debugging
     print(
@@ -1107,8 +1114,8 @@ def generate_salary_breakdown_pdf(request):
         )
 
     # Create the trip table and add it to the document
-    trip_table = Table(trip_table_data, repeatRows=1, hAlign="LEFT")
-    trip_table.setStyle(
+    trip_table = create_table(
+        trip_table_data,
         TableStyle(
             [
                 ("BACKGROUND", (0, 0), (-1, 0), colors.lightgreen),
@@ -1117,7 +1124,8 @@ def generate_salary_breakdown_pdf(request):
                 ("ALIGN", (0, 0), (2, -1), "CENTER"),
                 ("ALIGN", (3, 0), (-1, -1), "RIGHT"),
             ]
-        )
+        ),
+        hAlign="LEFT"
     )
     elements.append(Paragraph("<b>TRIP TABLE</b>", left_heading))
     elements.append(trip_table)
@@ -1156,8 +1164,8 @@ def generate_salary_breakdown_pdf(request):
             [k, format_currency(v)] for k, v in monthly_deductions.items()
         ]
         elements.append(Paragraph("<b>MONTHLY DEDUCTIONS</b>", left_heading))
-        monthly_table = Table(monthly_table_data, hAlign="LEFT")
-        monthly_table.setStyle(
+        monthly_table = create_table(
+            monthly_table_data,
             TableStyle(
                 [
                     ("BACKGROUND", (0, 0), (-1, 0), colors.lightcoral),
@@ -1166,7 +1174,8 @@ def generate_salary_breakdown_pdf(request):
                     ("ALIGN", (0, 0), (0, -1), "LEFT"),
                     ("ALIGN", (1, 0), (1, -1), "RIGHT"),
                 ]
-            )
+            ),
+            hAlign="LEFT"
         )
         elements.append(monthly_table)
         elements.append(Spacer(1, 12))
@@ -1184,8 +1193,8 @@ def generate_salary_breakdown_pdf(request):
         [k, format_currency(v)] for k, v in weekly_deductions.items()
     ]
     elements.append(Paragraph("<b>WEEKLY DEDUCTIONS</b>", left_heading))
-    weekly_table = Table(weekly_table_data, hAlign="LEFT")
-    weekly_table.setStyle(
+    weekly_table = create_table(
+        weekly_table_data,
         TableStyle(
             [
                 ("BACKGROUND", (0, 0), (-1, 0), colors.lightcoral),
@@ -1194,7 +1203,8 @@ def generate_salary_breakdown_pdf(request):
                 ("ALIGN", (0, 0), (0, -1), "LEFT"),
                 ("ALIGN", (1, 0), (1, -1), "RIGHT"),
             ]
-        )
+        ),
+        hAlign="LEFT"
     )
     elements.append(weekly_table)
     elements.append(Spacer(1, 12))
@@ -1205,9 +1215,6 @@ def generate_salary_breakdown_pdf(request):
     )
     net_pay = gross_total - total_deductions  # Removed bonuses from the calculation
 
-    # Updated table with larger font size and row height
-    # totals_table_data = [["Gross Salary", "Deductions", "Net Pay"],
-    #                     [f"{gross_total:.2f}", f"{total_deductions:.2f}", f"{net_pay:.2f}"]]
     totals_table_data = [
         ["Gross Salary", "Deductions", "Net Pay"],
         [
@@ -1216,12 +1223,10 @@ def generate_salary_breakdown_pdf(request):
             format_currency(net_pay),
         ],
     ]
-
+    
     # Create Totals Table and adjust style
-    totals_table = Table(
-        totals_table_data, hAlign="LEFT", colWidths=[200, 200, 200]
-    )  # Adjust column widths
-    totals_table.setStyle(
+    totals_table = create_table_totals(
+        totals_table_data,
         TableStyle(
             [
                 (
@@ -1304,7 +1309,6 @@ def generate_salary_breakdown_pdf(request):
             "Content-Disposition": f'attachment; filename="{username}_salary_breakdown.pdf"'
         },
     )
-
 
 # ==================================================================================================================================================================================
 @api_view(["GET"])
@@ -1407,12 +1411,12 @@ def generate_gross_payroll_pdf(request):
             ["CHARGES", format_currency(totals.total_charges)],
             ["OTHERS", format_currency(totals.total_others)],
             [
-                "SSS (including loan)",
+                "SSS (w/ loan)",
                 format_currency(totals.total_sss + totals.total_sss_loan),
             ],
             ["PHILHEALTH", format_currency(totals.total_philhealth)],
             [
-                "PAG-IBIG (including loan)",
+                "PAG-IBIG (w/ loan)",
                 format_currency(totals.total_pagibig + totals.total_pagibig_loan),
             ],
             ["BASE SALARY", format_currency(totals.total_base_salary)],
@@ -1437,7 +1441,8 @@ def generate_gross_payroll_pdf(request):
     row_buffer = []
     for idx, totals in enumerate(existing_totals, 1):
         completed_trips = Trip.objects.filter(
-            employee=totals.employee, trip_status="Confirmed"
+            employee=totals.employee, trip_status="Confirmed",
+            end_date__range=(start_date, end_date)
         ).count()
         content = [
             Paragraph(
@@ -1465,15 +1470,18 @@ def generate_gross_payroll_pdf(request):
             elements.append(Spacer(1, 25))
             row_buffer = []
 
-    # Footer
+    # Footer (this will only be added on the first page)
     generated_at = datetime.now().strftime("%B %d, %Y at %I:%M %p")
-
     footer_text = f"<i>Generated on {generated_at} by {logged_in_user}</i>"
 
-    elements.append(Spacer(1, 6))
-    elements.append(Paragraph(footer_text, styles["Normal"]))
+    def footer(canvas, doc):
+        canvas.setFont("Helvetica-Oblique", 16)
+        canvas.drawString(
+            30, 30, footer_text
+        )  # Position the footer at the bottom of the page
 
-    doc.build(elements)
+    # Build the document with the footer on the first page only
+    doc.build(elements, onFirstPage=footer)
     buffer.seek(0)
 
     return HttpResponse(
@@ -1481,6 +1489,7 @@ def generate_gross_payroll_pdf(request):
         content_type="application/pdf",
         headers={"Content-Disposition": 'attachment; filename="gross_payroll.pdf"'},
     )
+
 
 
 # ==================================================================================================================================================================================
@@ -1552,32 +1561,35 @@ class RegisterTripView(APIView):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def priority_queue_view(request):
-    # Get start and end of current week (Monday to Sunday)
-    today = datetime.now().date()
-    start_of_week = today - timedelta(days=today.weekday())  # Monday
-    end_of_week = start_of_week + timedelta(days=6)  # Sunday
+    # Get current date
+    today = datetime.today()
 
-    # Convert to datetime if your Trip.end_date is datetime-aware
-    start_of_week_dt = make_aware(datetime.combine(start_of_week, datetime.min.time()))
-    end_of_week_dt = make_aware(datetime.combine(end_of_week, datetime.max.time()))
+    # Find the start of the week (Saturday)
+    start_of_week = today - timedelta(days=today.weekday() + 2)  # Saturday
+    # Find the end of the week (Friday)
+    end_of_week = start_of_week + timedelta(days=6)  # Friday
 
+    # Format the dates as required for comparison
+    start_of_week = start_of_week.date()  # Only the date part
+    end_of_week = end_of_week.date()  # Only the date part
+
+    # Retrieve all employees who are Drivers or Helpers
     employees = Employee.objects.filter(user__employee_type__in=["Driver", "Helper"])
     employee_data = []
 
     for employee in employees:
-        # Find trips where this employee is either the driver or helper and ended this week
-        weekly_trips = Trip.objects.filter(
-            end_date__range=(start_of_week_dt, end_of_week_dt), trip_status="Confirmed"
-        ).filter(Q(employee=employee) | Q(helper=employee) | Q(helper2=employee))
-
-        # If no trips are found for this employee, skip further processing
-        if not weekly_trips:
-            continue
+        # Find trips where this employee is either the driver or helper, regardless of date
+        all_trips = Trip.objects.filter(
+            Q(employee=employee) | Q(helper=employee) | Q(helper2=employee),
+            trip_status="Confirmed",  # Only consider confirmed trips
+            end_date__gte=start_of_week,  # Filter trips that end after or on the start of the week
+            end_date__lte=end_of_week  # Filter trips that end before or on the end of the week
+        )
 
         # Calculate total salary based on employee type
         if employee.user.employee_type == "Driver":
             total_salary = (
-                weekly_trips.aggregate(total_salary=Sum(F("driver_base_salary")))[
+                all_trips.aggregate(total_salary=Sum(F("driver_base_salary")))[
                     "total_salary"
                 ]
                 or 0
@@ -1585,26 +1597,24 @@ def priority_queue_view(request):
             salary_field = "driver_base_salary"
         else:
             total_salary = (
-                weekly_trips.aggregate(total_salary=Sum(F("helper_base_salary")))[
+                all_trips.aggregate(total_salary=Sum(F("helper_base_salary")))[
                     "total_salary"
                 ]
                 or 0
             )
             salary_field = "helper_base_salary"
 
-        # Add serialized data including the total salary
+        # Add serialized data including the total salary, completed trip count, and employee info
         serialized = EmployeeSerializer(employee).data
         serialized["base_salary"] = total_salary
-        serialized["salary_field"] = (
-            salary_field  # Field to identify the type of salary
-        )
+        serialized["salary_field"] = salary_field  # Field to identify the type of salary
+
         employee_data.append(serialized)
 
-    # Sort employees by total base salary (ascending, prioritize lower earners)
-    sorted_employees = sorted(employee_data, key=lambda e: e["base_salary"])
+    # Sort employees by base salary (highest to lowest)
+    sorted_employees = sorted(employee_data, key=lambda e: e["base_salary"], reverse=True)
 
     return Response(sorted_employees)
-
 
 # ==================================================================================================================================================================================
 # DELETE VEHICLES
@@ -2209,7 +2219,8 @@ def change_password(request):
     return Response(
         {"message": "Password updated successfully."}, status=status.HTTP_200_OK
     )
-
+    
+# ==============================================================================================================================
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def generate_salary_breakdown_pdf_emp(request):
@@ -2223,6 +2234,16 @@ def generate_salary_breakdown_pdf_emp(request):
     username = request.GET.get("employee")
     start = request.GET.get("start_date")
     end = request.GET.get("end_date")
+    
+    def create_table(data, style, hAlign="CENTER"):
+        table = Table(data, repeatRows=1, hAlign=hAlign, splitByRow=True)
+        table.setStyle(style)
+        return table
+    
+    def create_table_totals(data, style, hAlign="LEFT"):
+        table = Table(data, repeatRows=1, hAlign=hAlign, splitByRow=True, colWidths=[200, 200, 200])
+        table.setStyle(style)
+        return table
     
     # Ensure employee and date range are provided
     if not all([username, start, end]):
@@ -2370,8 +2391,8 @@ def generate_salary_breakdown_pdf_emp(request):
             ]
         )
 
-    trip_table = Table(trip_table_data, repeatRows=1, hAlign="LEFT")
-    trip_table.setStyle(
+    trip_table = create_table(
+        trip_table_data,
         TableStyle(
             [
                 ("BACKGROUND", (0, 0), (-1, 0), colors.lightgreen),
@@ -2380,7 +2401,8 @@ def generate_salary_breakdown_pdf_emp(request):
                 ("ALIGN", (0, 0), (-1, -1), "CENTER"),
                 ("ALIGN", (3, 0), (-1, -1), "RIGHT"),
             ]
-        )
+        ),
+        hAlign="LEFT"
     )
     elements.append(Paragraph("<b>TRIP TABLE</b>", left_heading))
     elements.append(trip_table)
@@ -2419,8 +2441,8 @@ def generate_salary_breakdown_pdf_emp(request):
             [k, format_currency(v)] for k, v in monthly_deductions.items()
         ]
         elements.append(Paragraph("<b>MONTHLY DEDUCTIONS</b>", left_heading))
-        monthly_table = Table(monthly_table_data, hAlign="LEFT")
-        monthly_table.setStyle(
+        monthly_table = create_table(
+            monthly_table_data,
             TableStyle(
                 [
                     ("BACKGROUND", (0, 0), (-1, 0), colors.lightcoral),
@@ -2429,7 +2451,8 @@ def generate_salary_breakdown_pdf_emp(request):
                     ("ALIGN", (0, 0), (0, -1), "LEFT"),
                     ("ALIGN", (1, 0), (1, -1), "RIGHT"),
                 ]
-            )
+            ),
+            hAlign="LEFT"
         )
         elements.append(monthly_table)
         elements.append(Spacer(1, 12))
@@ -2447,8 +2470,8 @@ def generate_salary_breakdown_pdf_emp(request):
         [k, format_currency(v)] for k, v in weekly_deductions.items()
     ]
     elements.append(Paragraph("<b>WEEKLY DEDUCTIONS</b>", left_heading))
-    weekly_table = Table(weekly_table_data, hAlign="LEFT")
-    weekly_table.setStyle(
+    weekly_table = create_table(
+        weekly_table_data,
         TableStyle(
             [
                 ("BACKGROUND", (0, 0), (-1, 0), colors.lightcoral),
@@ -2457,7 +2480,8 @@ def generate_salary_breakdown_pdf_emp(request):
                 ("ALIGN", (0, 0), (0, -1), "LEFT"),
                 ("ALIGN", (1, 0), (1, -1), "RIGHT"),
             ]
-        )
+        ),
+        hAlign="LEFT"
     )
     elements.append(weekly_table)
     elements.append(Spacer(1, 12))
@@ -2471,10 +2495,8 @@ def generate_salary_breakdown_pdf_emp(request):
         [format_currency(gross_total), format_currency(total_deductions), format_currency(net_pay)],
     ]
 
-    totals_table = Table(
-        totals_table_data, hAlign="LEFT", colWidths=[200, 200, 200]        
-    )
-    totals_table.setStyle(
+    totals_table = create_table_totals(
+        totals_table_data,        
         TableStyle(
             [
                 (

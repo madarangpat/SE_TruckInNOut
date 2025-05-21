@@ -48,7 +48,7 @@ const PreviewReportG: React.FC<Props> = ({ session, start, end, onClose }) => {
     if (start && end) {
       fetchPDF();
     }
-  }, [start, end]);
+  }, [start, end, session.access]);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
