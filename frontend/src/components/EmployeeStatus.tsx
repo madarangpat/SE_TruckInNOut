@@ -118,10 +118,10 @@ const EmployeeStatus = () => {
               className="p-2 border-b border-gray-600 text-white"
             >
               <span className="block font-semibold">
-                {emp.name} ({emp.user.username})
+                {emp.user.username}
               </span>
-              <span className="text-xs italic text-gray-300">
-                Type: {emp.user.employee_type}
+              <span className="text-xs text-gray-300">
+                {emp.user.employee_type}
               </span>
               <div className="flex justify-between items-center mt-1">
                 <span className="text-xs bg-black/25 text-white px-2 py-1 rounded-lg">

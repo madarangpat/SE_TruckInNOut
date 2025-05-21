@@ -8,6 +8,10 @@ interface Employee {
   name: string;
   base_salary: number; // Total salary value for either driver or helper
   salary_field: string; // Identifies if it’s a driver or helper salary
+  user: {
+    username: string;
+    employee_type: string;
+  };
 }
 
 const PriorityQueue = () => {
@@ -55,9 +59,14 @@ const PriorityQueue = () => {
         {employees.map((employee) => (
           <div
             key={employee.id}
-            className="flex justify-between items-center p-2 border-b border-gray-600 text-white"
+            className="p-2 border-b border-gray-600 text-white"
           >
-            <span>{employee.name}</span>
+            <span className="block font-semibold">
+              {employee.user.username}
+            </span>
+            <span className="text-xs text-gray-300">
+                {employee.user.employee_type}{"  "} 
+            </span>
             <span className="text-xs bg-black/25 text-white px-2 py-1 rounded-lg">
               ₱{" "}
               {employee.base_salary?.toLocaleString("en-PH", {
