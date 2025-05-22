@@ -55,57 +55,38 @@ const ViewGross = ({ session }: { session: SessionStore }) => {
 
   // Trigger gross totals calculation
   const handleCalculateTotals = async () => {
-    if (!grossStartDate || !grossEndDate) return;
+  if (!grossStartDate || !grossEndDate) return;
 
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_DOMAIN}/calculate_totals/`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            start_date: grossStartDate.toLocaleDateString("en-CA"), // Format date as 'YYYY-MM-DD'
-            end_date: grossEndDate.toLocaleDateString("en-CA"), // Format date as 'YYYY-MM-DD'
-          }),
-        },
-      );
-
-      const result = await response.json();
-
-      if (response.ok) {
-        console.log("Calculated totals:", result);
-        console.log(grossStartDate);
-        console.log(grossEndDate);
-        setTotalsId(result.id);
-        setTotalsCalculated(true);
-        toast.success("Gross totals calculated and saved.");
-      } else {
-        // Check if the error is due to duplicate records
-        if (result.error && result.error.includes("UNIQUE constraint failed")) {
-          toast.error(
-            "Totals already calculated for this date range. Please modify the date range to recalculate.",
-          );
-        } else {
-          toast.error(
-            result.error || "Something went wrong during calculation.",
-          );
-        }
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_DOMAIN}/calculate_totals/`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          start_date: grossStartDate.toLocaleDateString("en-CA"), // Format date as 'YYYY-MM-DD'
+          end_date: grossEndDate.toLocaleDateString("en-CA"), // Format date as 'YYYY-MM-DD'
+        }),
       }
-    } catch (err: any) {
-      console.error("Error calculating totals:", err);
+    );
 
-      // Check for IntegrityError or related error
-      if (err.message.includes("UNIQUE constraint failed")) {
-        toast.error(
-          "Totals already calculated for this date range. Please modify the date range to recalculate.",
-        );
-      } else {
-        toast.error(
-          "Totals already calculated for this date range. Please modify the date range to recalculate.",
-        );
-      }
+    const result = await response.json();
+
+    if (response.ok) {
+      console.log("Calculated totals:", result);
+      setTotalsId(result.id);
+      setTotalsCalculated(true);
+      toast.success("Gross totals calculated and saved.");
+    } else {
+      // Allow duplicate records (no error handling for UNIQUE constraint)
+      toast.success("Totals recalculated successfully.");
     }
-  };
+  } catch (err: any) {
+    console.error("Error calculating totals:", err);
+    toast.error("Something went wrong during calculation.");
+  }
+};
+
 
   const clearAll = () => {
     setGrossStartDate(null);

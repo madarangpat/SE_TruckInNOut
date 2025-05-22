@@ -241,7 +241,9 @@ const SalaryBreakdownClient = ({ session }: { session: SessionStore }) => {
                     const calculatedEnd = new Date(date);
                     calculatedEnd.setDate(calculatedEnd.getDate() + 6); // Saturday + 6 = Friday
 
-                    setStartDate(date);
+                    const localDate = new Date(date); // Ensure it's in the local time zone
+      localDate.setHours(0, 0, 0, 0); // Resetting the time to midnight
+      setStartDate(localDate);
 
                     // If calculated end date is in the future, set end date to today
                     if (calculatedEnd > today) {
