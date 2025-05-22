@@ -1181,7 +1181,7 @@ def generate_salary_breakdown_pdf(request):
 
     # Weekly Deductions
     weekly_deductions = {
-        "Bale": sum(s["salary"].bale for s in data if s["salary"]),
+        "Bale": next((trip["salary"].bale for trip in data if trip.get("salary")), 0),
         "Cash Advance": sum(s["salary"].cash_advance for s in data if s["salary"]),
         "Cash Bond": sum(s["salary"].cash_bond for s in data if s["salary"]),
         "Charges": sum(s["salary"].charges for s in data if s["salary"]),
@@ -2479,7 +2479,7 @@ def generate_salary_breakdown_pdf_emp(request):
 
     # Weekly Deductions
     weekly_deductions = {
-        "Bale": sum(s["salary"].bale for s in data if s["salary"]),
+        "Bale": next((trip["salary"].bale for trip in data if trip.get("salary")), 0),
         "Cash Advance": sum(s["salary"].cash_advance for s in data if s["salary"]),
         "Cash Bond": sum(s["salary"].cash_bond for s in data if s["salary"]),
         "Charges": sum(s["salary"].charges for s in data if s["salary"]),
