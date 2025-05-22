@@ -1,17 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-
-// Define the User type
-interface User {
-  username: string;
-  employee_type: string; // "Driver", "Helper", etc.
-}
-
-// Define the Employee type
-interface Employee {
-  employee_id: number;
-  user: User; // The employee object contains the user object
-}
+import { Employee } from "@/types";
 
 interface DriverDropdownProps {
   onSelect: (result: {
@@ -22,7 +11,7 @@ interface DriverDropdownProps {
 const DriverDropdown: React.FC<DriverDropdownProps> = ({ onSelect }) => {
   const [employees, setEmployees] = useState<Employee[]>([]); // Using Employee[] type for the state
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(
-    null
+    null,
   );
   const [employeeDropdownOpen, setEmployeeDropdownOpen] = useState(false);
 
@@ -31,15 +20,20 @@ const DriverDropdown: React.FC<DriverDropdownProps> = ({ onSelect }) => {
     const fetchEmployees = async () => {
       try {
         const response = await axios.get(
-          `${process.env.NEXT_PUBLIC_DOMAIN}/employees/` 
+          `${process.env.NEXT_PUBLIC_DOMAIN}/priority-queue/`,
         ); // Adjust the API URL
         const data: Employee[] = response.data; // The response is typed as Employee[]
+        console.log(data);
 
         // Filter employees with employee_type "Driver"
         const filteredEmployees = data.filter(
-          (emp) => emp.user.employee_type === "Driver"
+          (emp) => emp.user.employee_type === "Driver",
         );
-        setEmployees(filteredEmployees);
+        const sortedEmployees = filteredEmployees.sort(
+          (a, b) => a.base_salary - b.base_salary,
+        );
+
+        setEmployees(sortedEmployees);
       } catch (error) {
         console.error("Error fetching employees:", error);
       }
@@ -67,7 +61,7 @@ const DriverDropdown: React.FC<DriverDropdownProps> = ({ onSelect }) => {
         <div className="absolute w-full bg-zinc-600 text-white mt-1 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
           <button
             onClick={() => {
-              setSelectedEmployee(null);  // Reset selection (opt-out choice)
+              setSelectedEmployee(null); // Reset selection (opt-out choice)
               setEmployeeDropdownOpen(false);
             }}
             className="w-full text-left px-4 py-2 hover:bg-black/40 uppercase tracking-widest text-sm"

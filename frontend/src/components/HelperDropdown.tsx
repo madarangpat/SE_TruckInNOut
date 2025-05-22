@@ -1,17 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-
-// Define the User type
-interface User {
-  username: string;
-  employee_type: string; // "Driver", "Helper", etc.
-}
-
-// Define the Employee type
-interface Employee {
-  employee_id: number;
-  user: User; // The employee object contains the user object
-}
+import { Employee } from "@/types";
 
 interface HelperDropdownProps {
   onSelect: (result: {
@@ -22,7 +11,7 @@ interface HelperDropdownProps {
 const HelperDropdown: React.FC<HelperDropdownProps> = ({ onSelect }) => {
   const [employees, setEmployees] = useState<Employee[]>([]); // Using Employee[] type for the state
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(
-    null
+    null,
   );
   const [employeeDropdownOpen, setEmployeeDropdownOpen] = useState(false);
 
@@ -31,15 +20,19 @@ const HelperDropdown: React.FC<HelperDropdownProps> = ({ onSelect }) => {
     const fetchEmployees = async () => {
       try {
         const response = await axios.get(
-          `${process.env.NEXT_PUBLIC_DOMAIN}/employees/` // Adjust the API URL
+          `${process.env.NEXT_PUBLIC_DOMAIN}/priority-queue/`,
         );
         const data: Employee[] = response.data; // The response is typed as Employee[]
 
-        // Filter employees with employee_type "Helper"
+        // Filter employees with employee_type "Driver"
         const filteredEmployees = data.filter(
-          (emp) => emp.user.employee_type === "Helper"
+          (emp) => emp.user.employee_type === "Helper",
         );
-        setEmployees(filteredEmployees);
+        const sortedEmployees = filteredEmployees.sort(
+          (a, b) => a.base_salary - b.base_salary,
+        );
+
+        setEmployees(sortedEmployees);
       } catch (error) {
         console.error("Error fetching employees:", error);
       }
@@ -99,4 +92,3 @@ const HelperDropdown: React.FC<HelperDropdownProps> = ({ onSelect }) => {
 };
 
 export default HelperDropdown;
-
