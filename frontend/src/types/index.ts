@@ -1,4 +1,4 @@
-type BaseUser = {
+export type BaseUser = {
   id: string;
   username: string;
   role: "super_admin" | "admin" | "employee" | "";
@@ -6,7 +6,7 @@ type BaseUser = {
   employee_type?: "Driver" | "Helper" | "" | undefined;
 };
 
-type User = BaseUser & {
+export type User = BaseUser & {
   first_name?: string;
   last_name?: string;
   cellphone_no?: string;
@@ -16,9 +16,10 @@ type User = BaseUser & {
   sss_no?: string;
   license_no?: string;
   [key: string]: any;
+  employee_type: string;
 };
 
-type SalConfig = {
+export type SalConfig = {
   id?: number;
   sss?: number;
   philhealth?: number;
@@ -26,14 +27,14 @@ type SalConfig = {
   pagibig_contribution?: number;
 };
 
-type Vehicle = {
+export type Vehicle = {
   plate_number?: number;
   vehicle_type?: string;
   is_company_owned?: boolean;
   subcon_name?: string;
 };
 
-type Trip = {
+export type Trip = {
   trip_id: number;
   full_destination?: string;
   client_info: string;
@@ -54,21 +55,17 @@ type Trip = {
   } | null;
 };
 
-type Employee = {
+export type Employee = {
   employee_id: number;
   completed_trip_count?: number;
   payment_status?: string;
   name?: string;
-  user: {
-    id: number;
-    username: string;
-    profile_image: string | null;
-    role: string;
-  };
+  user: User;
+  base_salary: number;
+  salary_field: string;
 };
 
-type EmployeeTripSalary = {
+export type EmployeeTripSalary = {
   trip: Trip;
   salary: SalConfig;
 };
-
