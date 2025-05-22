@@ -150,19 +150,16 @@ const ViewGross = ({ session }: { session: SessionStore }) => {
                 if (date) {
                   const today = new Date();
                   const calculatedEnd = new Date(date);
-                  calculatedEnd.setDate(calculatedEnd.getDate() + 6); // Saturday + 6 = Friday
-
-                  if (calculatedEnd > today) {
-                    toast.warning(
-                      "End date exceeds today. Please select an earlier Saturday.",
-                    );
-                    setGrossStartDate(null);
-                    setGrossEndDate(null);
-                    return;
-                  }
+                  calculatedEnd.setDate(calculatedEnd.getDate() + 6); // 7-day range
 
                   setGrossStartDate(date);
-                  setGrossEndDate(calculatedEnd);
+
+                  if (calculatedEnd > today) {
+                    toast.info("End date adjusted to today since it exceeds the current date.");
+                    setGrossEndDate(today);
+                  } else {
+                    setGrossEndDate(calculatedEnd);
+                  }
                 }
               }}
               dateFormat="MMMM d, yyyy"

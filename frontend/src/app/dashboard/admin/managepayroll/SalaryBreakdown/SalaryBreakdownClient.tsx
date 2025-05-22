@@ -241,16 +241,15 @@ const SalaryBreakdownClient = ({ session }: { session: SessionStore }) => {
                     const calculatedEnd = new Date(date);
                     calculatedEnd.setDate(calculatedEnd.getDate() + 6); // Saturday + 6 = Friday
 
-                    // Check if calculated end date is in the future
-                    if (calculatedEnd > today) {
-                      toast.warning("End date exceeds today. Please select an earlier Saturday.");
-                      setStartDate(null);
-                      setEndDate(null);
-                      return;
-                    }
-
                     setStartDate(date);
-                    setEndDate(calculatedEnd);
+
+                    // If calculated end date is in the future, set end date to today
+                    if (calculatedEnd > today) {
+                      toast.info("End date adjusted to today since it exceeds the current date.");
+                      setEndDate(today);
+                    } else {
+                      setEndDate(calculatedEnd);
+                    }
                   }
                 }}
                 dateFormat="MMMM d, yyyy"
@@ -258,7 +257,7 @@ const SalaryBreakdownClient = ({ session }: { session: SessionStore }) => {
                 className="w-full px-4 py-2 rounded-md shadow-md text-black cursor-pointer bg-white"
                 filterDate={(date) => {
                   const today = new Date();
-                  const isSaturday = date.getDay() === 6; // 6 = Saturday
+                  const isSaturday = date.getDay() === 6;
                   const isPastOrToday = date <= today;
                   return isSaturday && isPastOrToday;
                 }}

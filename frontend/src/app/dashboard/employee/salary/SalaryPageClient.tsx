@@ -34,19 +34,16 @@ const SalaryPageClient = ({ user }: { user: User }) => {
                 if (date) {
                   const today = new Date();
                   const calculatedEnd = new Date(date);
-                  calculatedEnd.setDate(calculatedEnd.getDate() + 6);
-
-                  if (calculatedEnd > today) {
-                    toast.warning(
-                      "End date exceeds today. Please select an earlier Saturday."
-                    );
-                    setStartDate(null);
-                    setEndDate(null);
-                    return;
-                  }
+                  calculatedEnd.setDate(calculatedEnd.getDate() + 6); // 7-day window
 
                   setStartDate(date);
-                  setEndDate(calculatedEnd);
+
+                  if (calculatedEnd > today) {
+                    toast.info("End date adjusted to today since it exceeds the current date.");
+                    setEndDate(today);
+                  } else {
+                    setEndDate(calculatedEnd);
+                  }
                 }
               }}
               dateFormat="MMMM d, yyyy"
