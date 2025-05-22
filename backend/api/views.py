@@ -7,6 +7,7 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from io import BytesIO
 
+from api.models import Employee, EmployeeLocation
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
@@ -19,24 +20,18 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.dateformat import DateFormat
-from django.utils.dateparse import parse_datetime
-from django.utils.timezone import  now
+from django.utils.dateparse import parse_date, parse_datetime
+from django.utils.timezone import now
 from django.views.decorators.csrf import csrf_exempt
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_LEFT
 from reportlab.lib.pagesizes import landscape, letter
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.pdfmetrics import registerFontFamily
+from reportlab.pdfbase.pdfmetrics import parseAFMFile, registerFontFamily
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import Image as RLImage
-from reportlab.platypus import (
-    Paragraph,
-    SimpleDocTemplate,
-    Spacer,
-    Table,
-    TableStyle,
-)
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 from rest_framework import generics, permissions, status, viewsets
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.generics import RetrieveAPIView
@@ -45,8 +40,6 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.views import TokenObtainPairView
-
-from api.models import Employee, EmployeeLocation
 
 from .models import (
     Administrator,
@@ -923,14 +916,20 @@ def generate_salary_breakdown_pdf(request):
     start = request.GET.get("start_date")
     end = request.GET.get("end_date")
     logged_in_user = request.user.username
-    
+
     def create_table(data, style, hAlign="CENTER"):
         table = Table(data, repeatRows=1, hAlign=hAlign, splitByRow=True)
         table.setStyle(style)
         return table
-    
+
     def create_table_totals(data, style, hAlign="LEFT"):
-        table = Table(data, repeatRows=1, hAlign=hAlign, splitByRow=True, colWidths=[200, 200, 200])
+        table = Table(
+            data,
+            repeatRows=1,
+            hAlign=hAlign,
+            splitByRow=True,
+            colWidths=[200, 200, 200],
+        )
         table.setStyle(style)
         return table
 
@@ -984,9 +983,9 @@ def generate_salary_breakdown_pdf(request):
         rightMargin=30,
         bottomMargin=30,
         title=f"Salary Report - {username}",  # Set the PDF document title
-        author="Big C Trucking Services",     # Set the author
+        author="Big C Trucking Services",  # Set the author
         subject=f"Salary breakdown for {username} from {start_date} to {end_date}",  # Set subject
-        creator="Big C Trucking Services"  # Set creator
+        creator="Big C Trucking Services",  # Set creator
     )
     styles = getSampleStyleSheet()
     normal = styles["Normal"]
@@ -1125,7 +1124,7 @@ def generate_salary_breakdown_pdf(request):
                 ("ALIGN", (3, 0), (-1, -1), "RIGHT"),
             ]
         ),
-        hAlign="LEFT"
+        hAlign="LEFT",
     )
     elements.append(Paragraph("<b>TRIP TABLE</b>", left_heading))
     elements.append(trip_table)
@@ -1175,14 +1174,14 @@ def generate_salary_breakdown_pdf(request):
                     ("ALIGN", (1, 0), (1, -1), "RIGHT"),
                 ]
             ),
-            hAlign="LEFT"
+            hAlign="LEFT",
         )
         elements.append(monthly_table)
         elements.append(Spacer(1, 12))
 
     # Weekly Deductions
     weekly_deductions = {
-        "Bale": sum(s["salary"].bale for s in data if s["salary"]),
+        "Bale": next((trip["salary"].bale for trip in data if trip.get("salary")), 0),
         "Cash Advance": sum(s["salary"].cash_advance for s in data if s["salary"]),
         "Cash Bond": sum(s["salary"].cash_bond for s in data if s["salary"]),
         "Charges": sum(s["salary"].charges for s in data if s["salary"]),
@@ -1204,7 +1203,7 @@ def generate_salary_breakdown_pdf(request):
                 ("ALIGN", (1, 0), (1, -1), "RIGHT"),
             ]
         ),
-        hAlign="LEFT"
+        hAlign="LEFT",
     )
     elements.append(weekly_table)
     elements.append(Spacer(1, 12))
@@ -1223,7 +1222,7 @@ def generate_salary_breakdown_pdf(request):
             format_currency(net_pay),
         ],
     ]
-    
+
     # Create Totals Table and adjust style
     totals_table = create_table_totals(
         totals_table_data,
@@ -1281,7 +1280,7 @@ def generate_salary_breakdown_pdf(request):
                     10,
                 ),  # Add padding to the right side of each cell
             ]
-        )
+        ),
     )
 
     # Add the Totals Table to the document
@@ -1309,6 +1308,7 @@ def generate_salary_breakdown_pdf(request):
             "Content-Disposition": f'attachment; filename="{username}_salary_breakdown.pdf"'
         },
     )
+
 
 # ==================================================================================================================================================================================
 @api_view(["GET"])
@@ -1352,9 +1352,9 @@ def generate_gross_payroll_pdf(request):
         rightMargin=30,
         bottomMargin=30,
         title=f"Gross Salary Report_{start_date}_{end_date}",  # Set the PDF document title
-        author="Big C Trucking Services",     # Set the author
+        author="Big C Trucking Services",  # Set the author
         subject=f"Gross Salary Report from {start_date} to {end_date}",  # Set subject
-        creator="Big C Trucking Services"  # Set creator
+        creator="Big C Trucking Services",  # Set creator
     )
 
     styles = getSampleStyleSheet()
@@ -1441,12 +1441,14 @@ def generate_gross_payroll_pdf(request):
     row_buffer = []
     for idx, totals in enumerate(existing_totals, 1):
         completed_trips = Trip.objects.filter(
-            employee=totals.employee, trip_status="Confirmed",
-            end_date__range=(start_date, end_date)
+            employee=totals.employee,
+            trip_status="Confirmed",
+            end_date__range=(start_date, end_date),
         ).count()
         content = [
             Paragraph(
-                f"<b>EMPLOYEE:</b> {totals.employee.user.username.upper()} | TRIPS: {completed_trips}", left_heading
+                f"<b>EMPLOYEE:</b> {totals.employee.user.username.upper()} | TRIPS: {completed_trips}",
+                left_heading,
             ),
             create_employee_table(totals),
         ]
@@ -1489,7 +1491,6 @@ def generate_gross_payroll_pdf(request):
         content_type="application/pdf",
         headers={"Content-Disposition": 'attachment; filename="gross_payroll.pdf"'},
     )
-
 
 
 # ==================================================================================================================================================================================
@@ -1583,7 +1584,7 @@ def priority_queue_view(request):
             Q(employee=employee) | Q(helper=employee) | Q(helper2=employee),
             trip_status="Confirmed",  # Only consider confirmed trips
             end_date__gte=start_of_week,  # Filter trips that end after or on the start of the week
-            end_date__lte=end_of_week  # Filter trips that end before or on the end of the week
+            end_date__lte=end_of_week,  # Filter trips that end before or on the end of the week
         )
 
         # Calculate total salary based on employee type
@@ -1607,14 +1608,19 @@ def priority_queue_view(request):
         # Add serialized data including the total salary, completed trip count, and employee info
         serialized = EmployeeSerializer(employee).data
         serialized["base_salary"] = total_salary
-        serialized["salary_field"] = salary_field  # Field to identify the type of salary
+        serialized["salary_field"] = (
+            salary_field  # Field to identify the type of salary
+        )
 
         employee_data.append(serialized)
 
     # Sort employees by base salary (highest to lowest)
-    sorted_employees = sorted(employee_data, key=lambda e: e["base_salary"], reverse=True)
+    sorted_employees = sorted(
+        employee_data, key=lambda e: e["base_salary"], reverse=True
+    )
 
     return Response(sorted_employees)
+
 
 # ==================================================================================================================================================================================
 # DELETE VEHICLES
@@ -1860,8 +1866,8 @@ def completed_trips_view(request):
         return JsonResponse({"error": "Missing query parameters"}, status=400)
 
     try:
-        start_date = parse_datetime(start_date)
-        end_date = parse_datetime(end_date)
+        start_date = parse_date(start_date)
+        end_date = parse_date(end_date)
     except Exception:
         return JsonResponse({"error": "Invalid date format"}, status=400)
 
@@ -2219,7 +2225,8 @@ def change_password(request):
     return Response(
         {"message": "Password updated successfully."}, status=status.HTTP_200_OK
     )
-    
+
+
 # ==============================================================================================================================
 @api_view(["GET"])
 @permission_classes([AllowAny])
@@ -2234,17 +2241,23 @@ def generate_salary_breakdown_pdf_emp(request):
     username = request.GET.get("employee")
     start = request.GET.get("start_date")
     end = request.GET.get("end_date")
-    
+
     def create_table(data, style, hAlign="CENTER"):
         table = Table(data, repeatRows=1, hAlign=hAlign, splitByRow=True)
         table.setStyle(style)
         return table
-    
+
     def create_table_totals(data, style, hAlign="LEFT"):
-        table = Table(data, repeatRows=1, hAlign=hAlign, splitByRow=True, colWidths=[200, 200, 200])
+        table = Table(
+            data,
+            repeatRows=1,
+            hAlign=hAlign,
+            splitByRow=True,
+            colWidths=[200, 200, 200],
+        )
         table.setStyle(style)
         return table
-    
+
     # Ensure employee and date range are provided
     if not all([username, start, end]):
         return Response({"error": "Missing parameters"}, status=400)
@@ -2253,7 +2266,9 @@ def generate_salary_breakdown_pdf_emp(request):
         start_date = datetime.strptime(start, "%Y-%m-%d").date()
         end_date = datetime.strptime(end, "%Y-%m-%d").date()
     except ValueError:
-        return Response({"error": "Invalid date format. Expected YYYY-MM-DD."}, status=400)
+        return Response(
+            {"error": "Invalid date format. Expected YYYY-MM-DD."}, status=400
+        )
 
     # Retrieve the employee based on the username
     try:
@@ -2265,11 +2280,13 @@ def generate_salary_breakdown_pdf_emp(request):
     trips = Trip.objects.filter(
         Q(employee=employee) | Q(helper=employee) | Q(helper2=employee),
         end_date__range=(start_date, end_date),
-        trip_status="Confirmed"  # Ensure the trip is confirmed
+        trip_status="Confirmed",  # Ensure the trip is confirmed
     )
 
     if not trips.exists():
-        return Response({"error": "No completed trips found in this range."}, status=400)
+        return Response(
+            {"error": "No completed trips found in this range."}, status=400
+        )
 
     data = [{"trip": t, "salary": Salary.objects.filter(trip=t).first()} for t in trips]
 
@@ -2283,9 +2300,9 @@ def generate_salary_breakdown_pdf_emp(request):
         rightMargin=30,
         bottomMargin=30,
         title=f"Salary Report - {username}",  # Set the PDF document title
-        author="Big C Trucking Services",     # Set the author
+        author="Big C Trucking Services",  # Set the author
         subject=f"Salary breakdown for {username} from {start_date} to {end_date}",  # Set subject
-        creator="Big C Trucking"  # Set creator
+        creator="Big C Trucking",  # Set creator
     )
 
     styles = getSampleStyleSheet()
@@ -2294,7 +2311,7 @@ def generate_salary_breakdown_pdf_emp(request):
     left_align = ParagraphStyle(
         name="LeftAlign",
         parent=styles["Normal"],
-        alignment=TA_LEFT, 
+        alignment=TA_LEFT,
         fontName="Helvetica-Bold",
     )
     left_heading = ParagraphStyle(
@@ -2330,30 +2347,33 @@ def generate_salary_breakdown_pdf_emp(request):
     elements.append(Paragraph(f"<b>Salary Report for {username}</b>", left_align))
     elements.append(Spacer(1, 6))
     elements.append(
-        Paragraph(f"<b>Date Range:</b> {formatted_start} to {formatted_end}", left_align)
+        Paragraph(
+            f"<b>Date Range:</b> {formatted_start} to {formatted_end}", left_align
+        )
     )
     elements.append(Spacer(1, 12))
 
     # Add the trip data table
     trip_table_data = [
         [
-            "Trip ID", 
-            "Total Drops", 
-            "Date Created", 
-            "Base Salary", 
-            "Multiplier", 
-            "Additionals", 
-            "Final Drop Made", 
-            "Adjusted Salary"]
+            "Trip ID",
+            "Total Drops",
+            "Date Created",
+            "Base Salary",
+            "Multiplier",
+            "Additionals",
+            "Final Drop Made",
+            "Adjusted Salary",
+        ]
     ]
     gross_total = 0
-    
+
     for record in data:
         trip = record["trip"]
         salary = record["salary"]
         if not salary:
             continue
-        
+
         # Determine salary details based on employee type (driver, helper, etc.)
         if employee.user.employee_type.lower() == "driver":
             base_salary = trip.driver_base_salary
@@ -2361,10 +2381,10 @@ def generate_salary_breakdown_pdf_emp(request):
             base_salary = trip.helper_base_salary
         else:
             base_salary = trip.base_salary
-        
+
         adjusted = salary.adjusted_salary or 0
         gross_total += adjusted
-        
+
         final_drop = "N/A"
         if hasattr(trip, "addresses") and trip.addresses:
             last_address = trip.addresses[-1]
@@ -2402,12 +2422,12 @@ def generate_salary_breakdown_pdf_emp(request):
                 ("ALIGN", (3, 0), (-1, -1), "RIGHT"),
             ]
         ),
-        hAlign="LEFT"
+        hAlign="LEFT",
     )
     elements.append(Paragraph("<b>TRIP TABLE</b>", left_heading))
     elements.append(trip_table)
     elements.append(Spacer(1, 12))
-    
+
     # Monthly deductions based on week of export date
     def get_week_of_month(d):
         return ((d.day - 1) // 7) + 1
@@ -2452,14 +2472,14 @@ def generate_salary_breakdown_pdf_emp(request):
                     ("ALIGN", (1, 0), (1, -1), "RIGHT"),
                 ]
             ),
-            hAlign="LEFT"
+            hAlign="LEFT",
         )
         elements.append(monthly_table)
         elements.append(Spacer(1, 12))
 
     # Weekly Deductions
     weekly_deductions = {
-        "Bale": sum(s["salary"].bale for s in data if s["salary"]),
+        "Bale": next((trip["salary"].bale for trip in data if trip.get("salary")), 0),
         "Cash Advance": sum(s["salary"].cash_advance for s in data if s["salary"]),
         "Cash Bond": sum(s["salary"].cash_bond for s in data if s["salary"]),
         "Charges": sum(s["salary"].charges for s in data if s["salary"]),
@@ -2481,22 +2501,28 @@ def generate_salary_breakdown_pdf_emp(request):
                 ("ALIGN", (1, 0), (1, -1), "RIGHT"),
             ]
         ),
-        hAlign="LEFT"
+        hAlign="LEFT",
     )
     elements.append(weekly_table)
     elements.append(Spacer(1, 12))
 
     # Add total calculations and footer
-    total_deductions = gross_total  # Example, you can adjust deduction calculations as needed
+    total_deductions = (
+        gross_total  # Example, you can adjust deduction calculations as needed
+    )
     net_pay = gross_total - total_deductions
 
     totals_table_data = [
         ["Gross Salary", "Deductions", "Net Pay"],
-        [format_currency(gross_total), format_currency(total_deductions), format_currency(net_pay)],
+        [
+            format_currency(gross_total),
+            format_currency(total_deductions),
+            format_currency(net_pay),
+        ],
     ]
 
     totals_table = create_table_totals(
-        totals_table_data,        
+        totals_table_data,
         TableStyle(
             [
                 (
@@ -2551,7 +2577,7 @@ def generate_salary_breakdown_pdf_emp(request):
                     10,
                 ),  # Add padding to the right side of each cell
             ]
-        )
+        ),
     )
     elements.append(Paragraph("<b>TOTALS</b>", left_heading))
     elements.append(totals_table)
@@ -2569,19 +2595,26 @@ def generate_salary_breakdown_pdf_emp(request):
     doc.build(elements, onFirstPage=footer)
 
     buffer.seek(0)
-    
-    employee_name = employee.user.get_full_name() or username  # Use full name if available, fall back to username
+
+    employee_name = (
+        employee.user.get_full_name() or username
+    )  # Use full name if available, fall back to username
     start_date_str = start_date.strftime("%Y%m%d")
     end_date_str = end_date.strftime("%Y%m%d")
     filename = f"Salary_Report_{employee_name}_{start_date_str}_to_{end_date_str}.pdf"
-    
-    filename = filename.replace(" ", "_").replace("/", "-").replace("\\", "-").replace(":", "-")
-    
+
+    filename = (
+        filename.replace(" ", "_")
+        .replace("/", "-")
+        .replace("\\", "-")
+        .replace(":", "-")
+    )
+
     return HttpResponse(
         buffer,
         content_type="application/pdf",
         headers={
             "Content-Disposition": f'attachment; filename="{filename}"',
-            "Content-Disposition": f'attachment; filename="{filename}"; filename*=UTF-8\'\'{filename}'
-            }
+            "Content-Disposition": f"attachment; filename=\"{filename}\"; filename*=UTF-8''{filename}",
+        },
     )
